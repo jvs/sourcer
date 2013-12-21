@@ -51,20 +51,15 @@ class UnaryTerm(Term):
         self.term = term
 
 
-class Alt(Term):
-    def __init__(self, term, separator):
-        self.first = term
-        self.rest = List(Right(separator, term))
-        self.tail = Opt(separator)
-
-    def parse(self, parser, pos):
-        triple = (self.first, self.rest, self.tail)
-        ans = parser.parse(triple, pos)
-        if ans is ParseFailure:
-            return ParseFailure
-        else:
-            (first, rest, tail) = ans.value
-            return ParseResult([first] + rest, ans.pos)
+def Alt(term, separator, allow_trailer=True):
+    '''
+    Parses a list of terms separated by a separator. Returns the elements
+    in a normal list, and drops the separators.
+    '''
+    rest = List(Right(separator, term))
+    tail = Opt(separator) if allow_trailer else None
+    triple = (term, rest, tail)
+    return Transform(triple, lambda ans: [ans[0]] + ans[1])
 
 
 class And(BinaryTerm):
