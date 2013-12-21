@@ -86,6 +86,16 @@ class TestSimpleExpressions(unittest.TestCase):
         ans = parse_all(Seq, 'A')
         self.assertEqual(ans, ('A', None))
 
+    def test_left_term(self):
+        T = Left('A', 'B')
+        ans = parse_all(T, 'AB')
+        self.assertEqual(ans, 'A')
+
+    def test_right_term(self):
+        T = Right('A', 'B')
+        ans = parse_all(T, 'AB')
+        self.assertEqual(ans, 'B')
+
 
 if __name__ == '__main__':
     unittest.main()
