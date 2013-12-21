@@ -66,6 +66,26 @@ class TestSimpleExpressions(unittest.TestCase):
         ans = parse_all(Nums, '1,2,3,4')
         self.assertEqual(ans, [1,2,3,4])
 
+    def test_opt_term_present(self):
+        Seq = ('A', Opt('B'))
+        ans = parse_all(Seq, 'AB')
+        self.assertEqual(ans, ('A', 'B'))
+
+    def test_opt_term_missing_front(self):
+        Seq = (Opt('A'), 'B')
+        ans = parse_all(Seq, 'B')
+        self.assertEqual(ans, (None, 'B'))
+
+    def test_opt_term_missing_middle(self):
+        Seq = ('A', Opt('B'), 'C')
+        ans = parse_all(Seq, 'AC')
+        self.assertEqual(ans, ('A', None, 'C'))
+
+    def test_opt_term_missing_end(self):
+        Seq = ('A', Opt('B'))
+        ans = parse_all(Seq, 'A')
+        self.assertEqual(ans, ('A', None))
+
 
 if __name__ == '__main__':
     unittest.main()
