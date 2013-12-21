@@ -126,6 +126,11 @@ class TestSimpleExpressions(unittest.TestCase):
         ans = parse_all(T, 'ABC')
         self.assertEqual(ans, 'ABC')
 
+    def test_expect_term(self):
+        T = (Expect('A'), 'A')
+        ans = parse_all(T, 'A')
+        self.assertEqual(ans, ('A', 'A'))
+
 
 if __name__ == '__main__':
     unittest.main()
