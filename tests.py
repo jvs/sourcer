@@ -106,6 +106,21 @@ class TestSimpleExpressions(unittest.TestCase):
         with self.assertRaises(ParseError):
             ans = parse_all(T, 'AA')
 
+    def test_ordered_choice_first(self):
+        T = (Or('A', 'AB'), 'B')
+        ans = parse_all(T, 'AB')
+        self.assertEqual(ans, ('A', 'B'))
+
+    def test_ordered_choice_second(self):
+        T = Or('A', 'B')
+        ans = parse_all(T, 'B')
+        self.assertEqual(ans, 'B')
+
+    def test_and_operator(self):
+        T = And('ABC', 'A')
+        ans = parse_all(T, 'ABC')
+        self.assertEqual(ans, 'ABC')
+
 
 if __name__ == '__main__':
     unittest.main()
