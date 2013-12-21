@@ -5,7 +5,7 @@ import re
 BinaryOperation = namedtuple('BinaryOperation', 'left, operator, right')
 ParseError = object()
 ParseResult = namedtuple('ParseResult', 'value, pos')
-_Regex = type(re.compile(''))
+RegexType = type(re.compile(''))
 
 
 class ParsingOperand(object):
@@ -265,7 +265,7 @@ class Parser(object):
             else:
                 return self.parse_token_string(term, pos)
 
-        if isinstance(term, _Regex):
+        if isinstance(term, RegexType):
             return self.parse_regex(term, pos)
 
         if isinstance(term, tuple):
