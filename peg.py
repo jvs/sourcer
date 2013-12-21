@@ -87,6 +87,11 @@ class End(Term):
         return ParseResult(None, pos) if at_end else ParseFailure
 
 
+def Interleave(term, separator):
+    step = Right(separator, term)
+    return Left(Some(step), separator)
+
+
 class Left(BinaryTerm):
     def parse(self, parser, pos):
         pair = (self.left, self.right)
@@ -219,11 +224,6 @@ class Transform(Term):
         else:
             value = self.transform(ans.value)
             return ParseResult(value, ans.pos)
-
-
-def Interleave(term, separator):
-    step = Right(separator, term)
-    return Left(Some(step), separator)
 
 
 def _associate_left(pair):
