@@ -316,9 +316,9 @@ class Parser(object):
         return ParseResult(tuple(ans), pos)
 
 
-def parse(term, source):
+def parse(term, source, pos=0):
     parser = Parser(source)
-    ans = parser.parse(term, 0)
+    ans = parser.parse(term, pos)
     if ans is ParseError:
         raise RuntimeError('ParseError')
     else:
