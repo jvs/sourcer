@@ -38,8 +38,8 @@ class TermMetaClass(type, ParsingOperand): pass
 class Term(ParsingOperand): __metaclass__ = TermMetaClass
 
 
-class UnaryTerm(Term):
-    '''Abstract base class for terms that consist of a single term.'''
+class SimpleTerm(Term):
+    '''Abstract base class for terms that consist of a single subterm.'''
     def __init__(self, term):
         self.term = term
 
@@ -68,7 +68,7 @@ class Any(Term):
             else ParseResult(parser.source[pos], pos + 1))
 
 
-class Expect(UnaryTerm):
+class Expect(SimpleTerm):
     def parse(self, parser, pos):
         ans = parser.parse(self.term, pos)
         return ans if ans is ParseFailure else ParseResult(ans.value, pos)
@@ -89,12 +89,12 @@ def Left(*args):
     return Transform(args, lambda ans: ans[0])
 
 
-class Lift(UnaryTerm):
+class Lift(SimpleTerm):
     def parse(self, parser, pos):
         return parser.parse(self.term, pos)
 
 
-class List(UnaryTerm):
+class List(SimpleTerm):
     def parse(self, parser, pos):
         ans = []
         while True:
@@ -110,7 +110,7 @@ def Middle(left, middle, right):
     return Right(left, Left(middle, right))
 
 
-class Not(UnaryTerm):
+class Not(SimpleTerm):
     def parse(self, parser, pos):
         ans = parser.parse(self.term, pos)
         return ParseResult(None, pos) if ans is ParseFailure else ParseFailure
