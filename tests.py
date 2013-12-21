@@ -96,6 +96,16 @@ class TestSimpleExpressions(unittest.TestCase):
         ans = parse_all(T, 'AB')
         self.assertEqual(ans, 'B')
 
+    def test_require_success(self):
+        T = Require(List('A'), lambda ans: len(ans) > 2)
+        ans = parse_all(T, 'AAA')
+        self.assertEqual(ans, list('AAA'))
+
+    def test_require_failure(self):
+        T = Require(List('A'), lambda ans: len(ans) > 2)
+        with self.assertRaises(ParseError):
+            ans = parse_all(T, 'AA')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -133,10 +133,14 @@ class Or(BinaryTerm):
         return parser.parse(self.right, pos) if ans is ParseFailure else ans
 
 
-class Require(BinaryTerm):
+class Require(Term):
+    def __init__(self, term, condition):
+        self.term = term
+        self.condition = condition
+
     def parse(self, parser, pos):
-        ans = parser.parse(self.left, pos)
-        failed = (ans is ParseFailure) or not self.right(ans.value)
+        ans = parser.parse(self.term, pos)
+        failed = (ans is ParseFailure) or not self.condition(ans.value)
         return ParseFailure if failed else ans
 
 
