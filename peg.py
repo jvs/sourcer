@@ -6,9 +6,18 @@ import re
 # LeftAssoc or RightAssoc term.
 BinaryOperation = namedtuple('BinaryOperation', 'left, operator, right')
 
+# This module raises this exception when it cannot parse an input sequence.
+class ParseError(Exception): pass
+
 # A singleton value used internally to indicate a parse failure.
-ParseError = object()
+ParseFailure = object()
+
+# A tuple of (object, int). The object is the parse tree, and the int value
+# is the index of the last item consumed by the parser, plus one. (So it's
+# the index of the next item that the parser should consume.)
 ParseResult = namedtuple('ParseResult', 'value, pos')
+
+# Used to recognize regular expression objects.
 RegexType = type(re.compile(''))
 
 
@@ -48,8 +57,8 @@ class Alt(Term):
     def parse(self, parser, pos):
         triple = (self.first, self.rest, self.tail)
         ans = parser.parse(triple, pos)
-        if ans is ParseError:
-            return ParseError
+        if ans is ParseFailure:
+            return ParseFailure
         else:
             (first, rest, tail) = ans.value
             return ParseResult([first] + rest, ans.pos)
@@ -59,32 +68,33 @@ class And(BinaryTerm):
     def parse(self, parser, pos):
         ans = parser.parse(self.left, pos)
         skip = parser.parse(self.right, pos)
-        return ParseError if ParseError in (ans, skip) else ans
+        return ParseFailure if ParseFailure in (ans, skip) else ans
 
 
 class Any(Term):
     def parse(self, parser, pos):
-        return (ParseError if pos >= len(parser.source)
+        return (ParseFailure if pos >= len(parser.source)
             else ParseResult(parser.source[pos], pos + 1))
 
 
 class Expect(UnaryTerm):
     def parse(self, parser, pos):
         ans = parser.parse(self.term, pos)
-        return ans if ans is ParseError else ParseResult(ans.value, pos)
+        return ans if ans is ParseFailure else ParseResult(ans.value, pos)
 
 
 class End(Term):
     def parse(self, parser, pos):
         at_end = (pos == len(parser.source))
-        return ParseResult(None, pos) if at_end else ParseError
+        return ParseResult(None, pos) if at_end else ParseFailure
 
 
 class Left(BinaryTerm):
     def parse(self, parser, pos):
         pair = (self.left, self.right)
         ans = parser.parse(pair, pos)
-        return ans if ans is ParseError else ParseResult(ans.value[0], ans.pos)
+        return (ans if ans is ParseFailure
+            else ParseResult(ans.value[0], ans.pos))
 
 
 class Lift(UnaryTerm):
@@ -97,7 +107,7 @@ class List(UnaryTerm):
         ans = []
         while True:
             next = parser.parse(self.term, pos)
-            if next is ParseError:
+            if next is ParseFailure:
                 break
             pos = next.pos
             ans.append(next.value)
@@ -111,35 +121,34 @@ def Middle(left, middle, right):
 class Not(UnaryTerm):
     def parse(self, parser, pos):
         ans = parser.parse(self.term, pos)
-        return ParseResult(None, pos) if ans is ParseError else ParseError
+        return ParseResult(None, pos) if ans is ParseFailure else ParseFailure
 
 
 class Opt(UnaryTerm):
     def parse(self, parser, pos):
         ans = parser.parse(self.term, pos)
-        return ParseResult(None, pos) if ans is ParseError else ans
+        return ParseResult(None, pos) if ans is ParseFailure else ans
 
 
 class Or(BinaryTerm):
     def parse(self, parser, pos):
         ans = parser.parse(self.left, pos)
-        return parser.parse(self.right, pos) if ans is ParseError else ans
+        return parser.parse(self.right, pos) if ans is ParseFailure else ans
 
 
 class Require(BinaryTerm):
     def parse(self, parser, pos):
         ans = parser.parse(self.left, pos)
-        if ans is ParseError or not self.right(ans.value):
-            return ParseError
-        else:
-            return ans
+        failed = (ans is ParseFailure) or not self.right(ans.value)
+        return ParseFailure if failed else ans
 
 
 class Right(BinaryTerm):
     def parse(self, parser, pos):
         pair = (self.left, self.right)
         ans = parser.parse(pair, pos)
-        return ans if ans is ParseError else ParseResult(ans.value[1], ans.pos)
+        return (ans if ans is ParseFailure
+            else ParseResult(ans.value[1], ans.pos))
 
 
 def Some(term):
@@ -163,8 +172,8 @@ class Struct(Term):
             return ParseResult(ans, pos)
         for field, value in getattr(self, '<fields>'):
             next = parser.parse(value, pos)
-            if next is ParseError:
-                return ParseError
+            if next is ParseFailure:
+                return ParseFailure
             object.__setattr__(ans, field, next.value)
             pos = next.pos
         return ParseResult(ans, pos)
@@ -183,8 +192,8 @@ def Token(pattern_str, skip=False):
                 return ParseResult(source[pos], pos + 1)
 
             next = parser.parse(pattern, pos)
-            if next is ParseError:
-                return ParseError
+            if next is ParseFailure:
+                return ParseFailure
             else:
                 ans = TokenType()
                 ans.content = source[pos : next.pos]
@@ -209,8 +218,8 @@ class Transform(Term):
 
     def parse(self, parser, pos):
         ans = parser.parse(self.term, pos)
-        if ans is ParseError:
-            return ParseError
+        if ans is ParseFailure:
+            return ParseFailure
         else:
             value = self.transform(ans.value)
             return ParseResult(value, ans.pos)
@@ -249,7 +258,7 @@ class Parser(object):
     def parse(self, term, pos):
         key = (term, pos)
         if key in self.visiting:
-            return ParseError
+            return ParseFailure
 
         self.visiting.add(key)
         try:
@@ -283,10 +292,10 @@ class Parser(object):
 
     def parse_regex(self, term, pos):
         if not isinstance(self.source, basestring):
-            return ParseError
+            return ParseFailure
         m = term.match(self.source[pos:])
         if m is None:
-            return ParseError
+            return ParseFailure
         else:
             value = m.group(0)
             return ParseResult(value or None, pos + len(value))
@@ -294,23 +303,23 @@ class Parser(object):
     def parse_text_string(self, term, pos):
         end = pos + len(term)
         part = self.source[pos : end]
-        return ParseResult(part, end) if part == term else ParseError
+        return ParseResult(part, end) if part == term else ParseFailure
 
     def parse_token_string(self, term, pos):
         if pos >= len(self.source):
-            return ParseError
+            return ParseFailure
         next = self.source[pos]
         if isinstance(next, BaseToken) and next.content == term:
             return ParseResult(term, pos + 1)
         else:
-            return ParseError
+            return ParseFailure
 
     def parse_tuple(self, term, pos):
         ans = []
         for item in term:
             next = self.parse(item, pos)
-            if next is ParseError:
-                return ParseError
+            if next is ParseFailure:
+                return ParseFailure
             ans.append(next.value)
             pos = next.pos
         return ParseResult(tuple(ans), pos)
@@ -319,8 +328,8 @@ class Parser(object):
 def parse(term, source, pos=0):
     parser = Parser(source)
     ans = parser.parse(term, pos)
-    if ans is ParseError:
-        raise RuntimeError('ParseError')
+    if ans is ParseFailure:
+        raise ParseError()
     else:
         return ans
 
@@ -331,4 +340,4 @@ def parse_all(term, source):
     if isinstance(ans, ParseResult):
         return ans.value
     else:
-        raise RuntimeError('Parse Error')
+        raise ParseError()

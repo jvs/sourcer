@@ -16,7 +16,7 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(ans.content, '123')
 
     def test_single_token_failure(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(ParseError):
             parse_all(Number, '123X')
 
     def test_prefix_token_success(self):
@@ -29,8 +29,8 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(pos, 3)
 
     def test_prefix_token_failure(self):
-        ans = parse(Number, 'ABC')
-        self.assertIs(ans, ParseError)
+        with self.assertRaises(ParseError):
+            parse(Number, 'ABC')
 
     def test_simple_transform(self):
         ans = parse_all(Int, '123')
