@@ -267,7 +267,7 @@ class Parser(object):
             self.visiting.remove(key)
 
     def _parse(self, term, pos):
-        if callable(term) and not isinstance(term, Term):
+        if isinstance(term, TermMetaClass):
             term = term()
 
         if term is None:
