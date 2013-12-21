@@ -122,10 +122,8 @@ class Not(UnaryTerm):
         return ParseResult(None, pos) if ans is ParseFailure else ParseFailure
 
 
-class Opt(UnaryTerm):
-    def parse(self, parser, pos):
-        ans = parser.parse(self.term, pos)
-        return ParseResult(None, pos) if ans is ParseFailure else ans
+def Opt(term):
+    return Or(term, None)
 
 
 class Or(BinaryTerm):
