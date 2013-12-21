@@ -61,5 +61,11 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(ans.sep, ',')
         self.assertEqual(ans.right, 20)
 
+    def test_simple_alt_sequence(self):
+        Nums = Alt(Int, ',')
+        ans = parse_all(Nums, '1,2,3,4')
+        self.assertEqual(ans, [1,2,3,4])
+
+
 if __name__ == '__main__':
     unittest.main()
