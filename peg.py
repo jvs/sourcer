@@ -33,17 +33,20 @@ class ParsingOperand(object):
     def __ror__(self, other): return Or(other, self)
 
 
+# These classes add the "&" and "|" parsing operators.
 class TermMetaClass(type, ParsingOperand): pass
 class Term(ParsingOperand): __metaclass__ = TermMetaClass
 
 
 class BinaryTerm(Term):
+    '''Abstract base class for compound terms that consist of two terms.'''
     def __init__(self, left, right):
         self.left = left
         self.right = right
 
 
 class UnaryTerm(Term):
+    '''Abstract base class for terms that consist of a single term.'''
     def __init__(self, term):
         self.term = term
 
