@@ -2,18 +2,26 @@ from collections import namedtuple
 import re
 
 
+# The parser returns a BinaryOperation tuple after successfully parsing a
+# LeftAssoc or RightAssoc term.
 BinaryOperation = namedtuple('BinaryOperation', 'left, operator, right')
+
+# A singleton value used internally to indicate a parse failure.
 ParseError = object()
 ParseResult = namedtuple('ParseResult', 'value, pos')
 RegexType = type(re.compile(''))
 
 
 class ParsingOperand(object):
+    '''
+    This mixin-style class adds support for two parsing operators:
+        a & b evaluates to And(a, b).
+        a | b evaluates to Or(a, b).
+    '''
     def __and__(self, other): return And(self, other)
     def __rand__(self, other): return And(other, self)
     def __or__(self, other): return Or(self, other)
     def __ror__(self, other): return Or(other, self)
-    def __invert__(self): return Not(self)
 
 
 class TermMetaClass(type, ParsingOperand): pass
@@ -310,7 +318,11 @@ class Parser(object):
 
 def parse(term, source):
     parser = Parser(source)
-    return parser.parse(term, 0)
+    ans = parser.parse(term, 0)
+    if ans is ParseError:
+        raise RuntimeError('ParseError')
+    else:
+        return ans
 
 
 def parse_all(term, source):
