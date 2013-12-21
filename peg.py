@@ -38,11 +38,16 @@ class TermMetaClass(type, ParsingOperand): pass
 class Term(ParsingOperand): __metaclass__ = TermMetaClass
 
 
-class BinaryTerm(Term):
-    '''Abstract base class for compound terms that consist of two terms.'''
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+class CompoundTerm(Term):
+    '''Abstract base class for compound terms.'''
+    def __init__(self, *terms):
+        self.terms = []
+        # Flatten the list of terms.
+        for term in terms:
+            if isinstance(term, self.__class__):
+                self.terms.extend(term.terms)
+            else:
+                self.terms.append(term)
 
 
 class UnaryTerm(Term):
@@ -62,11 +67,17 @@ def Alt(term, separator, allow_trailer=True):
     return Transform(triple, lambda ans: [ans[0]] + ans[1])
 
 
-class And(BinaryTerm):
+class And(CompoundTerm):
     def parse(self, parser, pos):
-        ans = parser.parse(self.left, pos)
-        skip = parser.parse(self.right, pos)
-        return ParseFailure if ParseFailure in (ans, skip) else ans
+        if not self.terms:
+            return ParseResult(None, pos)
+
+        for term in self.terms[1:]:
+            next = parser.parse(term, pos)
+            if next is ParseFailure:
+                return ParseFailure
+
+        return parser.parse(self.terms[0], pos)
 
 
 class Any(Term):
@@ -127,10 +138,13 @@ def Opt(term):
     return Or(term, None)
 
 
-class Or(BinaryTerm):
+class Or(CompoundTerm):
     def parse(self, parser, pos):
-        ans = parser.parse(self.left, pos)
-        return parser.parse(self.right, pos) if ans is ParseFailure else ans
+        for term in self.terms:
+            ans = parser.parse(term, pos)
+            if ans is not ParseFailure:
+                return ans
+        return ParseFailure
 
 
 class Require(Term):

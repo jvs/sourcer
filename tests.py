@@ -116,6 +116,11 @@ class TestSimpleExpressions(unittest.TestCase):
         ans = parse_all(T, 'B')
         self.assertEqual(ans, 'B')
 
+    def test_ordered_choice_third(self):
+        T = Or(*'ABC')
+        ans = parse_all(T, 'C')
+        self.assertEqual(ans, 'C')
+
     def test_and_operator(self):
         T = And('ABC', 'A')
         ans = parse_all(T, 'ABC')
