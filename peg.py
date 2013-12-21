@@ -92,12 +92,8 @@ def Interleave(term, separator):
     return Left(Some(step), separator)
 
 
-class Left(BinaryTerm):
-    def parse(self, parser, pos):
-        pair = (self.left, self.right)
-        ans = parser.parse(pair, pos)
-        return (ans if ans is ParseFailure
-            else ParseResult(ans.value[0], ans.pos))
+def Left(*args):
+    return Transform(args, lambda ans: ans[0])
 
 
 class Lift(UnaryTerm):
@@ -144,12 +140,8 @@ class Require(BinaryTerm):
         return ParseFailure if failed else ans
 
 
-class Right(BinaryTerm):
-    def parse(self, parser, pos):
-        pair = (self.left, self.right)
-        ans = parser.parse(pair, pos)
-        return (ans if ans is ParseFailure
-            else ParseResult(ans.value[1], ans.pos))
+def Right(*args):
+    return Transform(args, lambda ans: ans[-1])
 
 
 def Some(term):
