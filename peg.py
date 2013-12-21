@@ -38,18 +38,6 @@ class TermMetaClass(type, ParsingOperand): pass
 class Term(ParsingOperand): __metaclass__ = TermMetaClass
 
 
-class CompoundTerm(Term):
-    '''Abstract base class for compound terms.'''
-    def __init__(self, *terms):
-        self.terms = []
-        # Flatten the list of terms.
-        for term in terms:
-            if isinstance(term, self.__class__):
-                self.terms.extend(term.terms)
-            else:
-                self.terms.append(term)
-
-
 class UnaryTerm(Term):
     '''Abstract base class for terms that consist of a single term.'''
     def __init__(self, term):
@@ -67,17 +55,11 @@ def Alt(term, separator, allow_trailer=True):
     return Transform(triple, lambda ans: [ans[0]] + ans[1])
 
 
-class And(CompoundTerm):
-    def parse(self, parser, pos):
-        if not self.terms:
-            return ParseResult(None, pos)
-
-        for term in self.terms[1:]:
-            next = parser.parse(term, pos)
-            if next is ParseFailure:
-                return ParseFailure
-
-        return parser.parse(self.terms[0], pos)
+def And(*terms):
+    if not terms:
+        return Lift(None)
+    args = tuple(Expect(t) for t in terms[1:]) + (terms[0],)
+    return Right(*args)
 
 
 class Any(Term):
@@ -138,7 +120,16 @@ def Opt(term):
     return Or(term, None)
 
 
-class Or(CompoundTerm):
+class Or(Term):
+    def __init__(self, *terms):
+        self.terms = []
+        # Flatten the list of terms.
+        for term in terms:
+            if isinstance(term, self.__class__):
+                self.terms.extend(term.terms)
+            else:
+                self.terms.append(term)
+
     def parse(self, parser, pos):
         for term in self.terms:
             ans = parser.parse(term, pos)
