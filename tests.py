@@ -291,6 +291,8 @@ class TestEagerLambdaCalculus(unittest.TestCase):
             (r'(\x: \y: y) a b', 'b'),
             (r'(\x: \y: x y) (\x: z) b', 'z'),
             (r'(\x: \y: y x) z (\x: x)', 'z'),
+            (r'(\x: \y: \t: t x y) a b (\x: \y: x)', 'a'),
+            (r'(\x: \y: \t: t x y) a b (\x: \y: y)', 'b'),
         ]
         for (test, expectation) in testcases:
             ast = parse_all(grammar, test)
