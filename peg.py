@@ -250,18 +250,17 @@ def RightAssoc(left, op, right):
 class Parser(object):
     def __init__(self, source):
         self.source = source
-        self.visiting = set()
+        self.memo = {}
 
     def parse(self, term, pos):
         key = (term, pos)
-        if key in self.visiting:
-            return ParseFailure
+        if key in self.memo:
+            return self.memo[key]
 
-        self.visiting.add(key)
-        try:
-            return self._parse(term, pos)
-        finally:
-            self.visiting.remove(key)
+        self.memo[key] = ParseError
+        ans = self._parse(term, pos)
+        self.memo[key] = ans
+        return ans
 
     def _parse(self, term, pos):
         if isinstance(term, TermMetaClass):
