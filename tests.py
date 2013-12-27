@@ -229,5 +229,74 @@ class TestCalculator(unittest.TestCase):
             self.assertEqual(ans, eval(expression))
 
 
+class TestEagerLambdaCalculus(unittest.TestCase):
+    def grammar(self):
+        Name = re.compile('\w+')
+        Parens = Middle('(', Lazy(lambda: Expr), ')')
+
+        class Identifier(Struct):
+            def __init__(self):
+                self.name = Name
+
+            def __repr__(self):
+                return self.name
+
+            def evaluate(self, env):
+                return env.get(self.name, self.name)
+
+        class Abstraction(Struct):
+            def __init__(self):
+                self.symbol = '\\'
+                self.parameter = Name
+                self.separator = ':'
+                self.space = Opt(' ')
+                self.body = Expr
+
+            def __repr__(self):
+                return '(\\%s: %r)' % (self.parameter, self.body)
+
+            def evaluate(self, env):
+                def callback(arg):
+                    child = env.copy()
+                    child[self.parameter] = arg
+                    return self.body.evaluate(child)
+                return callback
+
+        class Application(object):
+            def __init__(self, left, operator, right):
+                assert operator == ' '
+                self.left = left
+                self.right = right
+
+            def __repr__(self):
+                return '%r %r' % (self.left, self.right)
+
+            def evaluate(self, env):
+                left = self.left.evaluate(env)
+                right = self.right.evaluate(env)
+                return left(right)
+
+        Operand = Parens | Abstraction | Identifier
+        Operation = LeftAssoc(Operand, ' ', Operand, Application)
+        Expr = Operation | Operand
+        return Expr
+
+    def test_expressions(self):
+        grammar = self.grammar()
+        testcases = [
+            ('x', 'x'),
+            ('(x)', 'x'),
+            (r'(\x: x) y', 'y'),
+            (r'(\x: \y: x) a b', 'a'),
+            (r'(\x: \y: y) a b', 'b'),
+            (r'(\x: \y: x y) (\x: z) b', 'z'),
+            (r'(\x: \y: y x) z (\x: x)', 'z'),
+        ]
+        for (test, expectation) in testcases:
+            ast = parse_all(grammar, test)
+            ans = ast.evaluate({})
+            self.assertEqual(ans, expectation)
+
+
 if __name__ == '__main__':
     unittest.main()
