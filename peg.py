@@ -85,6 +85,13 @@ def Interleave(term, separator):
     return Left(Some(step), separator)
 
 
+class Lazy(SimpleTerm):
+    def parse(self, parser, pos):
+        if not hasattr(self, 'cached_term'):
+            self.cached_term = self.term()
+        return parser.parse(self.cached_term, pos)
+
+
 def Left(*args):
     return Transform(args, lambda ans: ans[0])
 
@@ -227,24 +234,18 @@ class Transform(Term):
             return ParseResult(value, ans.pos)
 
 
-def _associate_left(pair):
-    assoc = lambda first, rest: BinaryOperation(first, *rest)
-    return reduce(assoc, pair[1], pair[0])
-
-
-def _associate_right(pair):
-    assoc = lambda prev, next: BinaryOperation(next[0], next[1], prev)
-    return reduce(assoc, reversed(pair[0]), pair[1])
-
-
-def LeftAssoc(left, op, right):
+def LeftAssoc(left, op, right, ctor=BinaryOperation):
     term = (left, Some((op, right)))
-    return Transform(term, _associate_left)
+    assoc = lambda first, rest: ctor(first, *rest)
+    xform = lambda pair: reduce(assoc, pair[1], pair[0])
+    return Transform(term, xform)
 
 
-def RightAssoc(left, op, right):
+def RightAssoc(left, op, right, ctor=BinaryOperation):
     term = (Some((left, op)), right)
-    return Transform(term, _associate_right)
+    assoc = lambda prev, next: ctor(next[0], next[1], prev)
+    xform = lambda pair: reduce(assoc, reversed(pair[0]), pair[1])
+    return Transform(term, xform)
 
 
 class Parser(object):

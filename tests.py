@@ -1,11 +1,15 @@
 import unittest
 
+import collections
+import operator
 import re
+
 from peg import *
 
 
 Int = Transform(re.compile(r'\d+'), int)
 Number = Token(r'\d+')
+Negation = collections.namedtuple('Negation', 'operator, right')
 
 
 class TestSimpleExpressions(unittest.TestCase):
@@ -130,6 +134,104 @@ class TestSimpleExpressions(unittest.TestCase):
         T = (Expect('A'), 'A')
         ans = parse_all(T, 'A')
         self.assertEqual(ans, ('A', 'A'))
+
+
+class TestArithmeticExpressions(unittest.TestCase):
+    def grammar(self):
+        F = Lazy(lambda: Factor)
+        E = Lazy(lambda: Expr)
+        Parens = Middle('(', E, ')')
+        Negate = Transform(('-', F), lambda p: Negation(*p))
+        Factor = Int | Parens | Negate
+        Term = LeftAssoc(Factor, Or('*', '/'), Factor) | Factor
+        Expr = LeftAssoc(Term, Or('+', '-'), Term) | Term
+        return Expr
+
+    def parse(self, source):
+        return parse_all(self.grammar(), source)
+
+    def test_ints(self):
+        for i in range(10):
+            ans = self.parse(str(i))
+            self.assertEqual(ans, i)
+
+    def test_int_in_parens(self):
+        ans = self.parse('(100)')
+        self.assertEqual(ans, 100)
+
+    def test_many_parens(self):
+        for i in range(10):
+            prefix = '(' * i
+            suffix = ')' * i
+            ans = self.parse('%s%s%s' % (prefix, i, suffix))
+            self.assertEqual(ans, i)
+
+    def test_simple_negation(self):
+        ans = self.parse('-50')
+        self.assertEqual(ans, Negation('-', 50))
+
+    def test_double_negation(self):
+        ans = self.parse('--100')
+        self.assertEqual(ans, Negation('-', Negation('-', 100)))
+
+    def test_subtract_negative(self):
+        ans = self.parse('1--2')
+        S = lambda x, y: BinaryOperation(x, '-', y)
+        self.assertEqual(ans, S(1, Negation('-', 2)))
+
+    def test_simple_precedence(self):
+        A = lambda x, y: BinaryOperation(x, '+', y)
+        M = lambda x, y: BinaryOperation(x, '*', y)
+        first = self.parse('1+2*3')
+        second = self.parse('(1+2)*3')
+        self.assertEqual(first, A(1, M(2, 3)))
+        self.assertEqual(second, M(A(1, 2), 3))
+
+    def test_compound_term(self):
+        t1 = self.parse('1+2*-3/4-5')
+        t2 = self.parse('(1+((2*(-3))/4))-5')
+        self.assertIsInstance(t1, BinaryOperation)
+        self.assertEqual(t1.operator, '-')
+        self.assertEqual(t1, t2)
+
+
+class TestCalculator(unittest.TestCase):
+    def grammar(self):
+        F = Lazy(lambda: Factor)
+        E = Lazy(lambda: Expr)
+        Parens = Middle('(', E, ')')
+        Negate = Transform(Right('-', F), lambda x: -x)
+        Factor = Int | Parens | Negate
+        operators = {
+            '+': operator.add,
+            '-': operator.sub,
+            '*': operator.mul,
+            '/': operator.div,
+        }
+        def evaluate(left, op, right):
+            return operators[op](left, right)
+        def binop(left, op, right):
+            return LeftAssoc(left, op, right, evaluate)
+        Term = binop(Factor, Or('*', '/'), Factor) | Factor
+        Expr = binop(Term, Or('+', '-'), Term) | Term
+        return Expr
+
+    def test_expressions(self):
+        grammar = self.grammar()
+        expressions = [
+            '1',
+            '1+2',
+            '1+2*3',
+            '--1---2----3',
+            '1+1+1+1',
+            '1+2+3+4*5*6',
+            '1+2+3*4-(5+6)/7',
+            '(((1)))+(2)',
+            '8/4/2',
+        ]
+        for expression in expressions:
+            ans = parse_all(grammar, expression)
+            self.assertEqual(ans, eval(expression))
 
 
 if __name__ == '__main__':
