@@ -43,14 +43,12 @@ class TestSimpleExpressions(unittest.TestCase):
     def test_left_assoc(self):
         Add = LeftAssoc(Int, '+', Int)
         ans = parse_all(Add, '1+2+3+4')
-        A = lambda x, y: BinaryOperation(x, '+', y)
-        self.assertEqual(ans, A(A(A(1, 2), 3), 4))
+        self.assertEqual(ans, (((1, '+', 2), '+', 3), '+', 4))
 
     def test_right_assoc(self):
         Arrow = RightAssoc(Int, '->', Int)
         ans = parse_all(Arrow, '1->2->3->4')
-        A = lambda x, y: BinaryOperation(x, '->', y)
-        self.assertEqual(ans, A(1, A(2, A(3, 4))))
+        self.assertEqual(ans, (1, '->', (2, '->', (3, '->', 4))))
 
     def test_simple_struct(self):
         class Pair(Struct):
@@ -176,22 +174,19 @@ class TestArithmeticExpressions(unittest.TestCase):
 
     def test_subtract_negative(self):
         ans = self.parse('1--2')
-        S = lambda x, y: BinaryOperation(x, '-', y)
-        self.assertEqual(ans, S(1, Negation('-', 2)))
+        self.assertEqual(ans, (1, '-', Negation('-', 2)))
 
     def test_simple_precedence(self):
-        A = lambda x, y: BinaryOperation(x, '+', y)
-        M = lambda x, y: BinaryOperation(x, '*', y)
-        first = self.parse('1+2*3')
-        second = self.parse('(1+2)*3')
-        self.assertEqual(first, A(1, M(2, 3)))
-        self.assertEqual(second, M(A(1, 2), 3))
+        ans = self.parse('1+2*3')
+        self.assertEqual(ans, (1, '+', (2, '*', 3)))
+
+    def test_simple_precedence_with_parens(self):
+        ans = self.parse('(1+2)*3')
+        self.assertEqual(ans, ((1, '+', 2), '*', 3))
 
     def test_compound_term(self):
         t1 = self.parse('1+2*-3/4-5')
         t2 = self.parse('(1+((2*(-3))/4))-5')
-        self.assertIsInstance(t1, BinaryOperation)
-        self.assertEqual(t1.operator, '-')
         self.assertEqual(t1, t2)
 
 

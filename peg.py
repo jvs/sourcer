@@ -2,10 +2,6 @@ from collections import namedtuple
 import re
 
 
-# The parser returns a BinaryOperation tuple after successfully parsing a
-# LeftAssoc or RightAssoc term.
-BinaryOperation = namedtuple('BinaryOperation', 'left, operator, right')
-
 # This module raises this exception when it cannot parse an input sequence.
 class ParseError(Exception): pass
 
@@ -234,16 +230,20 @@ class Transform(Term):
             return ParseResult(value, ans.pos)
 
 
-def LeftAssoc(left, op, right, ctor=BinaryOperation):
+# Utility function to create a tuple from a variable number of arguments.
+pack_tuple = (lambda *args: args)
+
+
+def LeftAssoc(left, op, right, transform=pack_tuple):
     term = (left, Some((op, right)))
-    assoc = lambda first, rest: ctor(first, *rest)
+    assoc = lambda first, rest: transform(first, *rest)
     xform = lambda pair: reduce(assoc, pair[1], pair[0])
     return Transform(term, xform)
 
 
-def RightAssoc(left, op, right, ctor=BinaryOperation):
+def RightAssoc(left, op, right, transform=pack_tuple):
     term = (Some((left, op)), right)
-    assoc = lambda prev, next: ctor(next[0], next[1], prev)
+    assoc = lambda prev, next: transform(next[0], next[1], prev)
     xform = lambda pair: reduce(assoc, reversed(pair[0]), pair[1])
     return Transform(term, xform)
 
