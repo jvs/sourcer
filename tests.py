@@ -300,5 +300,36 @@ class TestEagerLambdaCalculus(unittest.TestCase):
             self.assertEqual(ans, expectation)
 
 
+class TestTokenizer(unittest.TestCase):
+    def tokenize(self, tokenizer, source):
+        tokens = tokenizer.run(source)
+        return [t.content for t in tokens]
+
+    def test_numbers_and_spaces(self):
+        T = Tokenizer()
+        Word = T(r'\w+')
+        Space = T(r'\s+')
+        ans = self.tokenize(T, 'A B C')
+        self.assertEqual(ans, list('A B C'))
+
+    def test_skip_spaces(self):
+        T = Tokenizer()
+        Number = T(r'\d+')
+        Space = T(r'\s+', skip=True)
+        ans = self.tokenize(T, '1 2 3')
+        self.assertEqual(ans, list('123'))
+
+    def test_token_types(self):
+        T = Tokenizer()
+        Number = T(r'\d+')
+        Space = T(r'\s+', skip=True)
+        tokens = T.run('1 2 3')
+        self.assertIsInstance(tokens, list)
+        self.assertEqual(len(tokens), 3)
+        for index, token in enumerate(tokens):
+            self.assertIsInstance(token, Number)
+            self.assertEqual(token.content, str(index + 1))
+
+
 if __name__ == '__main__':
     unittest.main()

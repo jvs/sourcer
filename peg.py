@@ -212,8 +212,23 @@ def Token(pattern_str, skip=False):
     return TokenType
 
 
-def TokenContent(pattern_str):
-    return Transform(Token(pattern_str), lambda token: token.content)
+def Content(token):
+    return Transform(token, lambda token: token.content)
+
+
+class Tokenizer(object):
+    def __init__(self):
+        self.tokens = []
+
+    def __call__(self, pattern_str, skip=False):
+        token = Token(pattern_str, skip=skip)
+        self.tokens.append(token)
+        return token
+
+    def run(self, source):
+        main = List(Or(*self.tokens))
+        ans = parse_all(main, source)
+        return [t for t in ans if not t.skip]
 
 
 class Transform(Term):
