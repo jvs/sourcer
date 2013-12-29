@@ -48,7 +48,7 @@ def Alt(term, separator, allow_trailer=True):
     rest = List(Right(separator, term))
     tail = Opt(separator) if allow_trailer else None
     triple = (term, rest, tail)
-    return Transform(triple, lambda ans: [ans[0]] + ans[1])
+    return Transform(Opt(triple), lambda t: [t[0]] + t[1] if t else [])
 
 
 def And(*terms):

@@ -133,6 +133,11 @@ class TestSimpleExpressions(unittest.TestCase):
         ans = parse_all(T, 'A')
         self.assertEqual(ans, ('A', 'A'))
 
+    def test_empty_alt_term(self):
+        T = Middle('(', Alt('A', ','), ')')
+        ans = parse_all(T, '()')
+        self.assertEqual(ans, [])
+
 
 class TestArithmeticExpressions(unittest.TestCase):
     def grammar(self):
