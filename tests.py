@@ -253,7 +253,7 @@ class TestEagerLambdaCalculus(unittest.TestCase):
             def __init__(self):
                 self.symbol = '\\'
                 self.parameter = Name
-                self.separator = ':'
+                self.separator = '.'
                 self.space = Opt(' ')
                 self.body = Expr
 
@@ -291,13 +291,13 @@ class TestEagerLambdaCalculus(unittest.TestCase):
         testcases = [
             ('x', 'x'),
             ('(x)', 'x'),
-            (r'(\x: x) y', 'y'),
-            (r'(\x: \y: x) a b', 'a'),
-            (r'(\x: \y: y) a b', 'b'),
-            (r'(\x: \y: x y) (\x: z) b', 'z'),
-            (r'(\x: \y: y x) z (\x: x)', 'z'),
-            (r'(\x: \y: \t: t x y) a b (\x: \y: x)', 'a'),
-            (r'(\x: \y: \t: t x y) a b (\x: \y: y)', 'b'),
+            (r'(\x. x) y', 'y'),
+            (r'(\x. \y. x) a b', 'a'),
+            (r'(\x. \y. y) a b', 'b'),
+            (r'(\x. \y. x y) (\x. z) b', 'z'),
+            (r'(\x. \y. y x) z (\x. x)', 'z'),
+            (r'(\x. \y. \t. t x y) a b (\x. \y. x)', 'a'),
+            (r'(\x. \y. \t. t x y) a b (\x. \y. y)', 'b'),
         ]
         for (test, expectation) in testcases:
             ast = parse_all(grammar, test)
