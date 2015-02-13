@@ -7,7 +7,7 @@ import re
 from peg import *
 
 
-Int = Transform(re.compile(r'\d+'), int)
+Int = Transform(Regex(r'\d+'), int)
 Number = Token(r'\d+')
 Negation = collections.namedtuple('Negation', 'operator, right')
 
@@ -236,7 +236,7 @@ class TestCalculator(unittest.TestCase):
 
 class TestEagerLambdaCalculus(unittest.TestCase):
     def grammar(self):
-        Name = re.compile('\w+')
+        Name = Regex('\w+')
         Parens = Middle('(', Lazy(lambda: Expr), ')')
 
         class Identifier(Struct):

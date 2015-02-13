@@ -13,8 +13,11 @@ ParseFailure = object()
 # the index of the next item that the parser should consume.)
 ParseResult = namedtuple('ParseResult', 'value, pos')
 
+# Convenience function.
+Regex = re.compile
+
 # Used to recognize regular expression objects.
-RegexType = type(re.compile(''))
+RegexType = type(Regex(''))
 
 # Special return value used to control the parser.
 ParseStep = namedtuple('ParseStep', 'term, pos')
