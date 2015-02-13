@@ -268,7 +268,13 @@ class Parser(object):
     def run(self, term):
         ans = self._start(term, 0)
         while self.stack:
-            ans = self._continue(ans)
+            top = self.stack[-1][-1]
+            ans = top.send(ans)
+            if isinstance(ans, ParseStep):
+                ans = self._start(ans.term, ans.pos)
+            else:
+                key = self.stack.pop()[0]
+                self.memo[key] = ans
         if ans is ParseFailure:
             raise ParseError()
         else:
@@ -287,15 +293,6 @@ class Parser(object):
         self.memo[key] = ParseFailure
         self.stack.append((key, generator))
         return None
-
-    def _continue(self, result):
-        top = self.stack[-1][-1]
-        ans = top.send(result)
-        if isinstance(ans, ParseStep):
-            return self._start(ans.term, ans.pos)
-        key = self.stack.pop()[0]
-        self.memo[key] = ans
-        return ans
 
     def _parse(self, term, pos):
         if term is None:
