@@ -16,6 +16,9 @@ ParseResult = namedtuple('ParseResult', 'value, pos')
 # Used to recognize regular expression objects.
 RegexType = type(re.compile(''))
 
+# Special return value used to control the parser.
+ParseStep = namedtuple('ParseStep', 'term, pos')
+
 
 class ParsingOperand(object):
     '''
@@ -52,28 +55,27 @@ def Alt(term, separator, allow_trailer=True):
 
 
 def And(*terms):
-    if not terms:
-        return Lift(None)
+    assert terms
     args = tuple(Expect(t) for t in terms[1:]) + (terms[0],)
     return Right(*args)
 
 
 class Any(Term):
-    def parse(self, parser, pos):
-        return (ParseFailure if pos >= len(parser.source)
-            else ParseResult(parser.source[pos], pos + 1))
+    def parse(self, source, pos):
+        yield (ParseFailure if pos >= len(source)
+            else ParseResult(source[pos], pos + 1))
 
 
 class Expect(SimpleTerm):
-    def parse(self, parser, pos):
-        ans = parser.parse(self.term, pos)
-        return ans if ans is ParseFailure else ParseResult(ans.value, pos)
+    def parse(self, source, pos):
+        ans = yield ParseStep(self.term, pos)
+        yield ans if ans is ParseFailure else ParseResult(ans.value, pos)
 
 
 class End(Term):
-    def parse(self, parser, pos):
-        at_end = (pos == len(parser.source))
-        return ParseResult(None, pos) if at_end else ParseFailure
+    def parse(self, source, pos):
+        at_end = (pos == len(source))
+        yield ParseResult(None, pos) if at_end else ParseFailure
 
 
 def Interleave(term, separator):
@@ -82,31 +84,26 @@ def Interleave(term, separator):
 
 
 class Lazy(SimpleTerm):
-    def parse(self, parser, pos):
+    def preparse(self):
         if not hasattr(self, 'cached_term'):
             self.cached_term = self.term()
-        return parser.parse(self.cached_term, pos)
+        return self.cached_term
 
 
 def Left(*args):
     return Transform(args, lambda ans: ans[0])
 
 
-class Lift(SimpleTerm):
-    def parse(self, parser, pos):
-        return parser.parse(self.term, pos)
-
-
 class List(SimpleTerm):
-    def parse(self, parser, pos):
+    def parse(self, source, pos):
         ans = []
         while True:
-            next = parser.parse(self.term, pos)
+            next = yield ParseStep(self.term, pos)
             if next is ParseFailure:
                 break
             pos = next.pos
             ans.append(next.value)
-        return ParseResult(ans, pos)
+        yield ParseResult(ans, pos)
 
 
 def Middle(left, middle, right):
@@ -114,9 +111,9 @@ def Middle(left, middle, right):
 
 
 class Not(SimpleTerm):
-    def parse(self, parser, pos):
-        ans = parser.parse(self.term, pos)
-        return ParseResult(None, pos) if ans is ParseFailure else ParseFailure
+    def parse(self, source, pos):
+        ans = yield ParseStep(self.term, pos)
+        yield ParseResult(None, pos) if ans is ParseFailure else ParseFailure
 
 
 def Opt(term):
@@ -133,12 +130,12 @@ class Or(Term):
             else:
                 self.terms.append(term)
 
-    def parse(self, parser, pos):
+    def parse(self, source, pos):
         for term in self.terms:
-            ans = parser.parse(term, pos)
+            ans = yield ParseStep(term, pos)
             if ans is not ParseFailure:
-                return ans
-        return ParseFailure
+                yield ans
+        yield ParseFailure
 
 
 class Require(Term):
@@ -146,10 +143,10 @@ class Require(Term):
         self.term = term
         self.condition = condition
 
-    def parse(self, parser, pos):
-        ans = parser.parse(self.term, pos)
+    def parse(self, source, pos):
+        ans = yield ParseStep(self.term, pos)
         failed = (ans is ParseFailure) or not self.condition(ans.value)
-        return ParseFailure if failed else ans
+        yield ParseFailure if failed else ans
 
 
 def Right(*args):
@@ -169,19 +166,19 @@ class Struct(Term):
             getattr(self, '<fields>').append((name, value))
         object.__setattr__(self, name, value)
 
-    def parse(self, parser, pos):
+    def parse(self, source, pos):
         cls = self.__class__
         ans = cls.__new__(cls)
         object.__setattr__(ans, '<pos>', pos)
         if not hasattr(self, '<fields>'):
-            return ParseResult(ans, pos)
+            yield ParseResult(ans, pos)
         for field, value in getattr(self, '<fields>'):
-            next = parser.parse(value, pos)
+            next = yield ParseStep(value, pos)
             if next is ParseFailure:
-                return ParseFailure
+                yield ParseFailure
             object.__setattr__(ans, field, next.value)
             pos = next.pos
-        return ParseResult(ans, pos)
+        yield ParseResult(ans, pos)
 
 
 class BaseToken(Term): pass
@@ -191,19 +188,18 @@ def Token(pattern_str, skip=False):
     pattern = re.compile(pattern_str)
 
     class TokenType(BaseToken):
-        def parse(self, parser, pos):
-            source = parser.source
+        def parse(self, source, pos):
             if pos < len(source) and isinstance(source[pos], TokenType):
-                return ParseResult(source[pos], pos + 1)
+                yield ParseResult(source[pos], pos + 1)
 
-            next = parser.parse(pattern, pos)
+            next = yield ParseStep(pattern, pos)
             if next is ParseFailure:
-                return ParseFailure
+                yield ParseFailure
             else:
                 ans = TokenType()
                 ans.content = source[pos : next.pos]
                 ans.skip = skip
-                return ParseResult(ans, next.pos)
+                yield ParseResult(ans, next.pos)
 
         def __repr__(self):
             arg = getattr(self, 'content', pattern_str)
@@ -236,13 +232,13 @@ class Transform(Term):
         self.term = term
         self.transform = transform
 
-    def parse(self, parser, pos):
-        ans = parser.parse(self.term, pos)
+    def parse(self, source, pos):
+        ans = yield ParseStep(self.term, pos)
         if ans is ParseFailure:
-            return ParseFailure
+            yield ParseFailure
         else:
             value = self.transform(ans.value)
-            return ParseResult(value, ans.pos)
+            yield ParseResult(value, ans.pos)
 
 
 # Utility function to create a tuple from a variable number of arguments.
@@ -267,89 +263,107 @@ class Parser(object):
     def __init__(self, source):
         self.source = source
         self.memo = {}
+        self.stack = []
 
-    def parse(self, term, pos):
+    def run(self, term):
+        ans = self._start(term, 0)
+        while self.stack:
+            ans = self._continue(ans)
+        if ans is ParseFailure:
+            raise ParseError()
+        else:
+            return ans
+
+    def _start(self, term, pos):
+        if isinstance(term, TermMetaClass):
+            term = term()
+        if isinstance(term, Lazy):
+            term = term.preparse()
+
         key = (term, pos)
         if key in self.memo:
             return self.memo[key]
+        generator = self._parse(term, pos)
+        self.memo[key] = ParseFailure
+        self.stack.append((key, generator))
+        return None
 
-        self.memo[key] = ParseError
-        ans = self._parse(term, pos)
+    def _continue(self, result):
+        top = self.stack[-1][-1]
+        ans = top.send(result)
+        if isinstance(ans, ParseStep):
+            return self._start(ans.term, ans.pos)
+        key = self.stack.pop()[0]
         self.memo[key] = ans
         return ans
 
     def _parse(self, term, pos):
-        if isinstance(term, TermMetaClass):
-            term = term()
-
         if term is None:
-            return ParseResult(term, pos)
+            return self._parse_nothing(term, pos)
 
-        if term == '' and isinstance(self.source, basestring):
-            return ParseResult(term, pos)
+        is_source_str = isinstance(self.source, basestring)
+
+        if term == '' and is_source_str:
+            return self._parse_nothing(term, pos)
+
+        if isinstance(term, basestring) and is_source_str:
+            return self._parse_text(term, pos)
 
         if isinstance(term, basestring):
-            if isinstance(self.source, basestring):
-                return self.parse_text_string(term, pos)
-            else:
-                return self.parse_token_string(term, pos)
+            return self._parse_token(term, pos)
 
         if isinstance(term, RegexType):
-            return self.parse_regex(term, pos)
+            return self._parse_regex(term, pos)
 
         if isinstance(term, tuple):
-            return self.parse_tuple(term, pos)
+            return self._parse_tuple(term, pos)
         else:
-            return term.parse(self, pos)
+            return term.parse(self.source, pos)
 
-    def parse_regex(self, term, pos):
+    def _parse_nothing(self, term, pos):
+        yield ParseResult(term, pos)
+
+    def _parse_regex(self, term, pos):
         if not isinstance(self.source, basestring):
-            return ParseFailure
+            yield ParseFailure
         m = term.match(self.source[pos:])
         if m is None:
-            return ParseFailure
+            yield ParseFailure
         else:
             value = m.group(0)
-            return ParseResult(value or None, pos + len(value))
+            yield ParseResult(value or None, pos + len(value))
 
-    def parse_text_string(self, term, pos):
+    def _parse_text(self, term, pos):
         end = pos + len(term)
         part = self.source[pos : end]
-        return ParseResult(part, end) if part == term else ParseFailure
+        yield ParseResult(part, end) if part == term else ParseFailure
 
-    def parse_token_string(self, term, pos):
+    def _parse_token(self, term, pos):
         if pos >= len(self.source):
-            return ParseFailure
+            yield ParseFailure
         next = self.source[pos]
         if isinstance(next, BaseToken) and next.content == term:
-            return ParseResult(term, pos + 1)
+            yield ParseResult(term, pos + 1)
         else:
-            return ParseFailure
+            yield ParseFailure
 
-    def parse_tuple(self, term, pos):
+    def _parse_tuple(self, term, pos):
         ans = []
         for item in term:
-            next = self.parse(item, pos)
+            next = yield ParseStep(item, pos)
             if next is ParseFailure:
-                return ParseFailure
+                yield ParseFailure
             ans.append(next.value)
             pos = next.pos
-        return ParseResult(tuple(ans), pos)
-
-
-def parse(term, source, pos=0):
-    parser = Parser(source)
-    ans = parser.parse(term, pos)
-    if ans is ParseFailure:
-        raise ParseError()
-    else:
-        return ans
+        yield ParseResult(tuple(ans), pos)
 
 
 def parse_all(term, source):
     term = Left(term, End())
     ans = parse(term, source)
-    if isinstance(ans, ParseResult):
-        return ans.value
-    else:
-        raise ParseError()
+    return ans.value
+
+
+def parse(term, source):
+    parser = Parser(source)
+    return parser.run(term)

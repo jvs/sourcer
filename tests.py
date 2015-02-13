@@ -336,5 +336,17 @@ class TestTokenizer(unittest.TestCase):
             self.assertEqual(token.content, str(index + 1))
 
 
+class RegressionTests(unittest.TestCase):
+    def test_stack_depth(self):
+        test = ('(1+' * 100) + '1' + (')' * 100)
+        Parens = Middle('(', Lazy(lambda: Add), ')')
+        Term = Parens | '1'
+        Add = (Term, '+', Term) | Term
+        ans = parse_all(Add, test)
+        self.assertIsInstance(ans, tuple)
+        self.assertEqual(ans[0], '1')
+        self.assertEqual(ans[1], '+')
+
+
 if __name__ == '__main__':
     unittest.main()
