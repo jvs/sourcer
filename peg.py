@@ -264,6 +264,7 @@ class Parser(object):
         self.source = source
         self.memo = {}
         self.stack = []
+        self.instances = {}
 
     def run(self, term):
         ans = self._start(term, 0)
@@ -281,16 +282,20 @@ class Parser(object):
             return ans
 
     def _start(self, term, pos):
-        if isinstance(term, TermMetaClass):
-            term = term()
-        if isinstance(term, Lazy):
+        while isinstance(term, Lazy):
             term = term.preparse()
+
+        if isinstance(term, TermMetaClass):
+            if term not in self.instances:
+                self.instances[term] = term()
+            term = self.instances[term]
 
         key = (term, pos)
         if key in self.memo:
             return self.memo[key]
-        generator = self._parse(term, pos)
+
         self.memo[key] = ParseFailure
+        generator = self._parse(term, pos)
         self.stack.append((key, generator))
         return None
 
