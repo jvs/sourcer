@@ -188,7 +188,8 @@ class BaseToken(Term): pass
 
 
 def Token(pattern_str, skip=False):
-    pattern = re.compile(pattern_str)
+    is_regex = isinstance(pattern_str, RegexType)
+    pattern = pattern_str if is_regex else Regex(pattern_str)
 
     class TokenType(BaseToken):
         def parse(self, source, pos):

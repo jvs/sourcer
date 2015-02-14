@@ -317,6 +317,13 @@ class TestTokenizer(unittest.TestCase):
         ans = self.tokenize(T, 'A B C')
         self.assertEqual(ans, list('A B C'))
 
+    def test_numbers_and_spaces_with_regexes(self):
+        T = Tokenizer()
+        Word = T(Regex(r'\w+'))
+        Space = T(re.compile(r'\s+'))
+        ans = self.tokenize(T, 'A B C')
+        self.assertEqual(ans, list('A B C'))
+
     def test_skip_spaces(self):
         T = Tokenizer()
         Number = T(r'\d+')
