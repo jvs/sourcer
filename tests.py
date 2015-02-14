@@ -42,12 +42,12 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(ans, 123)
 
     def test_left_assoc(self):
-        Add = LeftAssoc(Int, '+', Int)
+        Add = ReduceLeft(Int, '+', Int)
         ans = parse_all(Add, '1+2+3+4')
         self.assertEqual(ans, (((1, '+', 2), '+', 3), '+', 4))
 
     def test_right_assoc(self):
-        Arrow = RightAssoc(Int, '->', Int)
+        Arrow = ReduceRight(Int, '->', Int)
         ans = parse_all(Arrow, '1->2->3->4')
         self.assertEqual(ans, (1, '->', (2, '->', (3, '->', 4))))
 
@@ -201,8 +201,8 @@ class TestArithmeticExpressions(unittest.TestCase):
         Parens = Middle('(', E, ')')
         Negate = Transform(('-', F), lambda p: Negation(*p))
         Factor = Int | Parens | Negate
-        Term = LeftAssoc(Factor, Or('*', '/'), Factor) | Factor
-        Expr = LeftAssoc(Term, Or('+', '-'), Term) | Term
+        Term = ReduceLeft(Factor, Or('*', '/'), Factor) | Factor
+        Expr = ReduceLeft(Term, Or('+', '-'), Term) | Term
         return Expr
 
     def parse(self, source):
@@ -266,7 +266,7 @@ class TestCalculator(unittest.TestCase):
         def evaluate(left, op, right):
             return operators[op](left, right)
         def binop(left, op, right):
-            return LeftAssoc(left, op, right, evaluate)
+            return ReduceLeft(left, op, right, evaluate)
         Term = binop(Factor, Or('*', '/'), Factor) | Factor
         Expr = binop(Term, Or('+', '-'), Term) | Term
         return Expr

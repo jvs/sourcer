@@ -259,14 +259,14 @@ class Transform(Term):
 pack_tuple = (lambda *args: args)
 
 
-def LeftAssoc(left, op, right, transform=pack_tuple):
+def ReduceLeft(left, op, right, transform=pack_tuple):
     term = (left, Some((op, right)))
     assoc = lambda first, rest: transform(first, *rest)
     xform = lambda pair: reduce(assoc, pair[1], pair[0])
     return Transform(term, xform)
 
 
-def RightAssoc(left, op, right, transform=pack_tuple):
+def ReduceRight(left, op, right, transform=pack_tuple):
     term = (Some((left, op)), right)
     assoc = lambda prev, next: transform(next[0], next[1], prev)
     xform = lambda pair: reduce(assoc, reversed(pair[0]), pair[1])
@@ -362,7 +362,7 @@ class Parser(object):
             last = fields[-1][-1]
             build = _assoc_struct_builder(term, fields)
             is_left = issubclass(term, LeftAssocStruct)
-            cls = LeftAssoc if is_left else RightAssoc
+            cls = ReduceLeft if is_left else ReduceRight
             self.delegates[term] = cls(first, middle, last, build)
         return self._parse(self.delegates[term], pos)
 
