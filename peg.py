@@ -173,9 +173,7 @@ class Struct(Term):
         cls = self.__class__
         ans = cls.__new__(cls)
         object.__setattr__(ans, '<pos>', pos)
-        if not hasattr(self, '<fields>'):
-            yield ParseResult(ans, pos)
-        for field, value in getattr(self, '<fields>'):
+        for field, value in getattr(self, '<fields>', ()):
             next = yield ParseStep(value, pos)
             if next is ParseFailure:
                 yield ParseFailure
