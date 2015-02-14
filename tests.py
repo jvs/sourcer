@@ -8,6 +8,7 @@ from peg import *
 
 
 Int = Transform(Regex(r'\d+'), int)
+Name = Regex('\w+')
 Number = TokenClass(r'\d+')
 Negation = collections.namedtuple('Negation', 'operator, right')
 
@@ -160,6 +161,38 @@ class TestSimpleExpressions(unittest.TestCase):
         ans = parse_all(T, '()')
         self.assertEqual(ans, [])
 
+    def test_left_assoc_struct(self):
+        class Dot(LeftAssocStruct):
+            def __init__(self):
+                self.left = Name
+                self.op = '.'
+                self.right = Name
+            def __str__(self):
+                return '(%s).%s' % (self.left, self.right)
+        ans = parse_all(Dot, 'foo.bar.baz.qux')
+        self.assertIsInstance(ans, Dot)
+        self.assertEqual(ans.right, 'qux')
+        self.assertEqual(ans.left.right, 'baz')
+        self.assertEqual(ans.left.left.right, 'bar')
+        self.assertEqual(ans.left.left.left, 'foo')
+        self.assertEqual(str(ans), '(((foo).bar).baz).qux')
+
+    def test_right_assoc_struct(self):
+        class Arrow(RightAssocStruct):
+            def __init__(self):
+                self.left = Name
+                self.op = ' -> '
+                self.right = Name
+            def __str__(self):
+                return '%s -> (%s)' % (self.left, self.right)
+        ans = parse_all(Arrow, 'a -> b -> c -> d')
+        self.assertIsInstance(ans, Arrow)
+        self.assertEqual(ans.left, 'a')
+        self.assertEqual(ans.right.left, 'b')
+        self.assertEqual(ans.right.right.left, 'c')
+        self.assertEqual(ans.right.right.right, 'd')
+        self.assertEqual(str(ans), 'a -> (b -> (c -> (d)))')
+
 
 class TestArithmeticExpressions(unittest.TestCase):
     def grammar(self):
@@ -258,7 +291,6 @@ class TestCalculator(unittest.TestCase):
 
 class TestEagerLambdaCalculus(unittest.TestCase):
     def grammar(self):
-        Name = Regex('\w+')
         Parens = Middle('(', Lazy(lambda: Expr), ')')
 
         class Identifier(Struct):
@@ -280,7 +312,7 @@ class TestEagerLambdaCalculus(unittest.TestCase):
                 self.body = Expr
 
             def __repr__(self):
-                return '(\\%s: %r)' % (self.parameter, self.body)
+                return '(\\%s. %r)' % (self.parameter, self.body)
 
             def evaluate(self, env):
                 def callback(arg):
@@ -289,11 +321,11 @@ class TestEagerLambdaCalculus(unittest.TestCase):
                     return self.body.evaluate(child)
                 return callback
 
-        class Application(object):
-            def __init__(self, left, operator, right):
-                assert operator == ' '
-                self.left = left
-                self.right = right
+        class Application(LeftAssocStruct):
+            def __init__(self):
+                self.left = Operand
+                self.operator = ' '
+                self.right = Operand
 
             def __repr__(self):
                 return '%r %r' % (self.left, self.right)
@@ -304,8 +336,7 @@ class TestEagerLambdaCalculus(unittest.TestCase):
                 return left(right)
 
         Operand = Parens | Abstraction | Identifier
-        Operation = LeftAssoc(Operand, ' ', Operand, Application)
-        Expr = Operation | Operand
+        Expr = Application | Operand
         return Expr
 
     def test_expressions(self):

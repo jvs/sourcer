@@ -177,6 +177,21 @@ def struct_fields(cls):
     return ans
 
 
+class LeftAssocStruct(Struct): pass
+class RightAssocStruct(Struct): pass
+
+
+def _assoc_struct_builder(term, fields):
+    names = [p[0] for p in fields]
+    def build(left, op, right):
+        ans = term.__new__(term)
+        values = [left] + list(op) + [right]
+        for name, value in zip(names, values):
+            setattr(ans, name, value)
+        return ans
+    return build
+
+
 class Token(object):
     __metaclass__ = TermMetaClass
 
@@ -263,7 +278,8 @@ class Parser(object):
         self.source = source
         self.memo = {}
         self.stack = []
-        self.structs = {}
+        self.fieldmap = {}
+        self.delegates = {}
 
     def run(self, term):
         ans = self._start(term, 0)
@@ -321,16 +337,34 @@ class Parser(object):
         yield ParseResult(term, pos)
 
     def _parse_struct(self, term, pos):
-        if term not in self.structs:
-            self.structs[term] = struct_fields(term)
+        if term not in self.fieldmap:
+            self.fieldmap[term] = struct_fields(term)
+        if issubclass(term, (LeftAssocStruct, RightAssocStruct)):
+            return self._parse_assoc_struct(term, pos)
+        else:
+            return self._parse_simple_struct(term, pos)
+
+    def _parse_simple_struct(self, term, pos):
         ans = term.__new__(term)
-        for field, value in self.structs[term]:
+        for field, value in self.fieldmap[term]:
             next = yield ParseStep(value, pos)
             if next is ParseFailure:
                 yield ParseFailure
             setattr(ans, field, next.value)
             pos = next.pos
         yield ParseResult(ans, pos)
+
+    def _parse_assoc_struct(self, term, pos):
+        if term not in self.delegates:
+            fields = self.fieldmap[term]
+            first = fields[0][-1]
+            middle = tuple(p[-1] for p in fields[1:-1])
+            last = fields[-1][-1]
+            build = _assoc_struct_builder(term, fields)
+            is_left = issubclass(term, LeftAssocStruct)
+            cls = LeftAssoc if is_left else RightAssoc
+            self.delegates[term] = cls(first, middle, last, build)
+        return self._parse(self.delegates[term], pos)
 
     def _parse_regex(self, term, pos):
         if not isinstance(self.source, basestring):
