@@ -333,7 +333,7 @@ class Parser(object):
     def _parse_regex(self, term, pos):
         if not isinstance(self.source, basestring):
             yield ParseFailure
-        m = term.match(self.source[pos:])
+        m = term.match(self.source, pos)
         if m is None:
             yield ParseFailure
         else:
