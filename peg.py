@@ -167,25 +167,14 @@ class Struct(object):
     __metaclass__ = TermMetaClass
 
 
-def _build_struct(cls):
-    fields = []
-
-    class StructBuilder(cls):
+def struct_fields(cls):
+    ans = []
+    class collect_fields(cls):
         def __setattr__(self, name, value):
-            fields.append((name, value))
+            ans.append((name, value))
             cls.__setattr__(self, name, value)
-
-        def parse(self, source, pos):
-            ans = cls.__new__(cls)
-            for field, value in fields:
-                next = yield ParseStep(value, pos)
-                if next is ParseFailure:
-                    yield ParseFailure
-                setattr(ans, field, next.value)
-                pos = next.pos
-            yield ParseResult(ans, pos)
-
-    return StructBuilder()
+    collect_fields()
+    return ans
 
 
 class Token(object):
@@ -274,6 +263,7 @@ class Parser(object):
         self.source = source
         self.memo = {}
         self.stack = []
+        self.structs = {}
 
     def run(self, term):
         ans = self._start(term, 0)
@@ -291,7 +281,8 @@ class Parser(object):
             return ans
 
     def _start(self, term, pos):
-        term = self._resolve(term)
+        while isinstance(term, Lazy):
+            term = term.preparse()
         key = (term, pos)
         if key in self.memo:
             return self.memo[key]
@@ -300,15 +291,12 @@ class Parser(object):
         self.stack.append((key, generator))
         return None
 
-    def _resolve(self, term):
-        while isinstance(term, Lazy):
-            term = term.preparse()
-        is_struct = inspect.isclass(term) and issubclass(term, Struct)
-        return _build_struct(term) if is_struct else term
-
     def _parse(self, term, pos):
         if term is None:
             return self._parse_nothing(term, pos)
+
+        if inspect.isclass(term) and issubclass(term, Struct):
+            return self._parse_struct(term, pos)
 
         is_source_str = isinstance(self.source, basestring)
 
@@ -331,6 +319,18 @@ class Parser(object):
 
     def _parse_nothing(self, term, pos):
         yield ParseResult(term, pos)
+
+    def _parse_struct(self, term, pos):
+        if term not in self.structs:
+            self.structs[term] = struct_fields(term)
+        ans = term.__new__(term)
+        for field, value in self.structs[term]:
+            next = yield ParseStep(value, pos)
+            if next is ParseFailure:
+                yield ParseFailure
+            setattr(ans, field, next.value)
+            pos = next.pos
+        yield ParseResult(ans, pos)
 
     def _parse_regex(self, term, pos):
         if not isinstance(self.source, basestring):
