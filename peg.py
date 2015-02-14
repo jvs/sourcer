@@ -184,23 +184,23 @@ class Struct(Term):
         yield ParseResult(ans, pos)
 
 
-class BaseToken(Term): pass
+class Token(Term): pass
 
 
-def Token(pattern_str, skip=False):
+def TokenClass(pattern_str, skip=False):
     is_regex = isinstance(pattern_str, RegexType)
     pattern = pattern_str if is_regex else Regex(pattern_str)
 
-    class TokenType(BaseToken):
+    class NewClass(Token):
         def parse(self, source, pos):
-            if pos < len(source) and isinstance(source[pos], TokenType):
+            if pos < len(source) and isinstance(source[pos], NewClass):
                 yield ParseResult(source[pos], pos + 1)
 
             next = yield ParseStep(pattern, pos)
             if next is ParseFailure:
                 yield ParseFailure
             else:
-                ans = TokenType()
+                ans = NewClass()
                 ans.content = source[pos : next.pos]
                 yield ParseResult(ans, next.pos)
 
@@ -208,8 +208,8 @@ def Token(pattern_str, skip=False):
             arg = getattr(self, 'content', pattern_str)
             return 'Token(%r)' % arg
 
-    TokenType.skip = skip
-    return TokenType
+    NewClass.skip = skip
+    return NewClass
 
 
 def Content(token):
@@ -221,7 +221,7 @@ class Tokenizer(object):
         self.tokens = []
 
     def __call__(self, pattern_str, skip=False):
-        token = Token(pattern_str, skip=skip)
+        token = TokenClass(pattern_str, skip=skip)
         self.tokens.append(token)
         return token
 
@@ -351,7 +351,7 @@ class Parser(object):
         if pos >= len(self.source):
             yield ParseFailure
         next = self.source[pos]
-        if isinstance(next, BaseToken) and next.content == term:
+        if isinstance(next, Token) and next.content == term:
             yield ParseResult(term, pos + 1)
         else:
             yield ParseFailure

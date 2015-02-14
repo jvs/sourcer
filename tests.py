@@ -8,14 +8,14 @@ from peg import *
 
 
 Int = Transform(Regex(r'\d+'), int)
-Number = Token(r'\d+')
+Number = TokenClass(r'\d+')
 Negation = collections.namedtuple('Negation', 'operator, right')
 
 
 class TestSimpleExpressions(unittest.TestCase):
     def test_single_token_success(self):
         ans = parse_all(Number, '123')
-        self.assertIsInstance(ans, BaseToken)
+        self.assertIsInstance(ans, Token)
         self.assertIsInstance(ans, Number)
         self.assertEqual(ans.content, '123')
 
@@ -27,7 +27,7 @@ class TestSimpleExpressions(unittest.TestCase):
         ans = parse(Number, '123ABC')
         self.assertIsInstance(ans, ParseResult)
         token, pos = ans
-        self.assertIsInstance(token, BaseToken)
+        self.assertIsInstance(token, Token)
         self.assertIsInstance(token, Number)
         self.assertEqual(token.content, '123')
         self.assertEqual(pos, 3)
