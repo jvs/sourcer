@@ -341,7 +341,7 @@ class Parser(object):
     def _parse_text(self, term, pos):
         end = pos + len(term)
         part = self.source[pos : end]
-        yield ParseResult(part, end) if part == term else ParseFailure
+        yield ParseResult(term, end) if part == term else ParseFailure
 
     def _parse_token(self, term, pos):
         if pos >= len(self.source):
