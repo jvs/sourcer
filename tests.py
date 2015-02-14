@@ -63,6 +63,28 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(ans.sep, ',')
         self.assertEqual(ans.right, 20)
 
+    def test_two_simple_structs(self):
+        class NumberPair(Struct):
+            def __init__(self):
+                self.left = Int
+                self.sep = ','
+                self.right = Int
+
+        class LetterPair(Struct):
+            def __init__(self):
+                self.left = 'A'
+                self.sep = ','
+                self.right = 'B'
+
+        Pair = NumberPair | LetterPair
+        TwoPairs = (Pair, ',', Pair)
+        ans1, comma, ans2 = parse_all(TwoPairs, 'A,B,100,200')
+        self.assertIsInstance(ans1, LetterPair)
+        self.assertEqual((ans1.left, ans1.right), ('A', 'B'))
+        self.assertEqual(comma, ',')
+        self.assertIsInstance(ans2, NumberPair)
+        self.assertEqual((ans2.left, ans2.right), (100, 200))
+
     def test_simple_alt_sequence(self):
         Nums = Alt(Int, ',')
         ans = parse_all(Nums, '1,2,3,4')

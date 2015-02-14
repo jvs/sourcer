@@ -1,4 +1,5 @@
 from collections import namedtuple
+import inspect
 import re
 
 
@@ -64,7 +65,8 @@ def And(*terms):
 
 
 class Any(Term):
-    def parse(self, source, pos):
+    @staticmethod
+    def parse(source, pos):
         yield (ParseFailure if pos >= len(source)
             else ParseResult(source[pos], pos + 1))
 
@@ -76,7 +78,8 @@ class Expect(SimpleTerm):
 
 
 class End(Term):
-    def parse(self, source, pos):
+    @staticmethod
+    def parse(source, pos):
         at_end = (pos == len(source))
         yield ParseResult(None, pos) if at_end else ParseFailure
 
@@ -160,29 +163,33 @@ def Some(term):
     return Require(List(term), bool)
 
 
-class Struct(Term):
-    def __setattr__(self, name, value):
-        if not hasattr(self, '<pos>'):
-            assert name not in ('<fields>', '<pos>', 'parse')
-            if not hasattr(self, '<fields>'):
-                object.__setattr__(self, '<fields>', [])
-            getattr(self, '<fields>').append((name, value))
-        object.__setattr__(self, name, value)
-
-    def parse(self, source, pos):
-        cls = self.__class__
-        ans = cls.__new__(cls)
-        object.__setattr__(ans, '<pos>', pos)
-        for field, value in getattr(self, '<fields>', ()):
-            next = yield ParseStep(value, pos)
-            if next is ParseFailure:
-                yield ParseFailure
-            object.__setattr__(ans, field, next.value)
-            pos = next.pos
-        yield ParseResult(ans, pos)
+class Struct(object):
+    __metaclass__ = TermMetaClass
 
 
-class Token(Term): pass
+def _build_struct(cls):
+    fields = []
+
+    class StructBuilder(cls):
+        def __setattr__(self, name, value):
+            fields.append((name, value))
+            cls.__setattr__(self, name, value)
+
+        def parse(self, source, pos):
+            ans = cls.__new__(cls)
+            for field, value in fields:
+                next = yield ParseStep(value, pos)
+                if next is ParseFailure:
+                    yield ParseFailure
+                setattr(ans, field, next.value)
+                pos = next.pos
+            yield ParseResult(ans, pos)
+
+    return StructBuilder()
+
+
+class Token(object):
+    __metaclass__ = TermMetaClass
 
 
 def TokenClass(pattern_str, skip=False):
@@ -190,7 +197,8 @@ def TokenClass(pattern_str, skip=False):
     pattern = pattern_str if is_regex else Regex(pattern_str)
 
     class NewClass(Token):
-        def parse(self, source, pos):
+        @staticmethod
+        def parse(source, pos):
             if pos < len(source) and isinstance(source[pos], NewClass):
                 yield ParseResult(source[pos], pos + 1)
 
@@ -266,7 +274,6 @@ class Parser(object):
         self.source = source
         self.memo = {}
         self.stack = []
-        self.instances = {}
 
     def run(self, term):
         ans = self._start(term, 0)
@@ -294,15 +301,10 @@ class Parser(object):
         return None
 
     def _resolve(self, term):
-        while True:
-            if isinstance(term, Lazy):
-                term = term.preparse()
-            elif isinstance(term, TermMetaClass):
-                if term not in self.instances:
-                    self.instances[term] = term()
-                term = self.instances[term]
-            else:
-                return term
+        while isinstance(term, Lazy):
+            term = term.preparse()
+        is_struct = inspect.isclass(term) and issubclass(term, Struct)
+        return _build_struct(term) if is_struct else term
 
     def _parse(self, term, pos):
         if term is None:
@@ -366,7 +368,7 @@ class Parser(object):
 
 
 def parse_all(term, source):
-    term = Left(term, End())
+    term = Left(term, End)
     ans = parse(term, source)
     return ans.value
 
