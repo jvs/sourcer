@@ -15,14 +15,14 @@ Negation = collections.namedtuple('Negation', 'operator, right')
 
 class TestSimpleExpressions(unittest.TestCase):
     def test_single_token_success(self):
-        ans = parse_all(Number, '123')
+        ans = parse(Number, '123')
         self.assertIsInstance(ans, Token)
         self.assertIsInstance(ans, Number)
         self.assertEqual(ans.content, '123')
 
     def test_single_token_failure(self):
         with self.assertRaises(ParseError):
-            parse_all(Number, '123X')
+            parse(Number, '123X')
 
     def test_prefix_token_success(self):
         ans = parse_prefix(Number, '123ABC')
@@ -38,17 +38,17 @@ class TestSimpleExpressions(unittest.TestCase):
             parse_prefix(Number, 'ABC')
 
     def test_simple_transform(self):
-        ans = parse_all(Int, '123')
+        ans = parse(Int, '123')
         self.assertEqual(ans, 123)
 
     def test_left_assoc(self):
         Add = ReduceLeft(Int, '+', Int)
-        ans = parse_all(Add, '1+2+3+4')
+        ans = parse(Add, '1+2+3+4')
         self.assertEqual(ans, (((1, '+', 2), '+', 3), '+', 4))
 
     def test_right_assoc(self):
         Arrow = ReduceRight(Int, '->', Int)
-        ans = parse_all(Arrow, '1->2->3->4')
+        ans = parse(Arrow, '1->2->3->4')
         self.assertEqual(ans, (1, '->', (2, '->', (3, '->', 4))))
 
     def test_simple_struct(self):
@@ -58,7 +58,7 @@ class TestSimpleExpressions(unittest.TestCase):
                 self.sep = ','
                 self.right = Int
 
-        ans = parse_all(Pair, '10,20')
+        ans = parse(Pair, '10,20')
         self.assertIsInstance(ans, Pair)
         self.assertEqual(ans.left, 10)
         self.assertEqual(ans.sep, ',')
@@ -79,7 +79,7 @@ class TestSimpleExpressions(unittest.TestCase):
 
         Pair = NumberPair | LetterPair
         TwoPairs = (Pair, ',', Pair)
-        ans1, comma, ans2 = parse_all(TwoPairs, 'A,B,100,200')
+        ans1, comma, ans2 = parse(TwoPairs, 'A,B,100,200')
         self.assertIsInstance(ans1, LetterPair)
         self.assertEqual((ans1.left, ans1.right), ('A', 'B'))
         self.assertEqual(comma, ',')
@@ -88,77 +88,77 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_simple_alt_sequence(self):
         Nums = Alt(Int, ',')
-        ans = parse_all(Nums, '1,2,3,4')
+        ans = parse(Nums, '1,2,3,4')
         self.assertEqual(ans, [1,2,3,4])
 
     def test_opt_term_present(self):
         Seq = ('A', Opt('B'))
-        ans = parse_all(Seq, 'AB')
+        ans = parse(Seq, 'AB')
         self.assertEqual(ans, ('A', 'B'))
 
     def test_opt_term_missing_front(self):
         Seq = (Opt('A'), 'B')
-        ans = parse_all(Seq, 'B')
+        ans = parse(Seq, 'B')
         self.assertEqual(ans, (None, 'B'))
 
     def test_opt_term_missing_middle(self):
         Seq = ('A', Opt('B'), 'C')
-        ans = parse_all(Seq, 'AC')
+        ans = parse(Seq, 'AC')
         self.assertEqual(ans, ('A', None, 'C'))
 
     def test_opt_term_missing_end(self):
         Seq = ('A', Opt('B'))
-        ans = parse_all(Seq, 'A')
+        ans = parse(Seq, 'A')
         self.assertEqual(ans, ('A', None))
 
     def test_left_term(self):
         T = Left('A', 'B')
-        ans = parse_all(T, 'AB')
+        ans = parse(T, 'AB')
         self.assertEqual(ans, 'A')
 
     def test_right_term(self):
         T = Right('A', 'B')
-        ans = parse_all(T, 'AB')
+        ans = parse(T, 'AB')
         self.assertEqual(ans, 'B')
 
     def test_require_success(self):
         T = Require(List('A'), lambda ans: len(ans) > 2)
-        ans = parse_all(T, 'AAA')
+        ans = parse(T, 'AAA')
         self.assertEqual(ans, list('AAA'))
 
     def test_require_failure(self):
         T = Require(List('A'), lambda ans: len(ans) > 2)
         with self.assertRaises(ParseError):
-            ans = parse_all(T, 'AA')
+            ans = parse(T, 'AA')
 
     def test_ordered_choice_first(self):
         T = (Or('A', 'AB'), 'B')
-        ans = parse_all(T, 'AB')
+        ans = parse(T, 'AB')
         self.assertEqual(ans, ('A', 'B'))
 
     def test_ordered_choice_second(self):
         T = Or('A', 'B')
-        ans = parse_all(T, 'B')
+        ans = parse(T, 'B')
         self.assertEqual(ans, 'B')
 
     def test_ordered_choice_third(self):
         T = Or(*'ABC')
-        ans = parse_all(T, 'C')
+        ans = parse(T, 'C')
         self.assertEqual(ans, 'C')
 
     def test_and_operator(self):
         T = And('ABC', 'A')
-        ans = parse_all(T, 'ABC')
+        ans = parse(T, 'ABC')
         self.assertEqual(ans, 'ABC')
 
     def test_expect_term(self):
         T = (Expect('A'), 'A')
-        ans = parse_all(T, 'A')
+        ans = parse(T, 'A')
         self.assertEqual(ans, ('A', 'A'))
 
     def test_empty_alt_term(self):
         T = Middle('(', Alt('A', ','), ')')
-        ans = parse_all(T, '()')
+        ans = parse(T, '()')
         self.assertEqual(ans, [])
 
     def test_left_assoc_struct(self):
@@ -169,7 +169,7 @@ class TestSimpleExpressions(unittest.TestCase):
                 self.right = Name
             def __str__(self):
                 return '(%s).%s' % (self.left, self.right)
-        ans = parse_all(Dot, 'foo.bar.baz.qux')
+        ans = parse(Dot, 'foo.bar.baz.qux')
         self.assertIsInstance(ans, Dot)
         self.assertEqual(ans.right, 'qux')
         self.assertEqual(ans.left.right, 'baz')
@@ -185,7 +185,7 @@ class TestSimpleExpressions(unittest.TestCase):
                 self.right = Name
             def __str__(self):
                 return '%s -> (%s)' % (self.left, self.right)
-        ans = parse_all(Arrow, 'a -> b -> c -> d')
+        ans = parse(Arrow, 'a -> b -> c -> d')
         self.assertIsInstance(ans, Arrow)
         self.assertEqual(ans.left, 'a')
         self.assertEqual(ans.right.left, 'b')
@@ -206,7 +206,7 @@ class TestArithmeticExpressions(unittest.TestCase):
         return Expr
 
     def parse(self, source):
-        return parse_all(self.grammar(), source)
+        return parse(self.grammar(), source)
 
     def test_ints(self):
         for i in range(10):
@@ -285,7 +285,7 @@ class TestCalculator(unittest.TestCase):
             '8/4/2',
         ]
         for expression in expressions:
-            ans = parse_all(grammar, expression)
+            ans = parse(grammar, expression)
             self.assertEqual(ans, eval(expression))
 
 
@@ -353,7 +353,7 @@ class TestEagerLambdaCalculus(unittest.TestCase):
             (r'(\x. \y. \t. t x y) a b (\x. \y. y)', 'b'),
         ]
         for (test, expectation) in testcases:
-            ast = parse_all(grammar, test)
+            ast = parse(grammar, test)
             ans = ast.evaluate({})
             self.assertEqual(ans, expectation)
 
@@ -402,7 +402,7 @@ class RegressionTests(unittest.TestCase):
         Parens = Middle('(', Lazy(lambda: Add), ')')
         Term = Parens | '1'
         Add = (Term, '+', Term) | Term
-        ans = parse_all(Add, test)
+        ans = parse(Add, test)
         self.assertIsInstance(ans, tuple)
         self.assertEqual(ans[0], '1')
         self.assertEqual(ans[1], '+')

@@ -237,7 +237,7 @@ class Tokenizer(object):
 
     def run(self, source):
         main = List(Or(*self.tokens))
-        ans = parse_all(main, source)
+        ans = parse(main, source)
         return [t for t in ans if not t.skip]
 
 
@@ -401,7 +401,7 @@ class Parser(object):
         yield ParseResult(tuple(ans), pos)
 
 
-def parse_all(term, source):
+def parse(term, source):
     whole = Left(term, End)
     ans = parse_prefix(whole, source)
     return ans.value
