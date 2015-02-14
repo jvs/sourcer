@@ -285,22 +285,25 @@ class Parser(object):
             return ans
 
     def _start(self, term, pos):
-        while isinstance(term, Lazy):
-            term = term.preparse()
-
-        if isinstance(term, TermMetaClass):
-            if term not in self.instances:
-                self.instances[term] = term()
-            term = self.instances[term]
-
+        term = self._resolve(term)
         key = (term, pos)
         if key in self.memo:
             return self.memo[key]
-
         self.memo[key] = ParseFailure
         generator = self._parse(term, pos)
         self.stack.append((key, generator))
         return None
+
+    def _resolve(self, term):
+        while True:
+            if isinstance(term, Lazy):
+                term = term.preparse()
+            elif isinstance(term, TermMetaClass):
+                if term not in self.instances:
+                    self.instances[term] = term()
+                term = self.instances[term]
+            else:
+                return term
 
     def _parse(self, term, pos):
         if term is None:
