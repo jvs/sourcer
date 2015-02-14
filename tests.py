@@ -25,7 +25,7 @@ class TestSimpleExpressions(unittest.TestCase):
             parse_all(Number, '123X')
 
     def test_prefix_token_success(self):
-        ans = parse(Number, '123ABC')
+        ans = parse_prefix(Number, '123ABC')
         self.assertIsInstance(ans, ParseResult)
         token, pos = ans
         self.assertIsInstance(token, Token)
@@ -35,7 +35,7 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_prefix_token_failure(self):
         with self.assertRaises(ParseError):
-            parse(Number, 'ABC')
+            parse_prefix(Number, 'ABC')
 
     def test_simple_transform(self):
         ans = parse_all(Int, '123')

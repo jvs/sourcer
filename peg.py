@@ -402,11 +402,11 @@ class Parser(object):
 
 
 def parse_all(term, source):
-    term = Left(term, End)
-    ans = parse(term, source)
+    whole = Left(term, End)
+    ans = parse_prefix(whole, source)
     return ans.value
 
 
-def parse(term, source):
+def parse_prefix(term, source):
     parser = Parser(source)
     return parser.run(term)
