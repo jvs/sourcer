@@ -153,6 +153,10 @@ class Or(Term):
         yield ParseFailure
 
 
+def Where(test):
+    return Require(Any, test)
+
+
 class Require(Term):
     def __init__(self, term, condition):
         self.term = term

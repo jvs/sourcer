@@ -193,6 +193,16 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(ans.right.right.right, 'd')
         self.assertEqual(str(ans), 'a -> (b -> (c -> (d)))')
 
+    def test_simple_where_term(self):
+        vowels = 'aeiou'
+        Vowel = Where(lambda x: x in vowels)
+        Consonant = Where(lambda x: x not in vowels)
+        Pattern = (Consonant, Vowel, Consonant)
+        ans = parse(Pattern, 'bar')
+        self.assertEqual(ans, tuple('bar'))
+        with self.assertRaises(ParseError):
+            parse(Pattern, 'foo')
+
     def test_list_of_numbers_as_source(self):
         Odd = Literal(1) | Literal(3)
         Even = Literal(2) | Literal(4)
@@ -200,6 +210,20 @@ class TestSimpleExpressions(unittest.TestCase):
         Pairs = List(Pair)
         ans = parse(Pairs, [1, 2, 3, 4, 3, 2])
         self.assertEqual(ans, [(1, 2), (3, 4), (3, 2)])
+
+    def test_mixed_list_of_values_as_source(self):
+        Null = Literal(None)
+        Str = Where(lambda x: isinstance(x, basestring))
+        Int = Where(lambda x: isinstance(x, int))
+        Empty = Literal([])
+        Intro = Literal([0, 0, 0])
+        Body = (Intro, Empty, Int, Str, Null)
+        source = [[0, 0, 0], [], 15, "ok bye", None]
+        ans = parse(Body, source)
+        self.assertEqual(ans, tuple(source))
+        bad_source = [[0, 0, 1]] + source[1:]
+        with self.assertRaises(ParseError):
+            parse(Body, bad_source)
 
 
 class TestArithmeticExpressions(unittest.TestCase):
