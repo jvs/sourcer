@@ -112,6 +112,15 @@ class List(SimpleTerm):
         yield ParseResult(ans, pos)
 
 
+class Literal(Term):
+    def __init__(self, value):
+        self.value = value
+
+    def parse(self, source, pos):
+        is_match = (pos < len(source)) and source[pos] == self.value
+        yield ParseResult(self.value, pos + 1) if is_match else ParseFailure
+
+
 def Middle(left, middle, right):
     return Right(left, Left(middle, right))
 

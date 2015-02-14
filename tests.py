@@ -193,6 +193,14 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(ans.right.right.right, 'd')
         self.assertEqual(str(ans), 'a -> (b -> (c -> (d)))')
 
+    def test_list_of_numbers_as_source(self):
+        Odd = Literal(1) | Literal(3)
+        Even = Literal(2) | Literal(4)
+        Pair = (Odd, Even)
+        Pairs = List(Pair)
+        ans = parse(Pairs, [1, 2, 3, 4, 3, 2])
+        self.assertEqual(ans, [(1, 2), (3, 4), (3, 2)])
+
 
 class TestArithmeticExpressions(unittest.TestCase):
     def grammar(self):
