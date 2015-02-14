@@ -162,7 +162,7 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(ans, [])
 
     def test_left_assoc_struct(self):
-        class Dot(LeftAssocStruct):
+        class Dot(LeftAssoc):
             def __init__(self):
                 self.left = Name
                 self.op = '.'
@@ -178,7 +178,7 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(str(ans), '(((foo).bar).baz).qux')
 
     def test_right_assoc_struct(self):
-        class Arrow(RightAssocStruct):
+        class Arrow(RightAssoc):
             def __init__(self):
                 self.left = Name
                 self.op = ' -> '
@@ -321,7 +321,7 @@ class TestEagerLambdaCalculus(unittest.TestCase):
                     return self.body.evaluate(child)
                 return callback
 
-        class Application(LeftAssocStruct):
+        class Application(LeftAssoc):
             def __init__(self):
                 self.left = Operand
                 self.operator = ' '

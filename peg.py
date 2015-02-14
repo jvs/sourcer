@@ -177,8 +177,8 @@ def struct_fields(cls):
     return ans
 
 
-class LeftAssocStruct(Struct): pass
-class RightAssocStruct(Struct): pass
+class LeftAssoc(Struct): pass
+class RightAssoc(Struct): pass
 
 
 def _assoc_struct_builder(term, fields):
@@ -339,7 +339,7 @@ class Parser(object):
     def _parse_struct(self, term, pos):
         if term not in self.fieldmap:
             self.fieldmap[term] = struct_fields(term)
-        if issubclass(term, (LeftAssocStruct, RightAssocStruct)):
+        if issubclass(term, (LeftAssoc, RightAssoc)):
             return self._parse_assoc_struct(term, pos)
         else:
             return self._parse_simple_struct(term, pos)
@@ -361,7 +361,7 @@ class Parser(object):
             middle = tuple(p[-1] for p in fields[1:-1])
             last = fields[-1][-1]
             build = _assoc_struct_builder(term, fields)
-            is_left = issubclass(term, LeftAssocStruct)
+            is_left = issubclass(term, LeftAssoc)
             cls = ReduceLeft if is_left else ReduceRight
             self.delegates[term] = cls(first, middle, last, build)
         return self._parse(self.delegates[term], pos)
