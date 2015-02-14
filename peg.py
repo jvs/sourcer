@@ -201,13 +201,13 @@ def Token(pattern_str, skip=False):
             else:
                 ans = TokenType()
                 ans.content = source[pos : next.pos]
-                ans.skip = skip
                 yield ParseResult(ans, next.pos)
 
         def __repr__(self):
             arg = getattr(self, 'content', pattern_str)
             return 'Token(%r)' % arg
 
+    TokenType.skip = skip
     return TokenType
 
 
