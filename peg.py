@@ -71,6 +71,10 @@ class Any(Term):
             else ParseResult(source[pos], pos + 1))
 
 
+def AnyInst(*cls):
+    return Where(lambda x: isinstance(x, cls))
+
+
 class Expect(SimpleTerm):
     def parse(self, source, pos):
         ans = yield ParseStep(self.term, pos)

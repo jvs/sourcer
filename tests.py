@@ -213,8 +213,8 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_mixed_list_of_values_as_source(self):
         Null = Literal(None)
-        Str = Where(lambda x: isinstance(x, basestring))
-        Int = Where(lambda x: isinstance(x, int))
+        Str = AnyInst(basestring)
+        Int = AnyInst(int)
         Empty = Literal([])
         Intro = Literal([0, 0, 0])
         Body = (Intro, Empty, Int, Str, Null)
@@ -224,6 +224,16 @@ class TestSimpleExpressions(unittest.TestCase):
         bad_source = [[0, 0, 1]] + source[1:]
         with self.assertRaises(ParseError):
             parse(Body, bad_source)
+
+    def test_any_inst_with_multiple_classes(self):
+        Str = AnyInst(basestring)
+        Num = AnyInst(int, float)
+        Nums = (Num, Num, Str)
+        source = [0.0, 10, 'ok']
+        ans = parse(Nums, source)
+        self.assertEqual(ans, tuple(source))
+        with self.assertRaises(ParseError):
+            parse(Nums, [200, 'ok', 100])
 
 
 class TestArithmeticExpressions(unittest.TestCase):
