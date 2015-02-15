@@ -427,6 +427,14 @@ class TestTokenizer(unittest.TestCase):
             self.assertIsInstance(token, T.Number)
             self.assertEqual(token.content, str(index + 1))
 
+    def test_one_char_in_string(self):
+        T = Tokenizer()
+        T.Symbol = AnyChar('(.*[;,])?')
+        sample = '[]().*;;'
+        ans = self.tokenize(T, sample)
+        self.assertIsInstance(ans, list)
+        self.assertEqual(ans, list(sample))
+
 
 class RegressionTests(unittest.TestCase):
     def test_stack_depth(self):

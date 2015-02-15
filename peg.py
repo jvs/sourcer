@@ -242,6 +242,11 @@ def TokenClass(name, pattern):
     return NewClass
 
 
+def AnyChar(pattern):
+    assert isinstance(pattern, basestring)
+    return '[%s]' % re.escape(pattern)
+
+
 def Content(token):
     return Transform(token, lambda token: token.content)
 
