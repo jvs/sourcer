@@ -8,7 +8,7 @@ from peg import *
 
 
 Int = Transform(Regex(r'\d+'), int)
-Name = Regex('\w+')
+Name = Regex(r'\w+')
 Number = TokenClass('Number', r'\d+')
 Negation = collections.namedtuple('Negation', 'operator, right')
 
@@ -442,8 +442,39 @@ class TestTokenizer(unittest.TestCase):
         T.Symbol = AnyChar('(.*[;,])?')
         sample = '[]().*;;'
         ans = self.tokenize(T, sample)
-        self.assertIsInstance(ans, list)
         self.assertEqual(ans, list(sample))
+
+    def test_init_style(self):
+        class FooTokens(Tokenizer):
+            def __init__(self):
+                self.Space = Skip(r'\s+')
+                self.Word = r'[a-zA-Z_][a-zA-Z_0-9]*'
+                self.Symbol = Skip(AnyChar(',.;'))
+        sample = 'This is a test, everybody.'
+        ans = self.tokenize(FooTokens(), sample)
+        self.assertEqual(ans, ['This', 'is', 'a', 'test', 'everybody'])
+
+    def test_tokenize_and_parse(self):
+        class CalcTokens(Tokenizer):
+            def __init__(self):
+                self.Space = Skip(r'\s+')
+                self.Number = r'\d+'
+                self.Operator = AnyChar('+*-/')
+        class Factor(LeftAssoc):
+            def __init__(self):
+                self.left = Operand
+                self.operator = Or('/', '*')
+                self.right = Operand
+        class Term(LeftAssoc):
+            def __init__(self):
+                self.left = Factor | Operand
+                self.operator = Or('+', '-')
+                self.right = Factor | Operand
+        T = CalcTokens()
+        Operand = T.Number
+        sample = '1 + 2 * 3 - 4'
+        ans = tokenize_and_parse(T, Term, sample)
+        self.assertIsInstance(ans, Term)
 
 
 class RegressionTests(unittest.TestCase):

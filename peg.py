@@ -259,17 +259,17 @@ Skip = namedtuple('Skip', 'pattern')
 
 
 class Tokenizer(object):
-    def __init__(self, exports=None):
-        self.__exports = {}
-        self.__classes = []
-
     def __setattr__(self, name, value):
-        if not name.startswith('_Tokenizer__'):
-            value = TokenClass(name, value)
-            self.__classes.append(value)
-            if self.__exports is not None:
-                self.__exports[name] = value
+        assert name != '_Tokenizer__classes'
+        if not hasattr(self, '_Tokenizer__classes'):
+            object.__setattr__(self, '_Tokenizer__classes', [])
+        value = TokenClass(name, value)
+        self.__classes.append(value)
         object.__setattr__(self, name, value)
+
+    def export(self, dst):
+        dst.update(dict((cls.__name__, cls)
+            for cls in self.__classes if not cls.skip))
 
     def run(self, source):
         main = List(Or(*self.__classes))
@@ -446,3 +446,8 @@ def parse(term, source):
 def parse_prefix(term, source):
     parser = Parser(source)
     return parser.run(term)
+
+
+def tokenize_and_parse(tokenizer, term, source):
+    tokens = tokenizer.run(source)
+    return parse(term, tokens)
