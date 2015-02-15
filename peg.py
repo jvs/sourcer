@@ -208,10 +208,20 @@ def _assoc_struct_builder(term, fields):
 class Token(object):
     __metaclass__ = TermMetaClass
 
+    def __init__(self, content):
+        self.content = content
 
-def TokenClass(pattern_str, skip=False):
-    is_regex = isinstance(pattern_str, RegexType)
-    pattern = pattern_str if is_regex else Regex(pattern_str)
+    def __repr__(self):
+        name = self.__class__.__name__
+        return '%s(%r)' % (name, self.content)
+
+
+def TokenClass(name, pattern):
+    is_skipped = isinstance(pattern, Skip)
+    if is_skipped:
+        pattern = pattern.pattern
+    if not isinstance(pattern, RegexType):
+        pattern = Regex(pattern)
 
     class NewClass(Token):
         @staticmethod
@@ -223,15 +233,12 @@ def TokenClass(pattern_str, skip=False):
             if next is ParseFailure:
                 yield ParseFailure
             else:
-                ans = NewClass()
-                ans.content = source[pos : next.pos]
+                content = source[pos : next.pos]
+                ans = NewClass(content)
                 yield ParseResult(ans, next.pos)
 
-        def __repr__(self):
-            arg = getattr(self, 'content', pattern_str)
-            return 'Token(%r)' % arg
-
-    NewClass.skip = skip
+    NewClass.__name__ = name
+    NewClass.skip = is_skipped
     return NewClass
 
 
@@ -239,17 +246,24 @@ def Content(token):
     return Transform(token, lambda token: token.content)
 
 
-class Tokenizer(object):
-    def __init__(self):
-        self.tokens = []
+Skip = namedtuple('Skip', 'pattern')
 
-    def __call__(self, pattern_str, skip=False):
-        token = TokenClass(pattern_str, skip=skip)
-        self.tokens.append(token)
-        return token
+
+class Tokenizer(object):
+    def __init__(self, exports=None):
+        self.__exports = {}
+        self.__classes = []
+
+    def __setattr__(self, name, value):
+        if not name.startswith('_Tokenizer__'):
+            value = TokenClass(name, value)
+            self.__classes.append(value)
+            if self.__exports is not None:
+                self.__exports[name] = value
+        object.__setattr__(self, name, value)
 
     def run(self, source):
-        main = List(Or(*self.tokens))
+        main = List(Or(*self.__classes))
         ans = parse(main, source)
         return [t for t in ans if not t.skip]
 

@@ -9,7 +9,7 @@ from peg import *
 
 Int = Transform(Regex(r'\d+'), int)
 Name = Regex('\w+')
-Number = TokenClass(r'\d+')
+Number = TokenClass('Number', r'\d+')
 Negation = collections.namedtuple('Negation', 'operator, right')
 
 
@@ -397,34 +397,34 @@ class TestTokenizer(unittest.TestCase):
 
     def test_numbers_and_spaces(self):
         T = Tokenizer()
-        Word = T(r'\w+')
-        Space = T(r'\s+')
+        T.Word = r'\w+'
+        T.Space = r'\s+'
         ans = self.tokenize(T, 'A B C')
         self.assertEqual(ans, list('A B C'))
 
     def test_numbers_and_spaces_with_regexes(self):
         T = Tokenizer()
-        Word = T(Regex(r'\w+'))
-        Space = T(re.compile(r'\s+'))
+        T.Word = Regex(r'\w+')
+        T.Space = re.compile(r'\s+')
         ans = self.tokenize(T, 'A B C')
         self.assertEqual(ans, list('A B C'))
 
     def test_skip_spaces(self):
         T = Tokenizer()
-        Number = T(r'\d+')
-        Space = T(r'\s+', skip=True)
+        T.Number = r'\d+'
+        T.Space = Skip(r'\s+')
         ans = self.tokenize(T, '1 2 3')
         self.assertEqual(ans, list('123'))
 
     def test_token_types(self):
         T = Tokenizer()
-        Number = T(r'\d+')
-        Space = T(r'\s+', skip=True)
+        T.Number = r'\d+'
+        T.Space = Skip(r'\s+')
         tokens = T.run('1 2 3')
         self.assertIsInstance(tokens, list)
         self.assertEqual(len(tokens), 3)
         for index, token in enumerate(tokens):
-            self.assertIsInstance(token, Number)
+            self.assertIsInstance(token, T.Number)
             self.assertEqual(token.content, str(index + 1))
 
 
