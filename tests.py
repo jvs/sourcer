@@ -4,39 +4,40 @@ import collections
 import operator
 import re
 
-import peg
 from peg import *
 
 
 Int = Transform(Regex(r'\d+'), int)
 Name = Regex(r'\w+')
-Number = peg.TokenClass('Number', r'\d+')
 Negation = collections.namedtuple('Negation', 'operator, right')
+
+T = Tokenizer()
+T.Number = r'\d+'
 
 
 class TestSimpleExpressions(unittest.TestCase):
     def test_single_token_success(self):
-        ans = parse(Number, '123')
+        ans = parse(T.Number, '123')
         self.assertIsInstance(ans, Token)
-        self.assertIsInstance(ans, Number)
+        self.assertIsInstance(ans, T.Number)
         self.assertEqual(ans.content, '123')
 
     def test_single_token_failure(self):
         with self.assertRaises(ParseError):
-            parse(Number, '123X')
+            parse(T.Number, '123X')
 
     def test_prefix_token_success(self):
-        ans = parse_prefix(Number, '123ABC')
+        ans = parse_prefix(T.Number, '123ABC')
         self.assertIsInstance(ans, ParseResult)
         token, pos = ans
         self.assertIsInstance(token, Token)
-        self.assertIsInstance(token, Number)
+        self.assertIsInstance(token, T.Number)
         self.assertEqual(token.content, '123')
         self.assertEqual(pos, 3)
 
     def test_prefix_token_failure(self):
         with self.assertRaises(ParseError):
-            parse_prefix(Number, 'ABC')
+            parse_prefix(T.Number, 'ABC')
 
     def test_simple_transform(self):
         ans = parse(Int, '123')
