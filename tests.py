@@ -4,12 +4,13 @@ import collections
 import operator
 import re
 
+import peg
 from peg import *
 
 
 Int = Transform(Regex(r'\d+'), int)
 Name = Regex(r'\w+')
-Number = TokenClass('Number', r'\d+')
+Number = peg.TokenClass('Number', r'\d+')
 Negation = collections.namedtuple('Negation', 'operator, right')
 
 
