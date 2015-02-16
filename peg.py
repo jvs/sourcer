@@ -104,6 +104,11 @@ def And(*terms):
 
 
 class Any(Term):
+    '''
+    Returns the next element of the input. Fails if the remaining input is
+    empty. This class can be used as a term directly, or it can be
+    instantiated.
+    '''
     @staticmethod
     def parse(source, pos):
         yield (ParseFailure if pos >= len(source)
