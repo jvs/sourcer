@@ -88,11 +88,6 @@ class End(Term):
         yield ParseResult(None, pos) if at_end else ParseFailure
 
 
-def Interleave(term, separator):
-    step = Right(separator, term)
-    return Left(Some(step), separator)
-
-
 class ForwardRef(SimpleTerm):
     def preparse(self):
         if not hasattr(self, 'cached_term'):
