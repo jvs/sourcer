@@ -238,8 +238,8 @@ class TestSimpleExpressions(unittest.TestCase):
 
 class TestArithmeticExpressions(unittest.TestCase):
     def grammar(self):
-        F = Lazy(lambda: Factor)
-        E = Lazy(lambda: Expr)
+        F = ForwardRef(lambda: Factor)
+        E = ForwardRef(lambda: Expr)
         Parens = Middle('(', E, ')')
         Negate = Transform(('-', F), lambda p: Negation(*p))
         Factor = Int | Parens | Negate
@@ -294,8 +294,8 @@ class TestArithmeticExpressions(unittest.TestCase):
 
 class TestCalculator(unittest.TestCase):
     def grammar(self):
-        F = Lazy(lambda: Factor)
-        E = Lazy(lambda: Expr)
+        F = ForwardRef(lambda: Factor)
+        E = ForwardRef(lambda: Expr)
         Parens = Middle('(', E, ')')
         Negate = Transform(Right('-', F), lambda x: -x)
         Factor = Int | Parens | Negate
@@ -333,7 +333,7 @@ class TestCalculator(unittest.TestCase):
 
 class TestEagerLambdaCalculus(unittest.TestCase):
     def grammar(self):
-        Parens = Middle('(', Lazy(lambda: Expr), ')')
+        Parens = Middle('(', ForwardRef(lambda: Expr), ')')
 
         class Identifier(Struct):
             def __init__(self):
@@ -480,7 +480,7 @@ class TestTokenizer(unittest.TestCase):
 class RegressionTests(unittest.TestCase):
     def test_stack_depth(self):
         test = ('(1+' * 100) + '1' + (')' * 100)
-        Parens = Middle('(', Lazy(lambda: Add), ')')
+        Parens = Middle('(', ForwardRef(lambda: Add), ')')
         Term = Parens | '1'
         Add = (Term, '+', Term) | Term
         ans = parse(Add, test)

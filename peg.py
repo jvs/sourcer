@@ -93,7 +93,7 @@ def Interleave(term, separator):
     return Left(Some(step), separator)
 
 
-class Lazy(SimpleTerm):
+class ForwardRef(SimpleTerm):
     def preparse(self):
         if not hasattr(self, 'cached_term'):
             self.cached_term = self.term()
@@ -333,7 +333,7 @@ class Parser(object):
             return ans
 
     def _start(self, term, pos):
-        while isinstance(term, Lazy):
+        while isinstance(term, ForwardRef):
             term = term.preparse()
         key = (term, pos)
         if key in self.memo:
