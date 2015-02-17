@@ -237,6 +237,13 @@ class TestSimpleExpressions(unittest.TestCase):
         with self.assertRaises(ParseError):
             parse(Nums, [200, 'ok', 100])
 
+    def test_bind_expression(self):
+        zs = Bind(Int, lambda count: 'z' * count)
+        ans = parse(zs, '4zzzz')
+        self.assertEqual(ans, 'zzzz')
+        with self.assertRaises(ParseError):
+            parse(zs, '4zzz')
+
 
 class TestArithmeticExpressions(unittest.TestCase):
     def grammar(self):
@@ -477,6 +484,150 @@ class TestTokenizer(unittest.TestCase):
         sample = '1 + 2 * 3 - 4'
         ans = tokenize_and_parse(T, Term, sample)
         self.assertIsInstance(ans, Term)
+
+
+class TestSignificantIndentation(unittest.TestCase):
+    def test_greedy_body(self):
+        Word = Regex(r'\w+')
+        # SHOULD: Consider implementing __eq__ and __hash__ in the Struct
+        # superclass. Also, consider providing a constructor that accepts
+        # keyword arguments. (Also, consider implementing __repr__, too.)
+        class Command(Struct):
+            def __init__(self):
+                self.message = Middle('print ', Word, '\n')
+            def __eq__(self, other):
+                return (isinstance(other, Command)
+                    and self.message == other.message)
+        class Loop(Struct):
+            def __init__(self):
+                self.count = Middle('loop ', Int, ' times\n')
+                self.body = Block
+            def __eq__(self, other):
+                return (isinstance(other, Loop)
+                    and self.count == other.count
+                    and self.body == other.body)
+        Statement = Command | Loop
+        def IndentedStatement(indent):
+            return Right(indent, Statement)
+        def IndentedBlock(indent):
+            return Some(IndentedStatement(indent))
+        Indent = Regex('[ \t]*')
+        Block = Bind(Expect(Indent), IndentedBlock)
+        Program = Middle('\n', Block, Indent)
+        ans1 = parse(Program, '''
+            print alfa
+            print bravo
+            loop 5 times
+                print charlie
+                print delta
+                loop 2 times
+                    print echo
+                    print foxtrot
+                print golf
+                print hotel
+            print india
+        ''')
+        def cmd(message):
+            ans = Command()
+            ans.message = message
+            return ans
+        def loop(count, body):
+            ans = Loop()
+            ans.count = count
+            ans.body = body
+            return ans
+        self.assertEqual(ans1, [
+            cmd('alfa'),
+            cmd('bravo'),
+            loop(5, [
+                cmd('charlie'),
+                cmd('delta'),
+                loop(2, [
+                    cmd('echo'),
+                    cmd('foxtrot'),
+                ]),
+                cmd('golf'),
+                cmd('hotel'),
+            ]),
+            cmd('india'),
+        ])
+        # The disadvantage with this approach is that
+        # it doesn't fail when the body isn't indented.
+        ans2 = parse(Program, '''
+            print juliett
+            loop 10 times
+            print kilo
+            print lima
+        ''')
+        self.assertEqual(ans2, [
+            cmd('juliett'),
+            loop(10, [
+                cmd('kilo'),
+                cmd('lima'),
+            ]),
+        ])
+        with self.assertRaises(ParseError):
+            parse(Program, '''
+                print mike
+                    print november
+            ''')
+
+    def test_careful_body(self):
+        Word = Regex(r'\w+')
+        class Command(Struct):
+            def __init__(self):
+                self.message = Middle('print ', Word, '\n')
+            def __eq__(self, other):
+                return (isinstance(other, Command)
+                    and self.message == other.message)
+        # SHOULD: Consider making a data-dependent struct.
+        # Alternately, consider making the bindings available
+        # to other rules.
+        def Loop(indent):
+            class LoopClass(Struct):
+                def __init__(self):
+                    self.count = Middle('loop ', Int, ' times\n')
+                    self.body = Opt(Block(indent))
+                def __eq__(self, other):
+                    return (hasattr(other, 'count')
+                        and self.count == other.count
+                        and self.body == other.body)
+            return LoopClass
+        def IndentedStatement(indent):
+            return Right(indent, Command | Loop(indent))
+        def Block(current):
+            indent = Require(Expect(Indent), lambda i: len(current) < len(i))
+            return Bind(indent, lambda i: List(IndentedStatement(i)))
+        Indent = Regex(' *')
+        Program = Middle('\n', Block(''), Indent)
+        def cmd(message):
+            ans = Command()
+            ans.message = message
+            return ans
+        def loop(count, body):
+            ans = Loop('')()
+            ans.count = count
+            ans.body = body
+            return ans
+        ans = parse(Program, '''
+            print alfa
+            loop 10 times
+            print bravo
+            print charlie
+        ''')
+        self.assertEqual(ans, [
+            cmd('alfa'),
+            loop(10, None),
+            cmd('bravo'),
+            cmd('charlie'),
+        ])
+        with self.assertRaises(ParseError):
+            parse(Program, '''
+                print foo
+                loop 20 times
+            print bar
+                print baz
+            ''')
 
 
 class RegressionTests(unittest.TestCase):

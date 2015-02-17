@@ -9,6 +9,7 @@ __all__ = [
     'Any',
     'AnyChar',
     'AnyInst',
+    'Bind',
     'Content',
     'End',
     'Expect',
@@ -117,6 +118,20 @@ class Any(Term):
 
 def AnyInst(*cls):
     return Where(lambda x: isinstance(x, cls))
+
+
+class Bind(Term):
+    def __init__(self, term, continuation):
+        self.term = term
+        self.continuation = continuation
+
+    def parse(self, source, pos):
+        arg = yield ParseStep(self.term, pos)
+        if arg is ParseFailure:
+            yield ParseFailure
+        next = self.continuation(arg.value)
+        ans = yield ParseStep(next, arg.pos)
+        yield ans
 
 
 class Expect(SimpleTerm):
