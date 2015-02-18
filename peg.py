@@ -14,18 +14,24 @@ __all__ = [
     'End',
     'Expect',
     'ForwardRef',
+    'InfixLeft',
+    'InfixRight',
     'Left',
     'LeftAssoc',
     'List',
     'Literal',
     'Middle',
     'Not',
+    'Operation',
+    'operator_table',
     'Opt',
     'Or',
     'parse',
     'parse_prefix',
     'ParseError',
     'ParseResult',
+    'Postfix',
+    'Prefix',
     'ReduceLeft',
     'ReduceRight',
     'Regex',
@@ -35,8 +41,8 @@ __all__ = [
     'Skip',
     'Some',
     'Struct',
-    'tokenize_and_parse',
     'Token',
+    'tokenize_and_parse',
     'Tokenizer',
     'Transform',
     'Where',
@@ -365,6 +371,44 @@ def ReduceRight(left, op, right, transform=pack_tuple):
     assoc = lambda prev, next: transform(next[0], next[1], prev)
     xform = lambda pair: reduce(assoc, reversed(pair[0]), pair[1])
     return Transform(term, xform)
+
+
+Operation = namedtuple('Operation', 'left, operator, right')
+
+
+class OperatorRow(object):
+    has_left = True
+    has_right = True
+    reduce_left = True
+
+    def __init__(self, *operators):
+        self.operator = operators
+
+    def build(self, Operand):
+        left = Operand if self.has_left else None
+        right = Operand if self.has_right else None
+        method = ReduceLeft if self.reduce_left else ReduceRight
+        return method(left, Or(*self.operator), right, Operation)
+
+
+class InfixLeft(OperatorRow): reduce_left = True
+class InfixRight(OperatorRow): reduce_left = False
+
+
+class Prefix(OperatorRow):
+    has_left = False
+    reduce_left = False
+
+
+class Postfix(OperatorRow):
+    has_right = False
+    reduce_left = True
+
+
+def operator_table(*rows):
+    ext = lambda Operand, row: row.build(Operand) | Operand
+    return reduce(ext, rows)
+
 
 
 class Parser(object):

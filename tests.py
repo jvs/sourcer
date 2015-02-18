@@ -249,6 +249,80 @@ class TestSimpleExpressions(unittest.TestCase):
             parse(zs, '4zzz')
 
 
+class TestOperatorTable(unittest.TestCase):
+    def grammar(self):
+        Parens = Middle('(', ForwardRef(lambda: Expr), ')')
+        Expr = operator_table(
+            Int | Parens,
+            Prefix('+', '-'),
+            Postfix('%'),
+            InfixRight('^'),
+            InfixLeft('*', '/'),
+            InfixLeft('+', '-'),
+        )
+        return Expr
+
+    def evaluate(self, obj):
+        if isinstance(obj, int):
+            return obj
+        evaluate = self.evaluate
+        assert isinstance(obj, Operation)
+        if obj.operator == '+' and obj.left is None:
+            return evaluate(obj.right)
+        if obj.operator == '-' and obj.left is None:
+            return -evaluate(obj.right)
+        if obj.operator == '%':
+            assert obj.right is None
+            return evaluate(obj.left) / 100.0
+        operators = {
+            '^': operator.pow,
+            '+': operator.add,
+            '-': operator.sub,
+            '*': operator.mul,
+            '/': operator.div,
+        }
+        left = evaluate(obj.left)
+        right = evaluate(obj.right)
+        func = operators[obj.operator]
+        return func(left, right)
+
+    def parse_and_evaluate(self, source):
+        ans = parse(self.grammar(), source)
+        return self.evaluate(ans)
+
+    def test_compatible_expressions(self):
+        testcases = [
+            '1',
+            '1+2',
+            '1+2*3',
+            '+1++2',
+            '+-+-1++--2',
+            '--1---2----3',
+            '1+1+1+1',
+            '1+2+3+4*5*6',
+            '1+2+3*4-(5+6)/7',
+            '(((1)))+(2)',
+            '8/4/2',
+            '(1+2)*3',
+            '1+(2*3)',
+            '(1+((2*(-3))/4))-5',
+        ]
+        for src in testcases:
+            ans = self.parse_and_evaluate(src)
+            self.assertEqual(ans, eval(src))
+
+    def test_incompatible_expressions(self):
+        testcases = {
+            '2^3^4': '2**(3**4)',
+            '1+2%': '1+(2/100.0)',
+            '1+205%%*3': '1+(205/100.0/100.0)*3',
+            '5^200%': '5**(200/100.0)',
+        }
+        for src, expected in testcases.iteritems():
+            ans = self.parse_and_evaluate(src)
+            self.assertEqual(ans, eval(expected))
+
+
 class TestArithmeticExpressions(unittest.TestCase):
     def grammar(self):
         F = ForwardRef(lambda: Factor)
