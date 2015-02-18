@@ -1,4 +1,4 @@
-peg
+sourcer
 ===
 
-Simple PEG library for Python.
+Simple parsing library for Python.
