@@ -252,7 +252,7 @@ class TestSimpleExpressions(unittest.TestCase):
 class TestOperatorTable(unittest.TestCase):
     def grammar(self):
         Parens = Middle('(', ForwardRef(lambda: Expr), ')')
-        Expr = operator_table(
+        Expr = precedence_table(
             Int | Parens,
             Prefix('+', '-'),
             Postfix('%'),
