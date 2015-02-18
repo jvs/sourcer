@@ -74,6 +74,12 @@ class ParsingOperand(object):
     def __rand__(self, other): return And(other, self)
     def __or__(self, other): return Or(self, other)
     def __ror__(self, other): return Or(other, self)
+    def __div__(self, other): return Alt(self, other, allow_trailer=True)
+    def __rdiv__(self, other): return Alt(other, self, allow_trailer=True)
+    def __truediv__(self, other): return Alt(self, other, allow_trailer=True)
+    def __rtruediv__(self, other): return Alt(other, self, allow_trailer=True)
+    def __floordiv__(self, other): return Alt(self, other, allow_trailer=False)
+    def __rfloordiv__(self, other): return Alt(other, self, allow_trailer=False)
 
 
 # These classes add the "&" and "|" parsing operators.
