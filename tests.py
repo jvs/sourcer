@@ -249,10 +249,10 @@ class TestSimpleExpressions(unittest.TestCase):
             parse(zs, '4zzz')
 
 
-class TestOperatorTable(unittest.TestCase):
+class TestOperatorPrecedenceTable(unittest.TestCase):
     def grammar(self):
         Parens = Middle('(', ForwardRef(lambda: Expr), ')')
-        Expr = precedence_table(
+        Expr = OperatorPrecedence(
             Int | Parens,
             Prefix('+', '-'),
             Postfix('%'),

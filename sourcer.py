@@ -23,6 +23,7 @@ __all__ = [
     'Middle',
     'Not',
     'Operation',
+    'OperatorPrecedence',
     'Opt',
     'Or',
     'parse',
@@ -30,7 +31,6 @@ __all__ = [
     'ParseError',
     'ParseResult',
     'Postfix',
-    'precedence_table',
     'Prefix',
     'ReduceLeft',
     'ReduceRight',
@@ -405,7 +405,7 @@ class Postfix(OperatorRow):
     reduce_left = True
 
 
-def precedence_table(*rows):
+def OperatorPrecedence(*rows):
     ext = lambda Operand, row: row.build(Operand) | Operand
     return reduce(ext, rows)
 
