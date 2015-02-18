@@ -149,9 +149,13 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(ans, 'C')
 
     def test_and_operator(self):
-        T = And('ABC', 'A')
-        ans = parse(T, 'ABC')
-        self.assertEqual(ans, 'ABC')
+        Vowel = Or(*'AEIOU')
+        Prefix = 'ABCD' & Vowel
+        T = (Prefix, Any)
+        ans = parse(T, 'ABCDE')
+        self.assertEqual(ans, ('ABCD', 'E'))
+        with self.assertRaises(ParseError):
+            parse(T, 'ABCD')
 
     def test_expect_term(self):
         T = (Expect('A'), 'A')

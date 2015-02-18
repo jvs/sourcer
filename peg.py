@@ -98,10 +98,8 @@ def Alt(term, separator, allow_trailer=True):
     return Transform(Opt(triple), lambda t: [t[0]] + t[1] if t else [])
 
 
-def And(*terms):
-    assert terms
-    args = tuple(Expect(t) for t in terms[1:]) + (terms[0],)
-    return Right(*args)
+def And(left, right):
+    return Left(left, Expect(right))
 
 
 class Any(Term):
