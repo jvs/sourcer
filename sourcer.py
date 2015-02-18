@@ -288,7 +288,7 @@ def TokenClass(name, pattern):
     is_skipped = isinstance(pattern, Skip)
     if is_skipped:
         pattern = pattern.pattern
-    if not isinstance(pattern, RegexType):
+    if isinstance(pattern, basestring):
         pattern = Regex(pattern)
 
     class NewClass(Token):
@@ -312,7 +312,7 @@ def TokenClass(name, pattern):
 
 def AnyChar(pattern):
     assert isinstance(pattern, basestring)
-    return '[%s]' % re.escape(pattern)
+    return Regex('[%s]' % re.escape(pattern))
 
 
 def Content(token):
