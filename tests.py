@@ -4,7 +4,7 @@ import collections
 import operator
 import re
 
-from peg import *
+from sourcer import *
 
 
 Int = Transform(Regex(r'\d+'), int)
