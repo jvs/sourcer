@@ -88,6 +88,7 @@ class ParsingOperand(object):
     def __rtruediv__(self, other): return Alt(other, self, allow_trailer=True)
     def __floordiv__(self, other): return Alt(self, other, allow_trailer=False)
     def __rfloordiv__(self, other): return Alt(other, self, allow_trailer=False)
+    def __invert__(self): return Opt(self)
 
 
 # These classes add the "&" and "|" parsing operators.

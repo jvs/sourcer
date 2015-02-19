@@ -113,6 +113,13 @@ class TestSimpleExpressions(unittest.TestCase):
         ans = parse(Seq, 'A')
         self.assertEqual(ans, ('A', None))
 
+    def test_opt_operator(self):
+        Seq = ('A', ~Right('A', 'B'))
+        ans1 = parse(Seq, 'AAB')
+        ans2 = parse(Seq, 'A')
+        self.assertEqual(ans1, ('A', 'B'))
+        self.assertEqual(ans2, ('A', None))
+
     def test_left_term(self):
         T = Left('A', 'B')
         ans = parse(T, 'AB')
