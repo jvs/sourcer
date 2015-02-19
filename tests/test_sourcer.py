@@ -7,8 +7,8 @@ import re
 from sourcer import *
 
 
-Int = Transform(Regex(r'\d+'), int)
-Name = Regex(r'\w+')
+Int = Transform(Pattern(r'\d+'), int)
+Name = Pattern(r'\w+')
 Negation = collections.namedtuple('Negation', 'operator, right')
 
 T = Tokenizer()
@@ -566,7 +566,7 @@ class TestTokenizer(unittest.TestCase):
 
 class TestSignificantIndentation(unittest.TestCase):
     def test_greedy_body(self):
-        Word = Regex(r'\w+')
+        Word = Pattern(r'\w+')
         # SHOULD: Consider implementing __eq__ and __hash__ in the Struct
         # superclass. Also, consider providing a constructor that accepts
         # keyword arguments. (Also, consider implementing __repr__, too.)
@@ -589,7 +589,7 @@ class TestSignificantIndentation(unittest.TestCase):
             return Right(indent, Statement)
         def IndentedBlock(indent):
             return Some(IndentedStatement(indent))
-        Indent = Regex('[ \t]*')
+        Indent = Pattern('[ \t]*')
         Block = Bind(Expect(Indent), IndentedBlock)
         Program = Middle('\n', Block, Indent)
         ans1 = parse(Program, '''
@@ -651,7 +651,7 @@ class TestSignificantIndentation(unittest.TestCase):
             ''')
 
     def test_careful_body(self):
-        Word = Regex(r'\w+')
+        Word = Pattern(r'\w+')
         class Command(Struct):
             def __init__(self):
                 self.message = Middle('print ', Word, '\n')
@@ -676,7 +676,7 @@ class TestSignificantIndentation(unittest.TestCase):
         def Block(current):
             indent = Require(Expect(Indent), lambda i: len(current) < len(i))
             return Bind(indent, lambda i: List(IndentedStatement(i)))
-        Indent = Regex(' *')
+        Indent = Pattern(' *')
         Program = Middle('\n', Block(''), Indent)
         def cmd(message):
             ans = Command()

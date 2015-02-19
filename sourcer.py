@@ -30,6 +30,7 @@ __all__ = [
     'parse_prefix',
     'ParseError',
     'ParseResult',
+    'Pattern',
     'Postfix',
     'Prefix',
     'ReduceLeft',
@@ -45,6 +46,7 @@ __all__ = [
     'tokenize_and_parse',
     'Tokenizer',
     'Transform',
+    'Verbose',
     'Where',
 ]
 
@@ -300,10 +302,12 @@ def TokenClass(name, pattern):
             next = yield ParseStep(pattern, pos)
             if next is ParseFailure:
                 yield ParseFailure
-            else:
-                content = source[pos : next.pos]
-                ans = NewClass(content)
-                yield ParseResult(ans, next.pos)
+
+            match = next.value
+            ans = NewClass(match.group(0))
+            for k, v in match.groupdict().iteritems():
+                setattr(ans, k, v)
+            yield ParseResult(ans, next.pos)
 
     NewClass.__name__ = name
     NewClass.skip = is_skipped
@@ -353,6 +357,10 @@ class Transform(Term):
         else:
             value = self.transform(ans.value)
             yield ParseResult(value, ans.pos)
+
+
+Pattern = lambda x: Transform(Regex(x), lambda m: m.group(0))
+Verbose = lambda x: Regex(x, re.VERBOSE)
 
 
 # Utility function to create a tuple from a variable number of arguments.
@@ -507,12 +515,8 @@ class Parser(object):
     def _parse_regex(self, term, pos):
         if not isinstance(self.source, basestring):
             yield ParseFailure
-        m = term.match(self.source, pos)
-        if m is None:
-            yield ParseFailure
-        else:
-            value = m.group(0)
-            yield ParseResult(value or None, pos + len(value))
+        match = term.match(self.source, pos)
+        yield ParseResult(match, match.end()) if match else ParseFailure
 
     def _parse_text(self, term, pos):
         end = pos + len(term)
