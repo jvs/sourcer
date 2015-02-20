@@ -15,6 +15,36 @@ T = Tokenizer()
 T.Number = r'\d+'
 
 
+class TestSomePotentiallyUsefulStrategies(unittest.TestCase):
+    def test_tokenize_indentation(self):
+        '''Use Backtrack and Lookback to recognize indentation tokens.'''
+        T = Tokenizer()
+        T.Word = r'\w+'
+        T.Newline = r'[\n\r]'
+
+        # If we look back and see a newline, or if we can't backtrack at all,
+        # then we know we're at the start of a fresh new line.
+        Startline = Lookback(T.Newline) | Not(Backtrack(1))
+
+        # An indent token is a non-empty sequence of spaces and tabs at the
+        # start of a line.
+        T.Indent = Right(Startline, Regex(r'[ \t]+'))
+
+        tokens = T.run('  foo\n    bar\n   baz\nqux')
+        contents = [t.content for t in tokens]
+        self.assertIsInstance(tokens[0], T.Indent)
+        self.assertIsInstance(tokens[3], T.Indent)
+        self.assertIsInstance(tokens[6], T.Indent)
+        self.assertIsInstance(tokens[1], T.Word)
+        self.assertIsInstance(tokens[2], T.Newline)
+        self.assertEqual(contents, [
+            '  ', 'foo', '\n',
+            '    ', 'bar', '\n',
+            '   ', 'baz', '\n',
+            'qux',
+        ])
+
+
 class TestSimpleExpressions(unittest.TestCase):
     def test_single_token_success(self):
         ans = parse(T.Number, '123')

@@ -50,6 +50,19 @@ class SimpleTerm(Term):
         self.term = term
 
 
+class Backtrack(Term):
+    '''
+    Moves the current position back by some number of spaces. If the new
+    position would be less than zero, then it fails and has no other effect.
+    '''
+    def __init__(self, count=1):
+        self.count = count
+
+    def parse(self, source, pos):
+        dst = pos - self.count
+        yield ParseFailure if dst < 0 else ParseResult(None, dst)
+
+
 def Alt(term, separator, allow_trailer=True):
     '''
     Parses a list of terms separated by a separator. Returns the elements
@@ -142,6 +155,14 @@ class Literal(Term):
 
 def Middle(left, middle, right):
     return Right(left, Left(middle, right))
+
+
+def Lookback(term, count=1):
+    '''
+    Moves the current position back by some number of spaces and then applies
+    the provided term.
+    '''
+    return Right(Backtrack(count), term)
 
 
 class Not(SimpleTerm):
