@@ -30,7 +30,9 @@ and install with::
 Example: Hello, World!
 ---------------------------------------
 
-Let's parse the string "Hello, World!", just to make sure the basics work::
+Let's parse the string "Hello, World!" (just to make sure the basics work):
+
+.. code:: python
 
     from sourcer import *
 
@@ -49,7 +51,9 @@ Let's parse the string "Hello, World!", just to make sure the basics work::
 Example: Parsing Arithmetic Expressions
 ---------------------------------------
 
-Here's a quick example showing how to use operator precedence parsing::
+Here's a quick example showing how to use operator precedence parsing:
+
+.. code:: python
 
     from sourcer import *
 
@@ -69,23 +73,23 @@ Here's a quick example showing how to use operator precedence parsing::
 
 Some notes about this example:
 
-* The `Pattern` term means "Compile the argument as a regular expression and
+* The ``Pattern`` term means "Compile the argument as a regular expression and
   return the matching string."
-* The `*` operator means take the parse-result from the left operand and then
+* The ``*`` operator means take the parse-result from the left operand and then
   apply the function on the right. In this case, the transform function is
-  simply `int`.
-* So in our example, the `Int` rule matches any string of digit characters
-  and produces the corresponding `int` value.
-* The `>>` operator means "Discard the result from the left operand. Just return
-  the result from the right operand."
-* The `<<` operator similarly means "Just return the result from the result from
-  the left operand and discard the result from the right operand."
-* So the `Parens` rule in our example parses an expression in parentheses
+  simply ``int``.
+* So in our example, the ``Int`` rule matches any string of digit characters
+  and produces the corresponding ``int`` value.
+* The ``>>`` operator means "Discard the result from the left operand. Just
+  return the result from the right operand."
+* The ``<<`` operator similarly means "Just return the result from the result
+  from the left operand and discard the result from the right operand."
+* So the ``Parens`` rule in our example parses an expression in parentheses
   and simply discards the parentheses.
-* The `ForwardRef` term is necessary because the `Parens` rule wants to refer to
-  the `Expr` rule, but it hasn't been defined by that point.
-* The `OperatorPrecedence` rule constructs the operator precedence table.
-  It parses operations and returns `Operation` objects.
+* The ``ForwardRef`` term is necessary because the ``Parens`` rule wants to
+  refer to the ``Expr`` rule, but it hasn't been defined by that point.
+* The ``OperatorPrecedence`` rule constructs the operator precedence table.
+  It parses operations and returns ``Operation`` objects.
 
 
 More Examples
