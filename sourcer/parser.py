@@ -62,9 +62,6 @@ class Parser(object):
 
         is_source_str = isinstance(self.source, basestring)
 
-        if term == '' and is_source_str:
-            return self._parse_nothing(term, pos)
-
         if isinstance(term, basestring) and is_source_str:
             return self._parse_text(term, pos)
 

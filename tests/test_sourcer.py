@@ -285,6 +285,15 @@ class TestSimpleExpressions(unittest.TestCase):
         with self.assertRaises(ParseError):
             parse(zs, '4zzz')
 
+    def test_parse_empty_string(self):
+        seq = ('', 'foo', '', 'bar', '')
+        ans = parse(seq, 'foobar')
+        self.assertEqual(ans, seq)
+        with self.assertRaises(ParseError):
+            parse(seq, 'foo bar')
+        alt = parse('', '')
+        self.assertEqual(alt, '')
+
 
 class TestOperatorPrecedenceTable(unittest.TestCase):
     def grammar(self):
