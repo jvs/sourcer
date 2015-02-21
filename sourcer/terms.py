@@ -19,11 +19,16 @@ ParseStep = namedtuple('ParseStep', 'term, pos')
 class ParsingOperand(object):
     '''
     This mixin-style class adds support for parsing operators:
-        a & b evaluates to And(a, b).
-        a | b evaluates to Or(a, b).
-        a / b evaluates to Alt(a, b, allow_trailer=True).
-        a // b evaluates to Alt(a, b, allow_trailer=False).
-        ~a evaluates to Opt(a).
+        a & b  ==  And(a, b)
+        a | b  ==  Or(a, b)
+        a / b  ==  Alt(a, b, allow_trailer=True)
+        a // b ==  Alt(a, b, allow_trailer=False)
+        ~a     ==  Opt(a)
+        a << b ==  Left(a, b)
+        a >> b ==  Right(a, b)
+        a ^ b  ==  Require(a, b)
+        a * b  ==  Transform(a, b)
+        a ** b ==  Bind(a, b)
     '''
     def __and__(self, other): return And(self, other)
     def __rand__(self, other): return And(other, self)
@@ -36,6 +41,13 @@ class ParsingOperand(object):
     def __floordiv__(self, other): return Alt(self, other, allow_trailer=False)
     def __rfloordiv__(self, other): return Alt(other, self, allow_trailer=False)
     def __invert__(self): return Opt(self)
+    def __lshift__(self, other): return Left(self, other)
+    def __rlshift__(self, other): return Left(other, self)
+    def __rshift__(self, other): return Right(self, other)
+    def __rrshift__(self, other): return Right(other, self)
+    def __mul__(self, other): return Transform(self, other)
+    def __pow__(self, other): return Bind(self, other)
+    def __xor__(self, other): return Require(self, other)
 
 
 # These classes add the "&" and "|" parsing operators.

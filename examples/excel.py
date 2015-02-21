@@ -100,4 +100,4 @@ def build_precedence_table(allow_unions):
 Expr = build_precedence_table(True)
 ExprElmt = build_precedence_table(False)
 ExprList = ~ExprElmt / ','
-Formula = Right(Opt('='), Expr)
+Formula = Opt('=') >> Expr

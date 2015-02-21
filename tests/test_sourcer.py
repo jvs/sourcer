@@ -155,8 +155,18 @@ class TestSimpleExpressions(unittest.TestCase):
         ans = parse(T, 'AB')
         self.assertEqual(ans, 'A')
 
+    def test_left_term_with_operator(self):
+        T = 'A' << Opt('B')
+        ans = parse(T, 'AB')
+        self.assertEqual(ans, 'A')
+
     def test_right_term(self):
         T = Right('A', 'B')
+        ans = parse(T, 'AB')
+        self.assertEqual(ans, 'B')
+
+    def test_right_term_with_operatorself(self):
+        T = Opt('A') >> 'B'
         ans = parse(T, 'AB')
         self.assertEqual(ans, 'B')
 
