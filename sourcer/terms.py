@@ -157,26 +157,10 @@ class Literal(Term):
         yield ParseResult(self.value, pos + 1) if is_match else ParseFailure
 
 
-def Middle(left, middle, right):
-    return Right(left, Left(middle, right))
-
-
-def Lookback(term, count=1):
-    '''
-    Moves the current position back by some number of spaces and then applies
-    the provided term.
-    '''
-    return Right(Backtrack(count), term)
-
-
 class Not(SimpleTerm):
     def parse(self, source, pos):
         ans = yield ParseStep(self.term, pos)
         yield ParseResult(None, pos) if ans is ParseFailure else ParseFailure
-
-
-def Opt(term):
-    return Or(term, None)
 
 
 class Or(Term):
@@ -195,6 +179,22 @@ class Or(Term):
             if ans is not ParseFailure:
                 yield ans
         yield ParseFailure
+
+
+def Middle(left, middle, right):
+    return Right(left, Left(middle, right))
+
+
+def Lookback(term, count=1):
+    '''
+    Moves the current position back by some number of spaces and then applies
+    the provided term.
+    '''
+    return Right(Backtrack(count), term)
+
+
+def Opt(term):
+    return Or(term, None)
 
 
 def Where(test):
