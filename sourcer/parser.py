@@ -26,6 +26,8 @@ class Parser(object):
         self.stack = []
         self.fieldmap = {}
         self.delegates = {}
+        is_str = isinstance(source, basestring)
+        self._parse_string = self._parse_text if is_str else self._parse_token
 
     def run(self, term):
         ans = self._start(term, 0)
@@ -60,13 +62,8 @@ class Parser(object):
         if inspect.isclass(term) and issubclass(term, Struct):
             return self._parse_struct(term, pos)
 
-        is_source_str = isinstance(self.source, basestring)
-
-        if isinstance(term, basestring) and is_source_str:
-            return self._parse_text(term, pos)
-
         if isinstance(term, basestring):
-            return self._parse_token(term, pos)
+            return self._parse_string(term, pos)
 
         if isinstance(term, RegexType):
             return self._parse_regex(term, pos)
