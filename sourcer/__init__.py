@@ -1,3 +1,8 @@
+from .parser import (
+    parse,
+    parse_prefix,
+)
+
 from .precedence import (
     InfixLeft,
     InfixRight,
@@ -37,11 +42,6 @@ from .terms import (
     Struct,
     Transform,
     Where,
-)
-
-from .parser import (
-    parse,
-    parse_prefix,
 )
 
 from .tokenizer import (
