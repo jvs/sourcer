@@ -78,25 +78,6 @@ class Backtrack(Term):
         yield ParseFailure if dst < 0 else ParseResult(None, dst)
 
 
-def Alt(term, separator, allow_trailer=True):
-    '''
-    Parses a list of terms separated by a separator. Returns the elements
-    in a normal list, and drops the separators.
-    '''
-    rest = List(Right(separator, term))
-    tail = Opt(separator) if allow_trailer else None
-    triple = (term, rest, tail)
-    return Transform(Opt(triple), lambda t: [t[0]] + t[1] if t else [])
-
-
-def And(left, right):
-    return Left(left, Expect(right))
-
-
-def AnyInst(*cls):
-    return Where(lambda x: isinstance(x, cls))
-
-
 class Bind(Term):
     def __init__(self, term, continuation):
         self.term = term
@@ -129,6 +110,26 @@ class ForwardRef(SimpleTerm):
         if not hasattr(self, 'cached_term'):
             self.cached_term = self.term()
         return self.cached_term
+
+
+def Alt(term, separator, allow_trailer=True):
+    '''
+    Parses a list of terms separated by a separator. Returns the elements
+    in a normal list, and drops the separators.
+    '''
+    rest = List(Right(separator, term))
+    tail = Opt(separator) if allow_trailer else None
+    triple = (term, rest, tail)
+    return Transform(Opt(triple), lambda t: [t[0]] + t[1] if t else [])
+
+
+def And(left, right):
+    return Left(left, Expect(right))
+
+
+def AnyInst(*cls):
+    return Where(lambda x: isinstance(x, cls))
+
 
 
 def Left(*args):
