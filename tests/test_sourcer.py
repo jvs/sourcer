@@ -24,7 +24,7 @@ class TestSomePotentiallyUsefulStrategies(unittest.TestCase):
 
         # If we look back and see a newline, or if we can't backtrack at all,
         # then we know we're at the start of a fresh new line.
-        Startline = Lookback(T.Newline) | Not(Backtrack(1))
+        Startline = Lookback(T.Newline) | Start
 
         # An indent token is a non-empty sequence of spaces and tabs at the
         # start of a line.

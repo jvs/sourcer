@@ -176,6 +176,12 @@ class Require(Term):
         yield ParseFailure if failed else ans
 
 
+class Start(Term):
+    @staticmethod
+    def parse(source, pos):
+        yield ParseResult(None, pos) if pos == 0 else ParseFailure
+
+
 class Struct(object):
     __metaclass__ = TermMetaClass
 
