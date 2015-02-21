@@ -112,30 +112,6 @@ class ForwardRef(SimpleTerm):
         return self.cached_term
 
 
-def Alt(term, separator, allow_trailer=True):
-    '''
-    Parses a list of terms separated by a separator. Returns the elements
-    in a normal list, and drops the separators.
-    '''
-    rest = List(Right(separator, term))
-    tail = Opt(separator) if allow_trailer else None
-    triple = (term, rest, tail)
-    return Transform(Opt(triple), lambda t: [t[0]] + t[1] if t else [])
-
-
-def And(left, right):
-    return Left(left, Expect(right))
-
-
-def AnyInst(*cls):
-    return Where(lambda x: isinstance(x, cls))
-
-
-
-def Left(*args):
-    return Transform(args, lambda ans: ans[0])
-
-
 class List(SimpleTerm):
     def parse(self, source, pos):
         ans = []
@@ -204,6 +180,29 @@ class Transform(Term):
         else:
             value = self.transform(ans.value)
             yield ParseResult(value, ans.pos)
+
+
+def Alt(term, separator, allow_trailer=True):
+    '''
+    Parses a list of terms separated by a separator. Returns the elements
+    in a normal list, and drops the separators.
+    '''
+    rest = List(Right(separator, term))
+    tail = Opt(separator) if allow_trailer else None
+    triple = (term, rest, tail)
+    return Transform(Opt(triple), lambda t: [t[0]] + t[1] if t else [])
+
+
+def And(left, right):
+    return Left(left, Expect(right))
+
+
+def AnyInst(*cls):
+    return Where(lambda x: isinstance(x, cls))
+
+
+def Left(*args):
+    return Transform(args, lambda ans: ans[0])
 
 
 def Middle(left, middle, right):
