@@ -53,6 +53,18 @@ class SimpleTerm(Term):
         self.term = term
 
 
+class Any(Term):
+    '''
+    Returns the next element of the input. Fails if the remaining input is
+    empty. This class can be used as a term directly, or it can be
+    instantiated.
+    '''
+    @staticmethod
+    def parse(source, pos):
+        yield (ParseFailure if pos >= len(source)
+            else ParseResult(source[pos], pos + 1))
+
+
 class Backtrack(Term):
     '''
     Moves the current position back by some number of spaces. If the new
@@ -79,18 +91,6 @@ def Alt(term, separator, allow_trailer=True):
 
 def And(left, right):
     return Left(left, Expect(right))
-
-
-class Any(Term):
-    '''
-    Returns the next element of the input. Fails if the remaining input is
-    empty. This class can be used as a term directly, or it can be
-    instantiated.
-    '''
-    @staticmethod
-    def parse(source, pos):
-        yield (ParseFailure if pos >= len(source)
-            else ParseResult(source[pos], pos + 1))
 
 
 def AnyInst(*cls):
