@@ -46,16 +46,14 @@ Let's parse the string "Hello, World!", just to make sure the basics work::
     assert person2 == 'Chief'
 
 
-
 Example: Parsing Arithmetic Expressions
 ---------------------------------------
 
-Here's a quick example showing how to use sourcer's support for
-operator precedence parsing::
+Here's a quick example showing how to use operator precedence parsing::
 
     from sourcer import *
 
-    Int = Transform(Pattern(r'\d+'), int)
+    Int = Pattern(r'\d+') * int
     Parens = '(' >> ForwardRef(lambda: Expr) << ')'
     Expr = OperatorPrecedence(
         Int | Parens,
@@ -68,11 +66,14 @@ operator precedence parsing::
     ans = parse(Expr, '1+2^3/4')
     assert ans == Operation(1, '+', Operation(Operation(2, '^', 3), '/', 4))
 
+
 Some notes about this example:
+
 * The `Pattern` term means "Compile the argument as a regular expression and
   return the matching string."
-* The `Transform` term means take the parse-result and apply the transform
-  function. In this case, the transform function is simply `int`.
+* The `*` operator means take the parse-result from the left operand and then
+  apply the function on the right. In this case, the transform function is
+  simply `int`.
 * So in our example, the `Int` rule matches any string of digit characters
   and produces the corresponding `int` value.
 * The `>>` operator means "Discard the result from the left operand. Just return
@@ -90,5 +91,5 @@ Some notes about this example:
 More Examples
 -------------
 Parsing `Excel formula <https://github.com/jvs/sourcer/tree/master/examples>`_
-and the corresponding
+and some corresponding
 `test cases <https://github.com/jvs/sourcer/blob/master/tests/test_excel.py>`_.
