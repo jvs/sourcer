@@ -192,6 +192,20 @@ class Require(Term):
         yield ParseFailure if failed else ans
 
 
+class Transform(Term):
+    def __init__(self, term, transform):
+        self.term = term
+        self.transform = transform
+
+    def parse(self, source, pos):
+        ans = yield ParseStep(self.term, pos)
+        if ans is ParseFailure:
+            yield ParseFailure
+        else:
+            value = self.transform(ans.value)
+            yield ParseResult(value, ans.pos)
+
+
 def Middle(left, middle, right):
     return Right(left, Left(middle, right))
 
@@ -259,20 +273,6 @@ def Content(token):
 
 
 Skip = namedtuple('Skip', 'pattern')
-
-
-class Transform(Term):
-    def __init__(self, term, transform):
-        self.term = term
-        self.transform = transform
-
-    def parse(self, source, pos):
-        ans = yield ParseStep(self.term, pos)
-        if ans is ParseFailure:
-            yield ParseFailure
-        else:
-            value = self.transform(ans.value)
-            yield ParseResult(value, ans.pos)
 
 
 Pattern = lambda x: Transform(Regex(x), lambda m: m.group(0))
