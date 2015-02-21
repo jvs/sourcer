@@ -21,7 +21,8 @@ If pip is not installed, use easy_install::
 
     easy_install sourcer
 
-Or download the source from github and install with::
+Or download the source from `github <https://github.com/jvs/sourcer>`_
+and install with::
 
     python setup.py install
 
