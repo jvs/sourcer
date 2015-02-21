@@ -56,5 +56,4 @@ class Postfix(OperatorRow):
 
 
 def OperatorPrecedence(*rows):
-    ext = lambda Operand, row: row.build(Operand) | Operand
-    return reduce(ext, rows)
+    return reduce(lambda prev, row: row.build(prev) | prev, rows)
