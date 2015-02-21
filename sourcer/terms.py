@@ -237,16 +237,6 @@ class Struct(object):
     __metaclass__ = TermMetaClass
 
 
-def struct_fields(cls):
-    ans = []
-    class collect_fields(cls):
-        def __setattr__(self, name, value):
-            ans.append((name, value))
-            cls.__setattr__(self, name, value)
-    collect_fields()
-    return ans
-
-
 class Token(object):
     __metaclass__ = TermMetaClass
 

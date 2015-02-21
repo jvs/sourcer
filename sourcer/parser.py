@@ -135,7 +135,7 @@ class Parser(object):
 
     def _parse_struct(self, term, pos):
         if term not in self.fieldmap:
-            self.fieldmap[term] = struct_fields(term)
+            self.fieldmap[term] = _struct_fields(term)
         if issubclass(term, (LeftAssoc, RightAssoc)):
             return self._parse_assoc_struct(term, pos)
         else:
@@ -203,3 +203,13 @@ def _assoc_struct_builder(term, fields):
             setattr(ans, name, value)
         return ans
     return build
+
+
+def _struct_fields(cls):
+    ans = []
+    class collect_fields(cls):
+        def __setattr__(self, name, value):
+            ans.append((name, value))
+            cls.__setattr__(self, name, value)
+    collect_fields()
+    return ans
