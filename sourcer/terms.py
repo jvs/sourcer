@@ -22,9 +22,12 @@ ParseStep = namedtuple('ParseStep', 'term, pos')
 
 class ParsingOperand(object):
     '''
-    This mixin-style class adds support for two parsing operators:
+    This mixin-style class adds support for parsing operators:
         a & b evaluates to And(a, b).
         a | b evaluates to Or(a, b).
+        a / b evaluates to Alt(a, b, allow_trailer=True).
+        a // b evaluates to Alt(a, b, allow_trailer=False).
+        ~a evaluates to Opt(a).
     '''
     def __and__(self, other): return And(self, other)
     def __rand__(self, other): return And(other, self)
