@@ -1,11 +1,6 @@
 import inspect
-import re
 from .terms import *
 from .precedence import *
-
-
-# Used to recognize regular expression objects.
-RegexType = type(re.compile(''))
 
 
 def parse(term, source):
@@ -62,16 +57,20 @@ class Parser(object):
         if inspect.isclass(term) and issubclass(term, Struct):
             return self._parse_struct(term, pos)
 
+        if isinstance(term, tuple):
+            return self._parse_tuple(term, pos)
+
         if isinstance(term, basestring):
             return self._parse_string(term, pos)
 
-        if isinstance(term, RegexType):
+        if hasattr(term, 'parse'):
+            return term.parse(self.source, pos)
+
+        if hasattr(term, 'match'):
             return self._parse_regex(term, pos)
 
-        if isinstance(term, tuple):
-            return self._parse_tuple(term, pos)
         else:
-            return term.parse(self.source, pos)
+            return Literal(term).parse(self.source, pos)
 
     def _parse_nothing(self, term, pos):
         yield ParseResult(term, pos)

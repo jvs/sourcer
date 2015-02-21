@@ -294,6 +294,14 @@ class TestSimpleExpressions(unittest.TestCase):
         alt = parse('', '')
         self.assertEqual(alt, '')
 
+    def test_default_literal(self):
+        msg = object()
+        seq = (0, 1, 2, msg)
+        ans = parse(seq, [0, 1, 2, msg])
+        self.assertEqual(ans, seq)
+        with self.assertRaises(ParseError):
+            parse(seq, [1, 2, msg])
+
 
 class TestOperatorPrecedenceTable(unittest.TestCase):
     def grammar(self):
