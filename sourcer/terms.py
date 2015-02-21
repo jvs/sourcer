@@ -18,7 +18,7 @@ ParseStep = namedtuple('ParseStep', 'term, pos')
 
 class ParsingOperand(object):
     '''
-    This mixin-style class adds support for parsing operators:
+    This mixin-style class adds support for parsing operators::
         a & b  ==  And(a, b)
         a | b  ==  Or(a, b)
         a / b  ==  Alt(a, b, allow_trailer=True)
@@ -66,6 +66,33 @@ class Any(Term):
     Returns the next element of the input. Fails if the remaining input is
     empty. This class can be used as a term directly, or it can be
     instantiated.
+
+    Example 1::
+        from sourcer import Any, parse
+
+        # Parse the number one, then any value, then the number 3.
+        # Note that the "Any" term does not need to be instantiated.
+        goal = (1, Any, 3)
+        ans = parse(goal, [1, 2, 3])
+        assert ans == (1, 2, 3)
+
+    Example 2::
+        from sourcer import Any, parse
+
+        # Try it again with a the string 'ok' in the middle position.
+        # Also, this time try instantiating the "Any" term.
+        goal = (1, Any(), 3)
+        ans = parse(goal, [1, 'ok', 3])
+        assert ans == (1, 'ok', 3)
+
+    Example 3::
+        from sourcer import Any, Middle, parse
+
+        # Parse any character surrounded by parentheses,
+        # discarding the parentheses.
+        goal = Middle('(', Any, ')')
+        ans = parse(goal, '(a)')
+        assert ans == 'a'
     '''
     @staticmethod
     def parse(source, pos):
@@ -77,6 +104,13 @@ class Backtrack(Term):
     '''
     Moves the current position back by some number of spaces. If the new
     position would be less than zero, then it fails and has no other effect.
+
+    Example::
+        from sourcer import *
+        # (The ">>" operator means "discard the result from the left operand".)
+        goal = Pattern(r'[a-z]+') >> Backtrack(1) >> 'o' >> Some('-')
+        ans = parse(goal, 'foo---')
+        assert ans == list('---')
     '''
     def __init__(self, count=1):
         self.count = count
@@ -133,6 +167,53 @@ class Let(Term):
 
 
 class List(SimpleTerm):
+    '''
+    Parse a term zero or more times and return the results as a list.
+
+    Example 1::
+        from sourcer import *
+
+        # Parse the string 'foo' zero or more times.
+        foos = List('foo')
+
+        # Try parsing 'foo' * 3.
+        # Assert that we receive a list of three 'foo'.
+        ans1 = parse(foos, 'foofoofoo')
+        assert ans1 == ['foo', 'foo', 'foo']
+
+        # Try parsing just one 'foo'.
+        # Assert that we receive a list of one 'foo'.
+        ans2 = parse(foos, 'foo')
+        assert ans2 == ['foo']
+
+        # Try parsing the empty string.
+        # Assert that we receive the empty list.
+        ans3 = parse(foos, '')
+        assert ans3 == []
+
+    Example 2::
+        from sourcer import *
+
+        # Parse a list of 'foo' followed by a list of 'bar'.
+        foos = List('foo')
+        bars = List('bar')
+        goal = (foos, bars)
+
+        # Try two 'foo' and two 'bar'.
+        # Assert that we receive a pair of two lists,
+        # one with two 'foo' and another with two 'bar'.
+        ans1 = parse(goal, 'foofoobarbar')
+        assert ans1 == (['foo', 'foo'], ['bar', 'bar'])
+
+        # Try parsing just the string 'bar'.
+        ans2 = parse(goal, 'bar')
+        assert ans2 == ([], ['bar'])
+
+        # Try parsing the empty string.
+        # Assert that we receive a pair of two empty lists.
+        ans3 = parse(goal, '')
+        assert ans3 == ([], [])
+    '''
     def parse(self, source, pos):
         ans = []
         while True:
