@@ -217,10 +217,6 @@ def Left(*args):
     return Transform(args, lambda ans: ans[0])
 
 
-def Middle(left, middle, right):
-    return Right(left, Left(middle, right))
-
-
 def Lookback(term, count=1):
     '''
     Moves the current position back by some number of spaces and then applies
@@ -229,12 +225,12 @@ def Lookback(term, count=1):
     return Right(Backtrack(count), term)
 
 
+def Middle(left, middle, right):
+    return Right(left, Left(middle, right))
+
+
 def Opt(term):
     return Or(term, None)
-
-
-def Where(test):
-    return Require(Any, test)
 
 
 def Right(*args):
@@ -243,3 +239,7 @@ def Right(*args):
 
 def Some(term):
     return Require(List(term), bool)
+
+
+def Where(test):
+    return Require(Any, test)
