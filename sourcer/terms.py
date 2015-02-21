@@ -120,6 +120,18 @@ class ForwardRef(SimpleTerm):
         return self.cached_term
 
 
+class Get(Term):
+    def __init__(self, name, default=ParseFailure):
+        self.name = name
+        self.default = default
+
+
+class Let(Term):
+    def __init__(self, name, term):
+        self.name = name
+        self.term = term
+
+
 class List(SimpleTerm):
     def parse(self, source, pos):
         ans = []

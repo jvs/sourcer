@@ -21,6 +21,7 @@ class Parser(object):
         self.stack = []
         self.fieldmap = {}
         self.delegates = {}
+        self.bindings = [(None, {})]
         is_str = isinstance(source, basestring)
         self._parse_string = self._parse_text if is_str else self._parse_token
 
@@ -34,6 +35,7 @@ class Parser(object):
             else:
                 key = self.stack.pop()[0]
                 self.memo[key] = ans
+                self._pop_scope(key[0])
         if ans is ParseFailure:
             raise ParseError()
         else:
@@ -55,9 +57,11 @@ class Parser(object):
             return self._parse_nothing(term, pos)
 
         if inspect.isclass(term) and issubclass(term, Struct):
+            self._push_scope(term)
             return self._parse_struct(term, pos)
 
         if isinstance(term, tuple):
+            self._push_scope(term)
             return self._parse_tuple(term, pos)
 
         if isinstance(term, basestring):
@@ -68,6 +72,15 @@ class Parser(object):
 
         if hasattr(term, 'match'):
             return self._parse_regex(term, pos)
+
+        if isinstance(term, Let):
+            return self._parse_let(term, pos)
+
+        if isinstance(term, Get):
+            return self._parse_get(term, pos)
+
+        if inspect.isfunction(term):
+            return self._parse_dependent_term(term, pos)
 
         else:
             return Literal(term).parse(self.source, pos)
@@ -134,6 +147,35 @@ class Parser(object):
             ans.append(next.value)
             pos = next.pos
         yield ParseResult(tuple(ans), pos)
+
+    def _parse_let(self, term, pos):
+        ans = yield ParseStep(term.term, pos)
+        if ans is not ParseFailure:
+            self.bindings[-1][-1][term.name] = ans.value
+        yield ans
+
+    def _parse_get(self, term, pos):
+        name = term.name
+        for _, scope in reversed(self.bindings):
+            if name in scope:
+                yield ParseResult(scope[name], pos)
+        ans = term.default
+        yield ans if ans is ParseFailure else ParseResult(ans, pos)
+
+    def _parse_dependent_term(self, term, pos):
+        (args, varargs, keywords, defaults) = inspect.getargspec(term)
+        assert not varargs and not keywords
+        assert len(args) == 1
+        defaults = defaults or ()
+        ans = Bind(Get(args[0], *defaults), term)
+        return self._parse(ans, pos)
+
+    def _push_scope(self, term):
+        self.bindings.append((term, {}))
+
+    def _pop_scope(self, term):
+        if term is self.bindings[-1][0]:
+            self.bindings.pop()
 
 
 def _assoc_struct_builder(term, fields):
