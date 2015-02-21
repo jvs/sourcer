@@ -1,5 +1,6 @@
 import inspect
 from .terms import *
+from .precedence import *
 
 
 # Used to recognize regular expression objects.
