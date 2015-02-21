@@ -181,6 +181,17 @@ class Or(Term):
         yield ParseFailure
 
 
+class Require(Term):
+    def __init__(self, term, condition):
+        self.term = term
+        self.condition = condition
+
+    def parse(self, source, pos):
+        ans = yield ParseStep(self.term, pos)
+        failed = (ans is ParseFailure) or not self.condition(ans.value)
+        yield ParseFailure if failed else ans
+
+
 def Middle(left, middle, right):
     return Right(left, Left(middle, right))
 
@@ -199,17 +210,6 @@ def Opt(term):
 
 def Where(test):
     return Require(Any, test)
-
-
-class Require(Term):
-    def __init__(self, term, condition):
-        self.term = term
-        self.condition = condition
-
-    def parse(self, source, pos):
-        ans = yield ParseStep(self.term, pos)
-        failed = (ans is ParseFailure) or not self.condition(ans.value)
-        yield ParseFailure if failed else ans
 
 
 def Right(*args):
