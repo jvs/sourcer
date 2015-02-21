@@ -15,11 +15,9 @@ from .terms import (
     Alt,
     And,
     Any,
-    AnyChar,
     AnyInst,
     Backtrack,
     Bind,
-    Content,
     End,
     Expect,
     ForwardRef,
@@ -33,22 +31,27 @@ from .terms import (
     Or,
     ParseError,
     ParseResult,
-    Pattern,
-    Regex,
     Require,
     Right,
-    Skip,
     Some,
     Struct,
-    Token,
     Transform,
-    Verbose,
     Where,
 )
 
 from .parser import (
     parse,
     parse_prefix,
+)
+
+from .tokenizer import (
+    AnyChar,
+    Content,
+    Pattern,
+    Regex,
+    Skip,
+    Token,
     tokenize_and_parse,
     Tokenizer,
+    Verbose,
 )

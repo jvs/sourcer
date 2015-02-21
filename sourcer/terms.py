@@ -1,5 +1,4 @@
 from collections import namedtuple
-import re
 
 
 # This module raises this exception when it cannot parse an input sequence.
@@ -12,9 +11,6 @@ ParseFailure = object()
 # is the index of the last item consumed by the parser, plus one. (So it's
 # the index of the next item that the parser should consume.)
 ParseResult = namedtuple('ParseResult', 'value, pos')
-
-# Convenience function.
-Regex = re.compile
 
 # Special return value used to control the parser.
 ParseStep = namedtuple('ParseStep', 'term, pos')
@@ -168,6 +164,10 @@ class Require(Term):
         yield ParseFailure if failed else ans
 
 
+class Struct(object):
+    __metaclass__ = TermMetaClass
+
+
 class Transform(Term):
     def __init__(self, term, transform):
         self.term = term
@@ -231,34 +231,3 @@ def Right(*args):
 
 def Some(term):
     return Require(List(term), bool)
-
-
-class Struct(object):
-    __metaclass__ = TermMetaClass
-
-
-class Token(object):
-    __metaclass__ = TermMetaClass
-
-    def __init__(self, content):
-        self.content = content
-
-    def __repr__(self):
-        name = self.__class__.__name__
-        return '%s(%r)' % (name, self.content)
-
-
-def AnyChar(pattern):
-    assert isinstance(pattern, basestring)
-    return Regex('[%s]' % re.escape(pattern))
-
-
-def Content(token):
-    return Transform(token, lambda token: token.content)
-
-
-Skip = namedtuple('Skip', 'pattern')
-
-
-Pattern = lambda x: Transform(Regex(x), lambda m: m.group(0))
-Verbose = lambda x: Regex(x, re.VERBOSE)
