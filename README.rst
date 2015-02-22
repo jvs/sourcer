@@ -36,16 +36,30 @@ Let's parse the string "Hello, World!" (just to make sure the basics work):
 
     from sourcer import *
 
-    # Let's parse strings like "Hello, foo!", and just keep the "foo" part:
+    # Let's parse strings like "Hello, foo!", and just keep the "foo" part.
     greeting = 'Hello' >> Opt(',') >> ' ' >> Pattern(r'\w+') << '!'
 
     # Let's try it on the string "Hello, World!"
     person1 = parse(greeting, 'Hello, World!')
     assert person1 == 'World'
 
-    # Now let's try omitting the comma, since we made it optional (with "Opt"):
+    # Now let's try omitting the comma, since we made it optional (with "Opt").
     person2 = parse(greeting, 'Hello Chief!')
     assert person2 == 'Chief'
+
+Some notes about this example:
+
+* The ``>>`` operator means "Discard the result from the left operand. Just
+  return the result from the right operand."
+  * ``Opt`` means "This term is optional. Parse it if it's there, otherwise just
+  keep going."
+* ``Pattern`` means "Compile the argument as a regular expression and return
+  the matching string."
+* The ``<<`` operator similarly means "Just return the result from the result
+  from the left operand and discard the result from the right operand."
+* So ``greeting`` means "Parse 'Hello', then optionally parse ',', then parse
+  a string of word characters, and finally parse '!'. Discard all of the results
+  except for the string of word characters."
 
 
 Example: Parsing Arithmetic Expressions
@@ -67,23 +81,25 @@ Here's a quick example showing how to use operator precedence parsing:
         InfixLeft('*', '/'),
         InfixLeft('+', '-'),
     )
-    ans = parse(Expr, '1+2^3/4')
-    assert ans == Operation(1, '+', Operation(Operation(2, '^', 3), '/', 4))
 
+    # Now let's try parsing an expression.
+    tree1 = parse(Expr, '1+2^3/4')
+    assert tree1 == Operation(1, '+', Operation(Operation(2, '^', 3), '/', 4))
+
+    # OK let's try putting some parentheses in the next one.
+    tree2 = parse(Expr, '1*(2+3)')
+    assert tree2 == Operation(1, '*', Operation(2, '+', 3))
+
+    # Finally, let's try using a unary operator in our expression.
+    tree3 = parse(Expr, '-1*2')
+    assert tree3 == Operation(Operation(None, '-', '1'), '*', 2)
 
 Some notes about this example:
 
-* The ``Pattern`` term means "Compile the argument as a regular expression and
-  return the matching string."
-* The ``*`` operator means take the parse-result from the left operand and then
-  apply the function on the right. In this case, the transform function is
-  simply ``int``.
+* The ``*`` operator means take the result from the left operand and then
+  apply the function on the right. In this case, the function is simply ``int``.
 * So in our example, the ``Int`` rule matches any string of digit characters
   and produces the corresponding ``int`` value.
-* The ``>>`` operator means "Discard the result from the left operand. Just
-  return the result from the right operand."
-* The ``<<`` operator similarly means "Just return the result from the result
-  from the left operand and discard the result from the right operand."
 * So the ``Parens`` rule in our example parses an expression in parentheses
   and simply discards the parentheses.
 * The ``ForwardRef`` term is necessary because the ``Parens`` rule wants to
