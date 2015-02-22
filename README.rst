@@ -169,6 +169,7 @@ tokenizer for the lambda calculus.
             self.Symbol = AnyChar(r'(\.)')
             self.Space = Skip(r'\s+')
 
+    # Run the tokenizer on a lambda term with a bunch of random whitespace.
     Tokens = LambdaTokens()
     ans1 = Tokens.run('\n (   x  y\n\t) ')
 
@@ -195,15 +196,12 @@ tokenizer for the lambda calculus.
 
 In this example, the ``Skip`` term tells the tokenizer that we want to ignore
 whitespace. The ``AnyChar`` term tell the tokenizer that a symbol can be any
-one of the characters ``'('``, ``\``, ``.``, ``)``. Alternatively, we could
-have used:
+one of the characters ``(``, ``\``, ``.``, ``)``. Alternatively, we could have
+used:
 
 .. code:: python
 
     Symbol = r'[(\\.)]'
-
-The ``AnyChar`` term helps readability when you have lots of symbols. In this
-case, it's not really necessary.
 
 
 Example 5: Customized Tokens
@@ -224,20 +222,23 @@ for your tokens. For example,
                 (?P<row_modifier>\$?)
                 (?P<row>\d+)
             ''')
+            # ... Other token defitions omitted ...
 
+    # Let's just try it on one token, to show the basic idea.
     Tokens = FormulaTokenizer()
     tmp = Tokens.run('$B4')
     assert len(tmp) == 1
     token = tmp[0]
+
+    # Assert that this token has the expected attributes.
+    assert token.content = '$B4'
     assert token.column_modifier == '$'
     assert token.column == 'B'
     assert token.row_modifier == ''
     assert token.row == '4'
 
 
-
-More Examples
--------------
-Parsing `Excel formula <https://github.com/jvs/sourcer/tree/master/examples>`_
-and some corresponding
-`test cases <https://github.com/jvs/sourcer/blob/master/tests/test_excel.py>`_.
+This example is taken from my `grammar for parsing Excel
+formula <https://github.com/jvs/sourcer/tree/master/examples>`_.
+You can find the corresponding `test cases
+here <https://github.com/jvs/sourcer/blob/master/tests/test_excel.py>`_.
