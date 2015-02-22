@@ -92,8 +92,9 @@ Here's a quick example showing how to use operator precedence parsing:
 
 Some notes about this example:
 
-* The ``*`` operator means take the result from the left operand and then
-  apply the function on the right. In this case, the function is simply ``int``.
+* The ``*`` operator means "Take the result from the left operand and then
+  apply the function on the right."
+* In this case, the function is simply ``int``.
 * So in our example, the ``Int`` rule matches any string of digit characters
   and produces the corresponding ``int`` value.
 * So the ``Parens`` rule in our example parses an expression in parentheses,
@@ -102,6 +103,53 @@ Some notes about this example:
   refer to the ``Expr`` rule, but ``Expr`` hasn't been defined by that point.
 * The ``OperatorPrecedence`` rule constructs the operator precedence table.
   It parses operations and returns ``Operation`` objects.
+
+
+Example: Building an Abstract Syntax Tree
+-----------------------------------------
+
+Let's try building a simple AST for the
+`lambda calculus <http://en.wikipedia.org/wiki/Lambda_calculus>`_. We can use
+``Struct`` classes to define the AST and the parser at the same time:
+
+.. code:: python
+
+    from sourcer import *
+
+    class Identifier(Struct):
+        def __init__(self):
+            self.name = Word
+
+        def __repr__(self):
+            return self.name
+
+    class Abstraction(Struct):
+        def __init__(self):
+            self.parameter = '\\' >> Word
+            self.body = '. ' >> Expr
+
+        def __repr__(self):
+            return r'(\%s. %r)' % (self.parameter, self.body)
+
+    class Application(LeftAssoc):
+        def __init__(self):
+            self.left = Operand << ' '
+            self.right = Operand
+
+        def __repr__(self):
+            return '%r %r' % (self.left, self.right)
+
+    Word = Pattern(r'\w+')
+    Parens = '(' >> ForwardRef(lambda: Expr) << ')'
+    Operand = Parens | Abstraction | Identifier
+    Expr = Application | Operand
+
+    tree = parse(Expr, r'(\x. x) y')
+    assert isinstance(tree, Application)
+    assert isinstance(tree.left, Abstraction)
+    assert isinstance(tree.right, Identifier)
+    assert repr(tree.left) == r'(\x. x)'
+    assert repr(tree.right) == 'y'
 
 
 More Examples
