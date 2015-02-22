@@ -51,7 +51,7 @@ Some notes about this example:
 
 * The ``>>`` operator means "Discard the result from the left operand. Just
   return the result from the right operand."
-  * ``Opt`` means "This term is optional. Parse it if it's there, otherwise just
+* ``Opt`` means "This term is optional. Parse it if it's there, otherwise just
   keep going."
 * ``Pattern`` means "Compile the argument as a regular expression and return
   the matching string."
