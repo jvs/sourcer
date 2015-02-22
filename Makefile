@@ -6,6 +6,7 @@ install:
 	python setup.py install
 
 test: clean
+	python -m tests.test_readme README.rst
 	python -m tests.test_examples
 	python -m tests.test_sourcer
 	python -m tests.test_excel
