@@ -51,15 +51,11 @@ Some notes about this example:
 
 * The ``>>`` operator means "Discard the result from the left operand. Just
   return the result from the right operand."
-* ``Opt`` means "This term is optional. Parse it if it's there, otherwise just
-  keep going."
-* ``Pattern`` means "Compile the argument as a regular expression and return
-  the matching string."
 * The ``<<`` operator similarly means "Just return the result from the result
   from the left operand and discard the result from the right operand."
-* So ``greeting`` means "Parse 'Hello', then optionally parse ',', then parse
-  a string of word characters, and finally parse '!'. Discard all of the results
-  except for the string of word characters."
+* ``Opt`` means "This term is optional. Parse it if it's there, otherwise just
+  keep going."
+* ``Pattern`` means "Parse strings that match this regular expression."
 
 
 Example: Parsing Arithmetic Expressions
@@ -86,13 +82,13 @@ Here's a quick example showing how to use operator precedence parsing:
     tree1 = parse(Expr, '1+2^3/4')
     assert tree1 == Operation(1, '+', Operation(Operation(2, '^', 3), '/', 4))
 
-    # OK let's try putting some parentheses in the next one.
+    # Let's try putting some parentheses in the next one.
     tree2 = parse(Expr, '1*(2+3)')
     assert tree2 == Operation(1, '*', Operation(2, '+', 3))
 
     # Finally, let's try using a unary operator in our expression.
     tree3 = parse(Expr, '-1*2')
-    assert tree3 == Operation(Operation(None, '-', '1'), '*', 2)
+    assert tree3 == Operation(Operation(None, '-', 1), '*', 2)
 
 Some notes about this example:
 
@@ -100,10 +96,10 @@ Some notes about this example:
   apply the function on the right. In this case, the function is simply ``int``.
 * So in our example, the ``Int`` rule matches any string of digit characters
   and produces the corresponding ``int`` value.
-* So the ``Parens`` rule in our example parses an expression in parentheses
-  and simply discards the parentheses.
+* So the ``Parens`` rule in our example parses an expression in parentheses,
+  discarding the parentheses.
 * The ``ForwardRef`` term is necessary because the ``Parens`` rule wants to
-  refer to the ``Expr`` rule, but it hasn't been defined by that point.
+  refer to the ``Expr`` rule, but ``Expr`` hasn't been defined by that point.
 * The ``OperatorPrecedence`` rule constructs the operator precedence table.
   It parses operations and returns ``Operation`` objects.
 
