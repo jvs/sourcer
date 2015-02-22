@@ -9,6 +9,8 @@ bad, but if you want to give it a try, go for it!
 Feel free to send me your feedback at vonseg@gmail.com. Or use the github
 `issue tracker <https://github.com/jvs/sourcer/issues>`_.
 
+.. contents::
+
 
 Installation
 ------------
@@ -27,8 +29,12 @@ and install with::
     python setup.py install
 
 
+Examples
+--------
+
+
 Example 1: Hello, World!
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Let's parse the string "Hello, World!" (just to make sure the basics work):
 
@@ -59,7 +65,7 @@ Some notes about this example:
 
 
 Example 2: Parsing Arithmetic Expressions
------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here's a quick example showing how to use operator precedence parsing:
 
@@ -106,7 +112,7 @@ Some notes about this example:
 
 
 Example 3: Building an Abstract Syntax Tree
--------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Let's try building a simple AST for the
 `lambda calculus <http://en.wikipedia.org/wiki/Lambda_calculus>`_. We can use
@@ -154,7 +160,7 @@ Let's try building a simple AST for the
 
 
 Example 4: Tokenizing
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 It's often useful to tokenize your input before parsing it. Let's create a
 tokenizer for the lambda calculus.
@@ -205,7 +211,7 @@ used:
 
 
 Example 5: Customized Tokens
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here's a handy thing: You can use Python's regex syntax to specify attributes
 for your tokens. For example,
