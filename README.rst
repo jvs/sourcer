@@ -210,8 +210,8 @@ used:
     Symbol = r'[(\\.)]'
 
 
-Example 5: Customized Tokens
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Example 5: Defining Token Attributes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here's a handy thing: You can use Python's regex syntax to specify attributes
 for your tokens. For example,
