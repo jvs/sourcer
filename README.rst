@@ -120,36 +120,37 @@ Let's try building a simple AST for the
         def __init__(self):
             self.name = Word
 
-        def __repr__(self):
-            return self.name
-
     class Abstraction(Struct):
         def __init__(self):
             self.parameter = '\\' >> Word
             self.body = '. ' >> Expr
 
-        def __repr__(self):
-            return r'(\%s. %r)' % (self.parameter, self.body)
-
     class Application(LeftAssoc):
         def __init__(self):
-            self.left = Operand << ' '
+            self.left = Operand
+            self.operator = ' '
             self.right = Operand
-
-        def __repr__(self):
-            return '%r %r' % (self.left, self.right)
 
     Word = Pattern(r'\w+')
     Parens = '(' >> ForwardRef(lambda: Expr) << ')'
     Operand = Parens | Abstraction | Identifier
     Expr = Application | Operand
 
-    tree = parse(Expr, r'(\x. x) y')
-    assert isinstance(tree, Application)
-    assert isinstance(tree.left, Abstraction)
-    assert isinstance(tree.right, Identifier)
-    assert repr(tree.left) == r'(\x. x)'
-    assert repr(tree.right) == 'y'
+    t1 = parse(Expr, r'(\x. x) y')
+    assert isinstance(t1, Application)
+    assert isinstance(t1.left, Abstraction)
+    assert isinstance(t1.right, Identifier)
+    assert t1.left.parameter == 'x'
+    assert t1.left.body.name == 'x'
+    assert t1.right.name == 'y'
+
+    t2 = parse(Expr, 'x y z')
+    assert isinstance(t2, Application)
+    assert isinstance(t2.left, Application)
+    assert isinstance(t2.right, Identifier)
+    assert t2.left.left.name == 'x'
+    assert t2.left.right.name == 'y'
+    assert t2.right.name == 'z'
 
 
 More Examples
