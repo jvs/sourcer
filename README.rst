@@ -27,8 +27,8 @@ and install with::
     python setup.py install
 
 
-Example: Hello, World!
----------------------------------------
+Example 1: Hello, World!
+------------------------
 
 Let's parse the string "Hello, World!" (just to make sure the basics work):
 
@@ -58,8 +58,8 @@ Some notes about this example:
 * ``Pattern`` means "Parse strings that match this regular expression."
 
 
-Example: Parsing Arithmetic Expressions
----------------------------------------
+Example 2: Parsing Arithmetic Expressions
+-----------------------------------------
 
 Here's a quick example showing how to use operator precedence parsing:
 
@@ -79,16 +79,16 @@ Here's a quick example showing how to use operator precedence parsing:
     )
 
     # Now let's try parsing an expression.
-    tree1 = parse(Expr, '1+2^3/4')
-    assert tree1 == Operation(1, '+', Operation(Operation(2, '^', 3), '/', 4))
+    t1 = parse(Expr, '1+2^3/4')
+    assert t1 == Operation(1, '+', Operation(Operation(2, '^', 3), '/', 4))
 
     # Let's try putting some parentheses in the next one.
-    tree2 = parse(Expr, '1*(2+3)')
-    assert tree2 == Operation(1, '*', Operation(2, '+', 3))
+    t2 = parse(Expr, '1*(2+3)')
+    assert t2 == Operation(1, '*', Operation(2, '+', 3))
 
     # Finally, let's try using a unary operator in our expression.
-    tree3 = parse(Expr, '-1*2')
-    assert tree3 == Operation(Operation(None, '-', 1), '*', 2)
+    t3 = parse(Expr, '-1*2')
+    assert t3 == Operation(Operation(None, '-', 1), '*', 2)
 
 Some notes about this example:
 
@@ -105,8 +105,8 @@ Some notes about this example:
   It parses operations and returns ``Operation`` objects.
 
 
-Example: Building an Abstract Syntax Tree
------------------------------------------
+Example 3: Building an Abstract Syntax Tree
+-------------------------------------------
 
 Let's try building a simple AST for the
 `lambda calculus <http://en.wikipedia.org/wiki/Lambda_calculus>`_. We can use
@@ -151,6 +151,89 @@ Let's try building a simple AST for the
     assert t2.left.left.name == 'x'
     assert t2.left.right.name == 'y'
     assert t2.right.name == 'z'
+
+
+Example 4: Tokenizing
+---------------------
+
+It's often useful to tokenize your input before parsing it. Let's create a
+tokenizer for the lambda calculus.
+
+.. code:: python
+
+    from sourcer import *
+
+    class LambdaTokens(Tokenizer):
+        def __init__(self):
+            self.Word = r'\w+'
+            self.Symbol = AnyChar(r'(\.)')
+            self.Space = Skip(r'\s+')
+
+    Tokens = LambdaTokens()
+    ans1 = Tokens.run('\n (   x  y\n\t) ')
+
+    # Assert that we didn't get any space tokens.
+    assert len(ans1) == 4
+    (t1, t2, t3, t4) = ans1
+    assert isinstance(t1, Tokens.Symbol) and t1.content == '('
+    assert isinstance(t2, Tokens.Word) and t2.content == 'x'
+    assert isinstance(t3, Tokens.Word) and t3.content == 'y'
+    assert isinstance(t4, Tokens.Symbol) and t4.content == ')'
+
+    # Let's use the tokenizer with a simple grammar, just to show how that
+    # works.
+    Sentence = Some(Tokens.Word) << '.'
+    ans2 = tokenize_and_parse(Tokens, Sentence, 'This is a test.')
+
+    # Assert that we got a list of Word tokens.
+    assert all(isinstance(i, Tokens.Word) for i in ans2)
+
+    # Assert that the tokens have the expected content.
+    contents = [i.content for i in ans2]
+    assert contents == ['This', 'is', 'a', 'test']
+
+
+In this example, the ``Skip`` term tells the tokenizer that we want to ignore
+whitespace. The ``AnyChar`` term tell the tokenizer that a symbol can be any
+one of the characters ``'('``, ``\``, ``.``, ``)``. Alternatively, we could
+have used:
+
+.. code:: python
+
+    Symbol = r'[(\\.)]'
+
+The ``AnyChar`` term helps readability when you have lots of symbols. In this
+case, it's not really necessary.
+
+
+Example 5: Customized Tokens
+----------------------------
+
+Here's a handy thing: You can use Python's regex syntax to specify attributes
+for your tokens. For example,
+
+.. code:: python
+
+    from sourcer import *
+
+    class FormulaTokenizer(Tokenizer):
+        def __init__(self):
+            self.A1Ref = Verbose(r'''
+                (?P<column_modifier>\$?)
+                (?P<column>I[A-V]|[A-H][A-Z]|[A-Z])
+                (?P<row_modifier>\$?)
+                (?P<row>\d+)
+            ''')
+
+    Tokens = FormulaTokenizer()
+    tmp = Tokens.run('$B4')
+    assert len(tmp) == 1
+    token = tmp[0]
+    assert token.column_modifier == '$'
+    assert token.column == 'B'
+    assert token.row_modifier == ''
+    assert token.row == '4'
+
 
 
 More Examples
