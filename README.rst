@@ -231,7 +231,7 @@ for your tokens. For example,
     token = tmp[0]
 
     # Assert that this token has the expected attributes.
-    assert token.content = '$B4'
+    assert token.content == '$B4'
     assert token.column_modifier == '$'
     assert token.column == 'B'
     assert token.row_modifier == ''
