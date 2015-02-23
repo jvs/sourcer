@@ -210,41 +210,8 @@ used:
     Symbol = r'[(\\.)]'
 
 
-Example 5: Defining Token Attributes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Here's a handy thing: You can use Python's regex syntax to specify attributes
-for your tokens. For example,
-
-.. code:: python
-
-    from sourcer import *
-
-    class FormulaTokenizer(Tokenizer):
-        def __init__(self):
-            self.A1Ref = Verbose(r'''
-                (?P<column_modifier>\$?)
-                (?P<column>I[A-V]|[A-H][A-Z]|[A-Z])
-                (?P<row_modifier>\$?)
-                (?P<row>\d+)
-            ''')
-            # ... Other token defitions omitted ...
-
-    # Let's just try it on one token, to show the basic idea.
-    Tokens = FormulaTokenizer()
-    tmp = Tokens.run('$B4')
-    assert len(tmp) == 1
-    token = tmp[0]
-
-    # Assert that this token has the expected attributes.
-    assert token.content == '$B4'
-    assert token.column_modifier == '$'
-    assert token.column == 'B'
-    assert token.row_modifier == ''
-    assert token.row == '4'
-
-
-This example is taken from my `grammar for parsing Excel
-formula <https://github.com/jvs/sourcer/tree/master/examples>`_.
-You can find the corresponding `test cases
-here <https://github.com/jvs/sourcer/blob/master/tests/test_excel.py>`_.
+ More Examples
+ -------------
+ Parsing `Excel formula <https://github.com/jvs/sourcer/tree/master/examples>`_
+ and some corresponding
+ `test cases <https://github.com/jvs/sourcer/blob/master/tests/test_excel.py>`_.
