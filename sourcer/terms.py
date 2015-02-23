@@ -165,8 +165,7 @@ class Get(Term):
 class Let(Term):
     def __init__(self, **kw):
         assert len(kw) == 1
-        self.name = kw.keys()[0]
-        self.term = kw.values()[0]
+        self.name, self.term = kw.items()[0]
 
 
 class List(SimpleTerm):
