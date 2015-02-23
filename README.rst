@@ -210,8 +210,8 @@ used:
     Symbol = r'[(\\.)]'
 
 
- More Examples
- -------------
- Parsing `Excel formula <https://github.com/jvs/sourcer/tree/master/examples>`_
- and some corresponding
- `test cases <https://github.com/jvs/sourcer/blob/master/tests/test_excel.py>`_.
+More Examples
+-------------
+Parsing `Excel formula <https://github.com/jvs/sourcer/tree/master/examples>`_
+and some corresponding
+`test cases <https://github.com/jvs/sourcer/blob/master/tests/test_excel.py>`_.
