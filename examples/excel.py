@@ -56,11 +56,11 @@ def _normalize_R1C1(token):
 class CellRef(Struct):
     def __init__(self):
         strip = lambda c: lambda x: x.content[1:-1].replace(c + c, c)
-        self.book = ~Middle('[', Name | String, ']')
-        self.sheet = ~Left(Cell | Name | Sheet, '!')
         String = Tokens.String * strip('"')
         Sheet = Tokens.Sheet * strip("'")
         Cell = Tokens.A1Ref | Tokens.R1C1Ref * _normalize_R1C1
+        self.book = ~Middle('[', Name | String, ']')
+        self.sheet = ~Left(Cell | Name | Sheet, '!')
         self.cell = Cell
 
     def __getattr__(self, name):
