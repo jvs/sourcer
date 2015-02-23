@@ -314,7 +314,7 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_simple_binding(self):
         Word = Pattern(r'\w+')
-        x = Let('x', Word)
+        x = Let(x=Word)
         seq = (x, '/', lambda x: x.upper())
         ans = parse(seq, 'foo/FOO')
         self.assertEqual(ans, ('foo', '/', 'FOO'))

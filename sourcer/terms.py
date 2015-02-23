@@ -161,9 +161,10 @@ class Get(Term):
 
 
 class Let(Term):
-    def __init__(self, name, term):
-        self.name = name
-        self.term = term
+    def __init__(self, **kw):
+        assert len(kw) == 1
+        self.name = kw.keys()[0]
+        self.term = kw.values()[0]
 
 
 class List(SimpleTerm):
