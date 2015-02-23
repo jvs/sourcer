@@ -57,8 +57,11 @@ class Term(ParsingOperand): __metaclass__ = TermMetaClass
 
 class SimpleTerm(Term):
     '''Abstract base class for terms that consist of a single subterm.'''
-    def __init__(self, term):
+    def __init__(self, term, **kw):
         self.term = term
+        for k, v in kw.iteritems():
+            setattr(self, k, v)
+        self.__extras = kw.keys()
 
 
 class Any(Term):
@@ -120,10 +123,9 @@ class Backtrack(Term):
         yield ParseFailure if dst < 0 else ParseResult(None, dst)
 
 
-class Bind(Term):
+class Bind(SimpleTerm):
     def __init__(self, term, continuation):
-        self.term = term
-        self.continuation = continuation
+        SimpleTerm.__init__(self, term, continuation=continuation)
 
     def parse(self, source, pos):
         arg = yield ParseStep(self.term, pos)
@@ -259,10 +261,9 @@ class Or(Term):
         yield ParseFailure
 
 
-class Require(Term):
+class Require(SimpleTerm):
     def __init__(self, term, condition):
-        self.term = term
-        self.condition = condition
+        SimpleTerm.__init__(self, term, condition=condition)
 
     def parse(self, source, pos):
         ans = yield ParseStep(self.term, pos)
@@ -280,10 +281,9 @@ class Struct(object):
     __metaclass__ = TermMetaClass
 
 
-class Transform(Term):
+class Transform(SimpleTerm):
     def __init__(self, term, transform):
-        self.term = term
-        self.transform = transform
+        SimpleTerm.__init__(self, term, transform=transform)
 
     def parse(self, source, pos):
         ans = yield ParseStep(self.term, pos)
