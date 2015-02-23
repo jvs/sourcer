@@ -149,11 +149,9 @@ class End(Term):
         yield ParseResult(None, pos) if at_end else ParseFailure
 
 
-class ForwardRef(SimpleTerm):
-    def preparse(self):
-        if not hasattr(self, 'cached_term'):
-            self.cached_term = self.term()
-        return self.cached_term
+class ForwardRef(Term):
+    def __init__(self, forward_term):
+        self.forward_term = forward_term
 
 
 class Get(Term):

@@ -48,18 +48,26 @@ def TokenClass(name, pattern):
     class NewClass(Token):
         @staticmethod
         def parse(source, pos):
-            if pos < len(source) and isinstance(source[pos], NewClass):
-                yield ParseResult(source[pos], pos + 1)
+            if isinstance(source, basestring):
+                return _parse_string(source, pos)
+            else:
+                return _parse_token(source, pos)
 
-            next = yield ParseStep(pattern, pos)
-            if next is ParseFailure:
-                yield ParseFailure
+    def _parse_token(source, pos):
+        if pos < len(source) and isinstance(source[pos], NewClass):
+            yield ParseResult(source[pos], pos + 1)
+        else:
+            yield ParseFailure
 
-            match = next.value
-            ans = NewClass(match.group(0))
-            for k, v in match.groupdict().iteritems():
-                setattr(ans, k, v)
-            yield ParseResult(ans, next.pos)
+    def _parse_string(source, pos):
+        next = yield ParseStep(pattern, pos)
+        if next is ParseFailure:
+            yield ParseFailure
+        match = next.value
+        ans = NewClass(match.group(0))
+        for k, v in match.groupdict().iteritems():
+            setattr(ans, k, v)
+        yield ParseResult(ans, next.pos)
 
     NewClass.__name__ = name
     NewClass.skip = is_skipped

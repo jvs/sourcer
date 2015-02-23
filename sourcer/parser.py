@@ -10,20 +10,18 @@ def parse(term, source):
 
 
 def parse_prefix(term, source):
-    parser = Parser(source)
+    parser = _Parser(source)
     return parser.run(term)
 
 
-class Parser(object):
+class _Parser(object):
     def __init__(self, source):
         self.source = source
+        self.is_text = isinstance(source, basestring)
         self.memo = {}
         self.stack = []
-        self.fieldmap = {}
         self.delegates = {}
-        self.bindings = [(None, {})]
-        is_str = isinstance(source, basestring)
-        self._parse_string = self._parse_text if is_str else self._parse_token
+        self.scopes = [{}]
 
     def run(self, term):
         ans = self._start(term, 0)
@@ -35,158 +33,83 @@ class Parser(object):
             else:
                 key = self.stack.pop()[0]
                 self.memo[key] = ans
-                self._pop_scope(key[0])
         if ans is ParseFailure:
             raise ParseError()
         else:
             return ans
 
     def _start(self, term, pos):
-        while isinstance(term, ForwardRef):
-            term = term.preparse()
         key = (term, pos)
         if key in self.memo:
             return self.memo[key]
         self.memo[key] = ParseFailure
-        generator = self._parse(term, pos)
+        if hasattr(term, 'parse'):
+            delegate = term
+        elif term in self.delegates:
+            delegate = self.delegates[term]
+        else:
+            delegate = self._compile_term(term)
+            self.delegates[term] = delegate
+        generator = delegate.parse(self.source, pos)
         self.stack.append((key, generator))
         return None
 
-    def _parse(self, term, pos):
-        if term is None:
-            return self._parse_nothing(term, pos)
-
-        if inspect.isclass(term) and issubclass(term, Struct):
-            self._push_scope(term)
-            return self._parse_struct(term, pos)
-
+    def _compile_term(self, term):
+        while isinstance(term, ForwardRef):
+            term = term.forward_term()
         if isinstance(term, tuple):
-            self._push_scope(term)
-            return self._parse_tuple(term, pos)
-
+            return _Seq(term, self.scopes)
         if isinstance(term, basestring):
-            return self._parse_string(term, pos)
-
-        if hasattr(term, 'parse'):
-            return term.parse(self.source, pos)
-
+            return (_Substr if self.is_text else _TokenContent)(term)
+        if inspect.isclass(term) and issubclass(term, Struct):
+            return _compile_struct(term)
         if hasattr(term, 'match'):
-            return self._parse_regex(term, pos)
-
-        if isinstance(term, Let):
-            return self._parse_let(term, pos)
-
-        if isinstance(term, Get):
-            return self._parse_get(term, pos)
-
+            return (_MatchString if self.is_text else _MatchToken)(term)
         if inspect.isfunction(term):
-            return self._parse_dependent_term(term, pos)
-
+            return _compile_dependent_term(term)
+        if isinstance(term, Get):
+            return _Get(term, self.scopes)
+        if isinstance(term, Let):
+            return _Let(term, self.scopes)
+        if term is None:
+            return _Nothing
+        if hasattr(term, 'parse'):
+            return term
         else:
-            return Literal(term).parse(self.source, pos)
-
-    def _parse_nothing(self, term, pos):
-        yield ParseResult(term, pos)
-
-    def _parse_struct(self, term, pos):
-        if term not in self.fieldmap:
-            self.fieldmap[term] = _struct_fields(term)
-        if issubclass(term, (LeftAssoc, RightAssoc)):
-            return self._parse_assoc_struct(term, pos)
-        else:
-            return self._parse_simple_struct(term, pos)
-
-    def _parse_simple_struct(self, term, pos):
-        ans = term.__new__(term)
-        for field, value in self.fieldmap[term]:
-            next = yield ParseStep(value, pos)
-            if next is ParseFailure:
-                yield ParseFailure
-            setattr(ans, field, next.value)
-            pos = next.pos
-        yield ParseResult(ans, pos)
-
-    def _parse_assoc_struct(self, term, pos):
-        if term not in self.delegates:
-            fields = self.fieldmap[term]
-            first = fields[0][-1]
-            middle = tuple(p[-1] for p in fields[1:-1])
-            last = fields[-1][-1]
-            build = _assoc_struct_builder(term, fields)
-            is_left = issubclass(term, LeftAssoc)
-            cls = ReduceLeft if is_left else ReduceRight
-            self.delegates[term] = cls(first, middle, last, build)
-        return self._parse(self.delegates[term], pos)
-
-    def _parse_regex(self, term, pos):
-        if not isinstance(self.source, basestring):
-            yield ParseFailure
-        match = term.match(self.source, pos)
-        yield ParseResult(match, match.end()) if match else ParseFailure
-
-    def _parse_text(self, term, pos):
-        end = pos + len(term)
-        part = self.source[pos : end]
-        yield ParseResult(term, end) if part == term else ParseFailure
-
-    def _parse_token(self, term, pos):
-        if pos >= len(self.source):
-            yield ParseFailure
-        next = self.source[pos]
-        if getattr(next, 'content') == term:
-            yield ParseResult(term, pos + 1)
-        else:
-            yield ParseFailure
-
-    def _parse_tuple(self, term, pos):
-        ans = []
-        for item in term:
-            next = yield ParseStep(item, pos)
-            if next is ParseFailure:
-                yield ParseFailure
-            ans.append(next.value)
-            pos = next.pos
-        yield ParseResult(tuple(ans), pos)
-
-    def _parse_let(self, term, pos):
-        ans = yield ParseStep(term.term, pos)
-        if ans is not ParseFailure:
-            self.bindings[-1][-1][term.name] = ans.value
-        yield ans
-
-    def _parse_get(self, term, pos):
-        name = term.name
-        for _, scope in reversed(self.bindings):
-            if name in scope:
-                yield ParseResult(scope[name], pos)
-        ans = term.default
-        yield ans if ans is ParseFailure else ParseResult(ans, pos)
-
-    def _parse_dependent_term(self, term, pos):
-        (args, varargs, keywords, defaults) = inspect.getargspec(term)
-        assert not varargs and not keywords
-        assert len(args) == 1
-        defaults = defaults or ()
-        ans = Bind(Get(args[0], *defaults), term)
-        return self._parse(ans, pos)
-
-    def _push_scope(self, term):
-        self.bindings.append((term, {}))
-
-    def _pop_scope(self, term):
-        if term is self.bindings[-1][0]:
-            self.bindings.pop()
+            return Literal(term)
 
 
-def _assoc_struct_builder(term, fields):
-    names = [p[0] for p in fields]
+def _compile_struct(term):
+    fields = _struct_fields(term)
+    if issubclass(term, (LeftAssoc, RightAssoc)):
+        return _compile_assoc_struct(term, fields)
+    else:
+        return _compile_simple_struct(term, fields)
+
+
+def _compile_assoc_struct(term, fields):
+    first = fields[0][-1]
+    middle = tuple(p[-1] for p in fields[1:-1])
+    last = fields[-1][-1]
     def build(left, op, right):
-        ans = term.__new__(term)
         values = [left] + list(op) + [right]
-        for name, value in zip(names, values):
-            setattr(ans, name, value)
-        return ans
-    return build
+        return _build_struct(term, fields, values)
+    is_left = issubclass(term, LeftAssoc)
+    cls = ReduceLeft if is_left else ReduceRight
+    return cls(first, middle, last, build)
+
+
+def _compile_simple_struct(term, fields):
+    raw = tuple(i[1] for i in fields)
+    build = lambda values: _build_struct(term, fields, values)
+    return Transform(raw, build)
+
+
+def _build_struct(term, fields, values):
+    ans = term.__new__(term)
+    for field, value in zip(fields, values):
+        setattr(ans, field[0], value)
+    return ans
 
 
 def _struct_fields(cls):
@@ -197,3 +120,110 @@ def _struct_fields(cls):
             cls.__setattr__(self, name, value)
     collect_fields()
     return ans
+
+
+def _compile_dependent_term(term):
+    (args, varargs, keywords, defaults) = inspect.getargspec(term)
+    assert not varargs and not keywords
+    assert len(args) == 1
+    defaults = defaults or ()
+    return Bind(Get(args[0], *defaults), term)
+
+
+class _Get(object):
+    def __init__(self, other, scopes):
+        self.name = other.name
+        self.default = other.default
+        self.scopes = scopes
+
+    def parse(self, source, pos):
+        name = self.name
+        for scope in reversed(self.scopes):
+            if name in scope:
+                yield ParseResult(scope[name], pos)
+        ans = self.default
+        yield ans if ans is ParseFailure else ParseResult(ans, pos)
+
+
+class _Let(object):
+    def __init__(self, other, scopes):
+        self.name = other.name
+        self.term = other.term
+        self.scopes = scopes
+
+    def parse(self, source, pos):
+        ans = yield ParseStep(self.term, pos)
+        if ans is not ParseFailure:
+            self.scopes[-1][self.name] = ans.value
+        yield ans
+
+
+class _MatchToken(object):
+    def __init__(self, regex):
+        self.regex = regex
+
+    def parse(self, source, pos):
+        yield ParseFailure
+        if pos >= len(source):
+            yield ParseFailure
+        content = getattr(source[pos], 'content')
+        match = self.regex.match(content)
+        is_end = match and match.end() == len(source)
+        yield ParseResult(match, pos + 1) if match else ParseFailure
+
+
+class _MatchString(object):
+    def __init__(self, regex):
+        self.regex = regex
+
+    def parse(self, source, pos):
+        match = self.regex.match(source, pos)
+        yield ParseResult(match, match.end()) if match else ParseFailure
+
+
+class _Nothing(object):
+    @staticmethod
+    def parse(source, pos):
+        yield ParseResult(None, pos)
+
+
+class _Seq(object):
+    def __init__(self, terms, scopes):
+        self.terms = terms
+        self.scopes = scopes
+
+    def parse(self, source, pos):
+        self.scopes.append({})
+        ans = []
+        for term in self.terms:
+            next = yield ParseStep(term, pos)
+            if next is ParseFailure:
+                self.scopes.pop()
+                yield ParseFailure
+            ans.append(next.value)
+            pos = next.pos
+        self.scopes.pop()
+        yield ParseResult(tuple(ans), pos)
+
+
+class _Substr(object):
+    def __init__(self, string):
+        self.string = string
+
+    def parse(self, source, pos):
+        ans = self.string
+        end = pos + len(ans)
+        test = source[pos : end]
+        yield ParseResult(ans, end) if test == ans else ParseFailure
+
+
+class _TokenContent(object):
+    def __init__(self, string):
+        self.string = string
+
+    def parse(self, source, pos):
+        if pos >= len(source):
+            yield ParseFailure
+        ans = self.string
+        is_match = ans == getattr(source[pos], 'content')
+        yield ParseResult(ans, pos + 1) if is_match else ParseFailure
