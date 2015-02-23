@@ -33,13 +33,13 @@ Name = Content(Tokens.Word)
 
 class Array(Struct):
     def __init__(self):
-        self.elements = Middle('{', ExprList / ';', '}')
+        self.elements = '{' >> ExprList / ';' << '}'
 
 
 class FunctionCall(Struct):
     def __init__(self):
         self.name = Name
-        self.arguments = Middle('(', ExprList, ')')
+        self.arguments = '(' >> ExprList << ')'
 
 
 def _normalize_R1C1(token):
@@ -56,11 +56,11 @@ def _normalize_R1C1(token):
 class CellRef(Struct):
     def __init__(self):
         strip = lambda c: lambda x: x.content[1:-1].replace(c + c, c)
-        String = Transform(Tokens.String, strip('"'))
-        Sheet = Transform(Tokens.Sheet, strip("'"))
-        Cell = Tokens.A1Ref | Transform(Tokens.R1C1Ref, _normalize_R1C1)
         self.book = ~Middle('[', Name | String, ']')
         self.sheet = ~Left(Cell | Name | Sheet, '!')
+        String = Tokens.String * strip('"')
+        Sheet = Tokens.Sheet * strip("'")
+        Cell = Tokens.A1Ref | Tokens.R1C1Ref * _normalize_R1C1
         self.cell = Cell
 
     def __getattr__(self, name):
@@ -68,7 +68,7 @@ class CellRef(Struct):
 
 
 Atom = (
-    Middle('(', ForwardRef(lambda: Expr), ')')
+    '(' >> ForwardRef(lambda: Expr) << ')'
     | Array
     | FunctionCall
     | CellRef
