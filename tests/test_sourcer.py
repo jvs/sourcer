@@ -312,22 +312,6 @@ class TestSimpleExpressions(unittest.TestCase):
         with self.assertRaises(ParseError):
             parse(seq, [1, 2, msg])
 
-    def test_simple_binding(self):
-        Word = Pattern(r'\w+')
-        x = Let(x=Word)
-        seq = (x, '/', lambda x: x.upper())
-        ans = parse(seq, 'foo/FOO')
-        self.assertEqual(ans, ('foo', '/', 'FOO'))
-        with self.assertRaises(ParseError):
-            parse(seq, 'foo/foo')
-
-    def test_function_with_default(self):
-        seq = ('bar', '/', lambda x='foo': x.upper())
-        ans = parse(seq, 'bar/FOO')
-        self.assertEqual(ans, ('bar', '/', 'FOO'))
-        with self.assertRaises(ParseError):
-            parse(seq, 'bar/foo')
-
 
 class TestOperatorPrecedenceTable(unittest.TestCase):
     def grammar(self):

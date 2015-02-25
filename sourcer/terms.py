@@ -154,18 +154,6 @@ class ForwardRef(Term):
         self.forward_term = forward_term
 
 
-class Get(Term):
-    def __init__(self, name, default=ParseFailure):
-        self.name = name
-        self.default = default
-
-
-class Let(Term):
-    def __init__(self, **kw):
-        assert len(kw) == 1
-        self.name, self.term = kw.items()[0]
-
-
 class List(SimpleTerm):
     '''
     Parse a term zero or more times and return the results as a list.

@@ -21,7 +21,6 @@ class _Parser(object):
         self.memo = {}
         self.stack = []
         self.delegates = {}
-        self.scopes = [{}]
 
     def run(self, term):
         ans = self._start(term, 0)
@@ -43,38 +42,28 @@ class _Parser(object):
         if key in self.memo:
             return self.memo[key]
         self.memo[key] = ParseFailure
-        if hasattr(term, 'parse'):
-            delegate = term
-        elif term in self.delegates:
-            delegate = self.delegates[term]
-        else:
-            delegate = self._compile_term(term)
-            self.delegates[term] = delegate
-        generator = delegate.parse(self.source, pos)
+        if term not in self.delegates:
+            tmp = self._compile_term(term)
+            self.delegates[term] = tmp.parse
+        generator = self.delegates[term](self.source, pos)
         self.stack.append((key, generator))
         return None
 
     def _compile_term(self, term):
         while isinstance(term, ForwardRef):
             term = term.forward_term()
+        if hasattr(term, 'parse'):
+            return term
         if isinstance(term, tuple):
-            return _Seq(term, self.scopes)
+            return _Seq(term)
         if isinstance(term, basestring):
             return (_Substr if self.is_text else _TokenContent)(term)
         if inspect.isclass(term) and issubclass(term, Struct):
             return _compile_struct(term)
         if hasattr(term, 'match'):
             return (_MatchString if self.is_text else _MatchToken)(term)
-        if inspect.isfunction(term):
-            return _compile_dependent_term(term)
-        if isinstance(term, Get):
-            return _Get(term, self.scopes)
-        if isinstance(term, Let):
-            return _Let(term, self.scopes)
         if term is None:
             return _Nothing
-        if hasattr(term, 'parse'):
-            return term
         else:
             return Literal(term)
 
@@ -122,42 +111,6 @@ def _struct_fields(cls):
     return ans
 
 
-def _compile_dependent_term(term):
-    (args, varargs, keywords, defaults) = inspect.getargspec(term)
-    assert not varargs and not keywords
-    assert len(args) == 1
-    defaults = defaults or ()
-    return Bind(Get(args[0], *defaults), term)
-
-
-class _Get(object):
-    def __init__(self, other, scopes):
-        self.name = other.name
-        self.default = other.default
-        self.scopes = scopes
-
-    def parse(self, source, pos):
-        name = self.name
-        for scope in reversed(self.scopes):
-            if name in scope:
-                yield ParseResult(scope[name], pos)
-        ans = self.default
-        yield ans if ans is ParseFailure else ParseResult(ans, pos)
-
-
-class _Let(object):
-    def __init__(self, other, scopes):
-        self.name = other.name
-        self.term = other.term
-        self.scopes = scopes
-
-    def parse(self, source, pos):
-        ans = yield ParseStep(self.term, pos)
-        if ans is not ParseFailure:
-            self.scopes[-1][self.name] = ans.value
-        yield ans
-
-
 class _MatchToken(object):
     def __init__(self, regex):
         self.regex = regex
@@ -188,21 +141,17 @@ class _Nothing(object):
 
 
 class _Seq(object):
-    def __init__(self, terms, scopes):
+    def __init__(self, terms):
         self.terms = terms
-        self.scopes = scopes
 
     def parse(self, source, pos):
-        self.scopes.append({})
         ans = []
         for term in self.terms:
             next = yield ParseStep(term, pos)
             if next is ParseFailure:
-                self.scopes.pop()
                 yield ParseFailure
             ans.append(next.value)
             pos = next.pos
-        self.scopes.pop()
         yield ParseResult(tuple(ans), pos)
 
 
