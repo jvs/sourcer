@@ -46,32 +46,22 @@ class Struct(object):
     __metaclass__ = ExpressionMetaClass
 
 
-def visit(expression, function):
-    visitor = __Visitor(function)
-    visitor.visit(expression)
-
-
 class __Self(object):
 
     def __setattr__(self, name, value):
         if isinstance(value, tuple):
-            raw_fields, doc = value
+            fields, doc = value
             assert isinstance(doc, basestring)
         else:
-            raw_fields = value
+            fields = value
             doc = None
 
-        assert isinstance(raw_fields, basestring)
-        names = raw_fields.split(', ') if raw_fields else ''
-        fields = [(i[1:] if i.startswith('*') else i) for i in names]
-        children = [i for i in names if not i.startswith('*')]
-
+        assert isinstance(fields, basestring)
         NT = namedtuple(name, fields)
 
         class ParsingExpression(ParsingOperand, NT):
             __metaclass__ = ExpressionMetaClass
             __doc__ = doc
-            _visit = visit
 
             def __hash__(self):
                 if not hasattr(self, '_hash'):
@@ -82,9 +72,6 @@ class __Self(object):
                 args = ', '.join(repr(i) for i in self)
                 return '%s(%s)' % (name, args)
 
-            def _children(self):
-                return tuple(getattr(self, i) for i in children)
-
         ParsingExpression.__name__ = name
         setattr(sys.modules[__name__], name, ParsingExpression)
 
@@ -92,7 +79,7 @@ class __Self(object):
 self = __Self()
 
 
-self._Alt = 'element, separator, *allow_trailer'
+self._Alt = 'element, separator, allow_trailer'
 
 
 self.And = 'left, right', '''
@@ -143,10 +130,10 @@ self.Any = '', '''
 '''
 
 
-self._Backtrack = '*count'
+self._Backtrack = 'count'
 
 
-self.Bind = 'expression, *function', '''
+self.Bind = 'expression, function', '''
 
     ``Bind`` is used to create context-sensitive expressions.
 
@@ -171,7 +158,7 @@ self.Expect = 'expression'
 self.End = '', 'Matches the end of the input.'
 
 
-self.ForwardRef = '*resolve'
+self.ForwardRef = 'resolve'
 
 
 self.Left = 'left, right'
@@ -229,7 +216,7 @@ self.List = 'element', '''
 '''
 
 
-self.Literal = '*value'
+self.Literal = 'value'
 
 
 self.Not = 'expression'
@@ -244,10 +231,10 @@ self.Opt = 'expression', '''
 self.Or = 'left, right', 'Ordered choice.'
 
 
-self.Require = 'expression, *predicate'
+self.Require = 'expression, predicate'
 
 
-self.Return = '*value', '''
+self.Return = 'value', '''
     Simply return the provided value, without parsing any of the input.
     This can be useful as the last operand of an "Or" expression.
 
@@ -273,7 +260,7 @@ self.Start = '', 'Matches the beginning of the input.'
 self.Term = 'value'
 
 
-self.Transform = 'expression, *function'
+self.Transform = 'expression, function'
 
 
 def Alt(element, separator, allow_trailer=True):
@@ -300,28 +287,3 @@ def Backtrack(count=1):
 
 def Where(test):
     return Any ^ test
-
-
-class __Visitor(object):
-    def __init__(self, function):
-        self.function = function
-        self.visited = set()
-
-    def visit(self, node):
-        if node in self.visited:
-            return
-        self.visited.add(node)
-        self.function(node)
-        if isinstance(node, ExpressionMetaClass):
-            return
-        if isinstance(node, ForwardRef):
-            self.visit(node.resolve())
-            return
-        if hasattr(node, '_children'):
-            children = node._children()
-        elif isinstance(node, tuple):
-            children = node
-        else:
-            return
-        for child in children:
-            self.visit(child)
