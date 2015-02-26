@@ -184,7 +184,7 @@ self.Expect = 'expression'
 self.End = '', 'Matches the end of the input.'
 
 
-self.ForwardRef = '*get_reference'
+self.ForwardRef = '*resolve'
 
 
 self.Left = 'left, right'
