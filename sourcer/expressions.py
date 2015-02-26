@@ -306,7 +306,7 @@ def Lookback(expression, count=1):
     Moves the current position back by some number of spaces and then applies
     the provided expression.
     '''
-    return Backtrack(count) >> term
+    return Backtrack(count) >> expression
 
 
 def Middle(left, middle, right):
