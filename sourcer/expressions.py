@@ -92,7 +92,7 @@ class __Self(object):
 self = __Self()
 
 
-self.Alternate = 'element, separator, *allow_trailer'
+self._Alt = 'element, separator, *allow_trailer'
 
 
 self.And = 'left, right', '''
@@ -143,20 +143,7 @@ self.Any = '', '''
 '''
 
 
-self.Backtrack = '*count', '''
-
-    Moves the current position back by some number of spaces. If the new
-    position would be less than zero, then it fails and has no other effect.
-
-    Example::
-
-        from sourcer import *
-        # (The ">>" operator means "discard the result from the left operand".)
-        goal = Pattern(r'[a-z]+') >> Backtrack(1) >> 'o' >> Some('-')
-        ans = parse(goal, 'foo---')
-        assert ans == list('---')
-
-'''
+self._Backtrack = '*count'
 
 
 self.Bind = 'expression, *function', '''
@@ -260,6 +247,20 @@ self.Or = 'left, right', 'Ordered choice.'
 self.Require = 'expression, *predicate'
 
 
+self.Return = '*value', '''
+    Simply return the provided value, without parsing any of the input.
+    This can be useful as the last operand of an "Or" expression.
+
+    Example::
+
+        from sourcer import *
+        Name = Pattern(r'\w+') | Return('User')
+        Count = Pattern(r'\d+')
+        ans = parse((Name, Count), '123')
+        assert ans == ('User', '123')
+'''
+
+
 self.Right = 'left, right'
 
 
@@ -275,26 +276,26 @@ self.Term = 'value'
 self.Transform = 'expression, *function'
 
 
-self.Return = '*value', '''
-    Simply return the provided value, without parsing any of the input.
-    This can be useful as the last operand of an "Or" expression.
+def Alt(element, separator, allow_trailer=True):
+    return _Alt(element, separator, allow_trailer)
+
+
+def Backtrack(count=1):
+    '''
+
+    Moves the current position back by some number of spaces. If the new
+    position would be less than zero, then it fails and has no other effect.
 
     Example::
 
         from sourcer import *
-        Name = Pattern(r'\w+') | Return('User')
-        Count = Pattern(r'\d+')
-        ans = parse((Name, Count), '123')
-        assert ans == ('User', '123')
-'''
+        # (The ">>" operator means "discard the result from the left operand".)
+        goal = Pattern(r'[a-z]+') >> Backtrack(1) >> 'o' >> Some('-')
+        ans = parse(goal, 'foo---')
+        assert ans == list('---')
 
-
-def Alt(element, separator, allow_trailer=True):
-    return Alternate(element, separator, allow_trailer)
-
-
-def Back(count=1):
-    return Backtrack(count)
+    '''
+    return _Backtrack(count)
 
 
 def Where(test):
@@ -312,6 +313,9 @@ class __Visitor(object):
         self.visited.add(node)
         self.function(node)
         if isinstance(node, ExpressionMetaClass):
+            return
+        if isinstance(node, ForwardRef):
+            self.visit(node.resolve())
             return
         if hasattr(node, '_children'):
             children = node._children()
