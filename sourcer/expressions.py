@@ -301,18 +301,6 @@ def Back(count=1):
     return Backtrack(count)
 
 
-def Lookback(expression, count=1):
-    '''
-    Moves the current position back by some number of spaces and then applies
-    the provided expression.
-    '''
-    return Backtrack(count) >> expression
-
-
-def Middle(left, middle, right):
-    return left >> middle << right
-
-
 def Where(test):
     return Any ^ test
 
