@@ -108,7 +108,7 @@ self.And = 'left, right', '''
 self.Any = '', '''
 
     Returns the next element of the input. Fails if the remaining input is
-    empty. This class can be used as a term directly, or it can be
+    empty. This class can be used as an expression directly, or it can be
     instantiated.
 
     Example 1::
@@ -116,7 +116,7 @@ self.Any = '', '''
         from sourcer import Any, parse
 
         # Parse the number one, then any value, then the number 3.
-        # Note that the "Any" term does not need to be instantiated.
+        # Note that the "Any" class does not need to be instantiated.
         goal = (1, Any, 3)
         ans = parse(goal, [1, 2, 3])
         assert ans == (1, 2, 3)
@@ -126,7 +126,7 @@ self.Any = '', '''
         from sourcer import Any, parse
 
         # Try it again with a the string 'ok' in the middle position.
-        # Also, this time try instantiating the "Any" term.
+        # Also, this time try instantiating the "Any" object.
         goal = (1, Any(), 3)
         ans = parse(goal, [1, 'ok', 3])
         assert ans == (1, 'ok', 3)
@@ -192,7 +192,7 @@ self.Left = 'left, right'
 
 self.List = 'element', '''
 
-    Parse a term zero or more times and return the results as a list.
+    Parse an expression zero or more times and return the results as a list.
 
     Example 1::
 
