@@ -293,10 +293,6 @@ def Alt(element, separator, allow_trailer=True):
     return Alternate(element, separator, allow_trailer)
 
 
-def AnyInst(*cls):
-    return Any ^ (lambda x: isinstance(x, cls))
-
-
 def Back(count=1):
     return Backtrack(count)
 
