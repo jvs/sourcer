@@ -16,7 +16,7 @@ class ParsingOperand(object):
         a * b  ==  Transform(a, b)
         a ** b ==  Bind(a, b)
     '''
-    # MUST: use an rST table in the doc comment.
+    # MUST: use a table in the doc comment.
     def __and__(self, other): return And(self, other)
     def __rand__(self, other): return And(other, self)
     def __or__(self, other): return Or(self, other)
@@ -64,8 +64,14 @@ class __Self(object):
             __doc__ = doc
 
             def __hash__(self):
+                # SHOULD: Clean up this method.
                 if not hasattr(self, '_hash'):
-                    self._hash = NT.__hash__(self)
+                    class_code = id(ParsingExpression)
+                    delegate = (class_code,) + self
+                    try:
+                        self._hash = hash(delegate)
+                    except TypeError:
+                        self._hash = id(self)
                 return self._hash
 
             def __repr__(self):
@@ -120,11 +126,11 @@ self.Any = '', '''
 
     Example 3::
 
-        from sourcer import Any, Middle, parse
+        from sourcer import Any, parse
 
         # Parse any character surrounded by parentheses,
         # discarding the parentheses.
-        goal = Middle('(', Any, ')')
+        goal = '(' >> Any << ')'
         ans = parse(goal, '(a)')
         assert ans == 'a'
 '''
@@ -152,10 +158,10 @@ self.Bind = 'expression, function', '''
 '''
 
 
-self.Expect = 'expression'
-
-
 self.End = '', 'Matches the end of the input.'
+
+
+self.Expect = 'expression'
 
 
 self.ForwardRef = 'resolve'

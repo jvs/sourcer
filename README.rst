@@ -169,7 +169,7 @@ tokenizer for the lambda calculus.
 
     from sourcer import *
 
-    class LambdaTokens(Tokenizer):
+    class LambdaTokens(TokenSyntax):
         def __init__(self):
             self.Word = r'\w+'
             self.Symbol = AnyChar(r'(\.)')
@@ -177,7 +177,7 @@ tokenizer for the lambda calculus.
 
     # Run the tokenizer on a lambda term with a bunch of random whitespace.
     Tokens = LambdaTokens()
-    ans1 = Tokens.run('\n (   x  y\n\t) ')
+    ans1 = tokenize(Tokens, '\n (   x  y\n\t) ')
 
     # Assert that we didn't get any space tokens.
     assert len(ans1) == 4

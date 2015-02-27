@@ -5,7 +5,7 @@ def parse_formula(formula):
     return tokenize_and_parse(Tokens, Formula, formula)
 
 
-class FormulaTokenizer(Tokenizer):
+class FormulaTokenizer(TokenSyntax):
     def __init__(self):
         offset = lambda n: r'(?P<raw_%s>(\d+|\[\-?\d+\]))' % n
         self.R1C1Ref = 'R%sC%s' % (offset('row'), offset('column'))
@@ -59,8 +59,8 @@ class CellRef(Struct):
         String = Tokens.String * strip('"')
         Sheet = Tokens.Sheet * strip("'")
         Cell = Tokens.A1Ref | Tokens.R1C1Ref * _normalize_R1C1
-        self.book = ~Middle('[', Name | String, ']')
-        self.sheet = ~Left(Cell | Name | Sheet, '!')
+        self.book = ~('[' >> (Name | String) << ']')
+        self.sheet = ~((Cell | Name | Sheet) << '!')
         self.cell = Cell
 
     def __getattr__(self, name):
@@ -85,7 +85,7 @@ def build_precedence_table(allow_unions):
     return OperatorPrecedence(
         Atom,
         InfixLeft(':'),
-        InfixLeft(None),
+        InfixLeft(Return(None)),
         InfixLeft(',') if allow_unions else Prefix(),
         Prefix('-', '+'),
         Postfix('%'),

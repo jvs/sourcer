@@ -1,4 +1,4 @@
-from .terms import *
+from .expressions import *
 
 
 Operation = namedtuple('Operation', 'left, operator, right')
@@ -13,17 +13,17 @@ pack_tuple = (lambda *args: args)
 
 
 def ReduceLeft(left, op, right, transform=pack_tuple):
-    term = (left, Some((op, right)))
+    expr = (left, Some((op, right)))
     assoc = lambda first, rest: transform(first, *rest)
     xform = lambda pair: reduce(assoc, pair[1], pair[0])
-    return Transform(term, xform)
+    return Transform(expr, xform)
 
 
 def ReduceRight(left, op, right, transform=pack_tuple):
-    term = (Some((left, op)), right)
+    expr = (Some((left, op)), right)
     assoc = lambda prev, next: transform(next[0], next[1], prev)
     xform = lambda pair: reduce(assoc, reversed(pair[0]), pair[1])
-    return Transform(term, xform)
+    return Transform(expr, xform)
 
 
 class OperatorRow(object):
@@ -32,13 +32,19 @@ class OperatorRow(object):
     reduce_left = True
 
     def __init__(self, *operators):
-        self.operator = operators
+        # SHOULD: Clean up this constructor.
+        if len(operators) == 0:
+            self.operator = Literal(object())
+        elif len(operators) == 1:
+            self.operator = operators[0]
+        else:
+            self.operator = reduce(Or, operators)
 
     def build(self, Operand):
-        left = Operand if self.has_left else None
-        right = Operand if self.has_right else None
+        left = Operand if self.has_left else Return(None)
+        right = Operand if self.has_right else Return(None)
         method = ReduceLeft if self.reduce_left else ReduceRight
-        return method(left, Or(*self.operator), right, Operation)
+        return method(left, self.operator, right, Operation)
 
 
 class InfixLeft(OperatorRow): reduce_left = True
