@@ -28,10 +28,6 @@ class Tokenizer(object):
         self.__classes.append(value)
         object.__setattr__(self, name, value)
 
-    def export(self, dst):
-        dst.update(dict((cls.__name__, cls)
-            for cls in self.__classes if not cls.skip))
-
     def run(self, source):
         main = List(Or(*self.__classes))
         ans = parse(main, source)
