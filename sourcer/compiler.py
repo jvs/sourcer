@@ -14,18 +14,21 @@ ParseFailure = object()
 ParseStep = namedtuple('ParseStep', 'parser, pos')
 
 
-# SHOULD: use a weak reference to the expression.
-_cache = {}
-
 def compile(expression, is_text=True):
-    key = (expression, is_text)
-    if key in _cache:
-        return _cache[key]
+    attr = '_text_parser' if is_text else '_data_parser'
+    is_operand = isinstance(expression, ParsingOperand)
+    is_class = inspect.isclass(expression)
+    is_cacheable = is_operand and not is_class
+    if is_cacheable and hasattr(expression, attr):
+        return getattr(expression, attr)
+
     compiler = _Compiler(is_text)
     parser = compiler.compile(expression)
     assert not isinstance(parser, ForwardingPointer)
     _replace_pointers(parser)
-    _cache[key] = parser
+
+    if is_cacheable:
+        setattr(expression, attr, parser)
     return parser
 
 

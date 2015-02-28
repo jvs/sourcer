@@ -19,9 +19,13 @@ def tokenize_and_parse(token_syntax, expression, source):
 
 
 def parse(expression, source):
-    whole = Left(expression, End)
-    ans = parse_prefix(whole, source)
-    return ans.value
+    # Use the expression directly, rather than ``Left(expression, End)``
+    # because the compiler module caches the parser in the expression object.
+    # (We want to be able to reuse the parser instead of building it again.)
+    ans = parse_prefix(expression, source)
+    if ans.pos == len(source):
+        return ans.value
+    raise ParseError()
 
 
 def parse_prefix(expression, source):
