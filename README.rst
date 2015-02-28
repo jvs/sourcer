@@ -210,6 +210,63 @@ used:
     Symbol = r'[(\\.)]'
 
 
+Example 5: Parsing Significant Indentation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code:: python
+
+    from sourcer import *
+
+    class TestTokens(TokenSyntax):
+        def __init__(self):
+            self.Word = r'\w+'
+            self.Newline = r'\n'
+            self.Indent = r'(?<=\n) +(?=\w)'
+            self.Space = Skip(' +')
+
+    Tokens = TestTokens()
+
+    class InlineStatement(Struct):
+        def parse(self):
+            self.words = Some(Content(Tokens.Word))
+
+        def __repr__(self):
+            return '%s;' % ' '.join(self.words)
+
+    class Block(Struct):
+        def parse(self, indent=''):
+            self.statements = Statement(indent) // Some(Tokens.Newline)
+
+        def __repr__(self):
+            return '{%s}' % ' '.join(repr(i) for i in self.statements)
+
+    def Statement(indent):
+        return (CurrentIndent(indent) >> InlineStatement
+            | IncreaseIndent(indent) ** Block)
+
+    def CurrentIndent(indent):
+        return Return('') if indent == '' else indent
+
+    def IncreaseIndent(current):
+        token = Expect(Content(Tokens.Indent))
+        return token ^ (lambda token: len(current) < len(token))
+
+    OptNewlines = List(Tokens.Newline)
+    Program = OptNewlines >> Block << OptNewlines
+
+    test = '''
+    print foo
+    while true
+        print bar
+        if baz
+            then break
+    exit
+    '''
+    ans = tokenize_and_parse(Tokens, Program, test)
+    expect = '{print foo; while true; {print bar; if baz; {then break;}} exit;}'
+    assert repr(ans) == expect
+
+
 More Examples
 -------------
 Parsing `Excel formula <https://github.com/jvs/sourcer/tree/master/examples>`_
