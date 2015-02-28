@@ -64,12 +64,10 @@ class __Self(object):
             __doc__ = doc
 
             def __hash__(self):
-                # SHOULD: Clean up this method.
                 if not hasattr(self, '_hash'):
-                    class_code = id(ParsingExpression)
-                    delegate = (class_code,) + self
+                    class_prefix = (id(ParsingExpression),)
                     try:
-                        self._hash = hash(delegate)
+                        self._hash = hash(class_prefix + self)
                     except TypeError:
                         self._hash = id(self)
                 return self._hash
