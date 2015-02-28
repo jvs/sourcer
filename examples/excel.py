@@ -86,7 +86,7 @@ def build_precedence_table(allow_unions):
         Atom,
         InfixLeft(':'),
         InfixLeft(Return(None)),
-        InfixLeft(',') if allow_unions else Prefix(),
+        InfixLeft(',') if allow_unions else Prefix(Fail),
         Prefix('-', '+'),
         Postfix('%'),
         InfixRight('^'),
