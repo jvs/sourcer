@@ -314,6 +314,21 @@ class TestSimpleExpressions(unittest.TestCase):
         with self.assertRaises(ParseError):
             parse(seq, [1, 2, msg])
 
+    def test_none_is_return_none_not_literal_none(self):
+        # The expression compiler interprets ``None`` as ``Return(None)`` as
+        # opposed to ``Literal(None)``.
+        seq1 = ('foo', None, 'bar')
+        ans1 = parse(seq1, 'foobar')
+        self.assertEqual(ans1, seq1)
+        seq2 = (Literal('foo'), None, Literal('bar'))
+        ans2 = parse(seq2, ['foo', 'bar'])
+        self.assertEqual(ans2, seq1)
+        with self.assertRaises(ParseError):
+            parse(seq2, ['foo', None, 'bar'])
+        seq3 = (Literal('foo'), Literal(None), Literal('bar'))
+        ans3 = parse(seq3, ['foo', None, 'bar'])
+        self.assertEqual(ans3, seq1)
+
 
 class TestOperatorPrecedenceTable(unittest.TestCase):
     def grammar(self):

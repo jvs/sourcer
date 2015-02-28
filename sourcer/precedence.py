@@ -29,8 +29,8 @@ def ReduceRight(left, op, right, transform=pack_tuple):
 def operator_row(operators, has_left=True, has_right=True, method=ReduceLeft):
     middle = reduce(Or, operators)
     def build(Operand):
-        left = Operand if has_left else Return(None)
-        right = Operand if has_right else Return(None)
+        left = Operand if has_left else None
+        right = Operand if has_right else None
         return method(left, middle, right, Operation)
     return build
 

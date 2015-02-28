@@ -85,7 +85,7 @@ def build_precedence_table(allow_unions):
     return OperatorPrecedence(
         Atom,
         InfixLeft(':'),
-        InfixLeft(Return(None)),
+        InfixLeft(None),
         InfixLeft(',') if allow_unions else Prefix(Fail),
         Prefix('-', '+'),
         Postfix('%'),

@@ -99,6 +99,8 @@ class _Compiler(object):
         return method(node)
 
     def compile_default(self, node):
+        if node is None:
+            return _none_parser
         if isinstance(node, tuple):
             return self.compile_tuple(node)
         if isinstance(node, basestring):
@@ -113,7 +115,7 @@ class _Compiler(object):
     def compile__alt(self, node):
         element, separator, allow_trailer = node
         rest = List(Right(separator, element))
-        tail = Opt(separator) if allow_trailer else Return(None)
+        tail = Opt(separator) if allow_trailer else None
         triple = (element, rest, tail)
         delegate = Transform(Opt(triple), lambda t: [t[0]] + t[1] if t else [])
         return self.compile(delegate)
@@ -166,7 +168,7 @@ class _Compiler(object):
         return _NotParser(parser)
 
     def compile_opt(self, node):
-        delegate = Or(node.expression, Return(None))
+        delegate = Or(node.expression, None)
         return self.compile(delegate)
 
     def compile_or(self, node):
@@ -251,10 +253,14 @@ def _literal_parser(value):
     return parser
 
 
+def _none_parser(source, pos):
+    yield ParseResult(None, pos)
+
+
 def _return_parser(value):
     def parser(source, pos):
         yield ParseResult(value, pos)
-    return parser
+    return _none_parser if value is None else parser
 
 
 def _start_parser(source, pos):

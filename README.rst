@@ -269,7 +269,10 @@ bare-bones example to demonstrate one possible approach.
     def CurrentIndent(indent):
         # The point of this function is to return a parsing expression that
         # matches the current indent (which is provided as an argument).
-        return Return('') if indent == '' else indent
+
+        # If the current indent is the empty string, then we don't need to
+        # consume any input. (We don't have tokens for zero-indentation.)
+        return None if indent == '' else indent
 
     def IncreaseIndent(current):
         # To see if the next indentation is more than the current indentation,
