@@ -237,14 +237,14 @@ bare-bones example to demonstrate one possible approach.
 
     class InlineStatement(Struct):
         def parse(self):
-            # Let's say an inline-statement is just some word tokens. And let's
-            # use ``Content`` to just get the string content of each token.
+            # Let's say an inline-statement is just some word tokens. We'll use
+            # ``Content`` to get the string content of each token (since in this
+            # case, we don't care about the tokens themselves).
             self.words = Some(Content(Tokens.Word))
 
         def __repr__(self):
-            # We'll define a ``repr`` method so that we can easily see if the
-            # parse results looks right. We'll just put a semicolon after each
-            # inline statement.
+            # We'll define a ``repr`` method so that we can easily check the
+            # parse results. We'll just put a semicolon after each statement.
             return '%s;' % ' '.join(self.words)
 
     class Block(Struct):
@@ -254,23 +254,21 @@ bare-bones example to demonstrate one possible approach.
             self.statements = Statement(indent) // Some(Tokens.Newline)
 
         def __repr__(self):
-            # In this case, we'll just put a space between each statement and
-            # enclose the whole block in curly braces. This will make it easy
-            # for use to tell if our parse results look right.
+            # In this case, we'll put a space between each statement and enclose
+            # the whole block in curly braces. This will make it easy for us to
+            # tell if our parse results look right.
             return '{%s}' % ' '.join(repr(i) for i in self.statements)
 
     def Statement(indent):
-        # We'll say there are two ways to get a statement:
-        # - See an inline-statement with the current indentation.
-        # - See a block that is indented farther than the current indentation.
+        # Let's say there are two ways to get a statement:
+        # - Get an inline-statement with the current indentation.
+        # - Get a block that is indented farther than the current indentation.
         return (CurrentIndent(indent) >> InlineStatement
             | IncreaseIndent(indent) ** Block)
 
     def CurrentIndent(indent):
-        # If the current indent is the empty string, then we don't need to
-        # consume an input. (We don't have tokens for zero-indentation.)
-        # So in this case, we use ``Return``. Otherwise, we need to match the
-        # current indentation, so we simply return it.
+        # The point of this function is to return a parsing expression that
+        # matches the current indent (which is provided as an argument).
         return Return('') if indent == '' else indent
 
     def IncreaseIndent(current):
