@@ -1,7 +1,7 @@
 import inspect
 from .expressions import *
 from .tokens import *
-from .structs import compile_struct
+from .structs import compile_struct, compile_bound_struct
 
 
 # A tuple of (object, int). The object is the parse tree, and the int value
@@ -130,7 +130,10 @@ class _Compiler(object):
 
     def compile_bind(self, node):
         parser = self.compile(node.expression)
-        return _BindParser(self.bind, parser, node.function)
+        function = node.function
+        if inspect.isclass(function) and issubclass(function, Struct):
+            function = compile_bound_struct(function)
+        return _BindParser(self.bind, parser, function)
 
     def compile_expect(self, node):
         parser = self.compile(node.expression)
