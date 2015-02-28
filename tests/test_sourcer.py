@@ -87,7 +87,7 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_simple_struct(self):
         class Pair(Struct):
-            def __init__(self):
+            def parse(self):
                 self.left = Int
                 self.sep = ','
                 self.right = Int
@@ -100,13 +100,13 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_two_simple_structs(self):
         class NumberPair(Struct):
-            def __init__(self):
+            def parse(self):
                 self.left = Int
                 self.sep = ','
                 self.right = Int
 
         class LetterPair(Struct):
-            def __init__(self):
+            def parse(self):
                 self.left = 'A'
                 self.sep = ','
                 self.right = 'B'
@@ -218,7 +218,7 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_left_assoc_struct(self):
         class Dot(LeftAssoc):
-            def __init__(self):
+            def parse(self):
                 self.left = Name
                 self.op = '.'
                 self.right = Name
@@ -234,7 +234,7 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_right_assoc_struct(self):
         class Arrow(RightAssoc):
-            def __init__(self):
+            def parse(self):
                 self.left = Name
                 self.op = ' -> '
                 self.right = Name
@@ -489,7 +489,7 @@ class TestEagerLambdaCalculus(unittest.TestCase):
         Parens = '(' >> ForwardRef(lambda: Expr) << ')'
 
         class Identifier(Struct):
-            def __init__(self):
+            def parse(self):
                 self.name = Name
 
             def __repr__(self):
@@ -499,7 +499,7 @@ class TestEagerLambdaCalculus(unittest.TestCase):
                 return env.get(self.name, self.name)
 
         class Abstraction(Struct):
-            def __init__(self):
+            def parse(self):
                 self.symbol = '\\'
                 self.parameter = Name
                 self.separator = '.'
@@ -517,7 +517,7 @@ class TestEagerLambdaCalculus(unittest.TestCase):
                 return callback
 
         class Application(LeftAssoc):
-            def __init__(self):
+            def parse(self):
                 self.left = Operand
                 self.operator = ' '
                 self.right = Operand
@@ -614,12 +614,12 @@ class TestTokens(unittest.TestCase):
                 self.Number = r'\d+'
                 self.Operator = AnyChar('+*-/')
         class Factor(LeftAssoc):
-            def __init__(self):
+            def parse(self):
                 self.left = Operand
                 self.operator = Or('/', '*')
                 self.right = Operand
         class Term(LeftAssoc):
-            def __init__(self):
+            def parse(self):
                 self.left = Factor | Operand
                 self.operator = Or('+', '-')
                 self.right = Factor | Operand
@@ -637,13 +637,13 @@ class TestSignificantIndentation(unittest.TestCase):
         # superclass. Also, consider providing a constructor that accepts
         # keyword arguments. (Also, consider implementing __repr__, too.)
         class Command(Struct):
-            def __init__(self):
+            def parse(self):
                 self.message = 'print ' >> Word << '\n'
             def __eq__(self, other):
                 return (isinstance(other, Command)
                     and self.message == other.message)
         class Loop(Struct):
-            def __init__(self):
+            def parse(self):
                 self.count = 'loop ' >> Int << ' times\n'
                 self.body = Block
             def __eq__(self, other):
@@ -719,7 +719,7 @@ class TestSignificantIndentation(unittest.TestCase):
     def test_careful_body(self):
         Word = Pattern(r'\w+')
         class Command(Struct):
-            def __init__(self):
+            def parse(self):
                 self.message = 'print ' >> Word << '\n'
             def __eq__(self, other):
                 return (isinstance(other, Command)
@@ -729,7 +729,7 @@ class TestSignificantIndentation(unittest.TestCase):
         # to other rules.
         def Loop(indent):
             class LoopClass(Struct):
-                def __init__(self):
+                def parse(self):
                     self.count = 'loop ' >> Int << ' times\n'
                     self.body = Opt(Block(indent))
                 def __eq__(self, other):

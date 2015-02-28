@@ -44,6 +44,7 @@ class ExpressionMetaClass(type, ParsingOperand):
 
 class Struct(object):
     __metaclass__ = ExpressionMetaClass
+    def parse(self): pass
 
 
 class __Self(object):

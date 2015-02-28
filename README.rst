@@ -123,16 +123,16 @@ Let's try building a simple AST for the
     from sourcer import *
 
     class Identifier(Struct):
-        def __init__(self):
+        def parse(self):
             self.name = Word
 
     class Abstraction(Struct):
-        def __init__(self):
+        def parse(self):
             self.parameter = '\\' >> Word
             self.body = '. ' >> Expr
 
     class Application(LeftAssoc):
-        def __init__(self):
+        def parse(self):
             self.left = Operand
             self.operator = ' '
             self.right = Operand

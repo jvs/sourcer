@@ -32,12 +32,12 @@ Name = Content(Tokens.Word)
 
 
 class Array(Struct):
-    def __init__(self):
+    def parse(self):
         self.elements = '{' >> ExprList / ';' << '}'
 
 
 class FunctionCall(Struct):
-    def __init__(self):
+    def parse(self):
         self.name = Name
         self.arguments = '(' >> ExprList << ')'
 
@@ -54,7 +54,7 @@ def _normalize_R1C1(token):
 
 
 class CellRef(Struct):
-    def __init__(self):
+    def parse(self):
         strip = lambda c: lambda x: x.content[1:-1].replace(c + c, c)
         String = Tokens.String * strip('"')
         Sheet = Tokens.Sheet * strip("'")

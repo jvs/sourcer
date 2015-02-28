@@ -37,9 +37,10 @@ def _build_struct(node, fields, values):
 
 def _struct_fields(cls):
     ans = []
-    class collect_fields(cls):
+    class AttributeRecorder(cls):
         def __setattr__(self, name, value):
             ans.append((name, value))
             cls.__setattr__(self, name, value)
-    collect_fields()
+    recorder = AttributeRecorder.__new__(AttributeRecorder)
+    recorder.parse()
     return ans
