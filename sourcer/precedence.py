@@ -26,40 +26,30 @@ def ReduceRight(left, op, right, transform=pack_tuple):
     return Transform(expr, xform)
 
 
-class OperatorRow(object):
-    has_left = True
-    has_right = True
-    reduce_left = True
-
-    def __init__(self, *operators):
-        # SHOULD: Clean up this constructor.
-        if len(operators) == 0:
-            self.operator = Literal(object())
-        elif len(operators) == 1:
-            self.operator = operators[0]
-        else:
-            self.operator = reduce(Or, operators)
-
-    def build(self, Operand):
-        left = Operand if self.has_left else Return(None)
-        right = Operand if self.has_right else Return(None)
-        method = ReduceLeft if self.reduce_left else ReduceRight
-        return method(left, self.operator, right, Operation)
+def operator_row(operators, has_left=True, has_right=True, method=ReduceLeft):
+    middle = reduce(Or, operators)
+    def build(Operand):
+        left = Operand if has_left else Return(None)
+        right = Operand if has_right else Return(None)
+        return method(left, middle, right, Operation)
+    return build
 
 
-class InfixLeft(OperatorRow): reduce_left = True
-class InfixRight(OperatorRow): reduce_left = False
+def InfixLeft(*operators):
+    return operator_row(operators)
 
 
-class Prefix(OperatorRow):
-    has_left = False
-    reduce_left = False
+def InfixRight(*operators):
+    return operator_row(operators, method=ReduceRight)
 
 
-class Postfix(OperatorRow):
-    has_right = False
-    reduce_left = True
+def Prefix(*operators):
+    return operator_row(operators, has_left=False, method=ReduceRight)
+
+
+def Postfix(*operators):
+    return operator_row(operators, has_right=False)
 
 
 def OperatorPrecedence(*rows):
-    return reduce(lambda prev, row: row.build(prev) | prev, rows)
+    return reduce(lambda prev, row: row(prev) | prev, rows)
