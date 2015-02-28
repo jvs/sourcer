@@ -164,6 +164,9 @@ self.End = '', 'Matches the end of the input.'
 self.Expect = 'expression'
 
 
+self.Fail = '', 'Causes the parser to fail.'
+
+
 self.ForwardRef = 'resolve'
 
 

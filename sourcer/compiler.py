@@ -139,6 +139,9 @@ class _Compiler(object):
     def compile_end(self, node):
         return _end_parser
 
+    def compile_fail(self, node):
+        return _fail_parser
+
     def compile_forwardref(self, node):
         expression = node.resolve()
         return self.compile(expression)
@@ -232,6 +235,10 @@ def _backtrack_parser(count):
 def _end_parser(source, pos):
     at_end = (pos == len(source))
     yield ParseResult(None, pos) if at_end else ParseFailure
+
+
+def _fail_parser(source, pos):
+    yield ParseFailure
 
 
 def _literal_parser(value):

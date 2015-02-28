@@ -8,6 +8,7 @@ from .expressions import (
     Bind,
     End,
     Expect,
+    Fail,
     ForwardRef,
     Left,
     List,
