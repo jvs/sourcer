@@ -303,7 +303,7 @@ class _ListParser(object):
         ans = []
         while True:
             elmt = yield ParseStep(self.parser, pos)
-            if elmt is ParseFailure:
+            if elmt is ParseFailure or pos == elmt.pos:
                 break
             pos = elmt.pos
             ans.append(elmt.value)

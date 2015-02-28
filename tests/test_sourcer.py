@@ -785,6 +785,18 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(ans[0], '1')
         self.assertEqual(ans[1], '+')
 
+    def test_infinite_list(self):
+        InfLoop = List('')
+        ans = parse_prefix(InfLoop, 'abc')
+        self.assertIsInstance(ans, ParseResult)
+        self.assertEqual(ans.value, [])
+        self.assertEqual(ans.pos, 0)
+
+    def test_infinite_operators(self):
+        InfOp = OperatorPrecedence(Int, Prefix(''))
+        ans = parse(InfOp, '123')
+        self.assertEqual(ans, 123)
+
 
 if __name__ == '__main__':
     unittest.main()
