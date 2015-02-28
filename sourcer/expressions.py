@@ -242,7 +242,7 @@ self.Require = 'expression, predicate'
 
 
 self.Return = 'value', '''
-    Simply return the provided value, without parsing any of the input.
+    Simply returns the provided value, without parsing any of the input.
     This can be useful as the last operand of an "Or" expression.
 
     Example::
