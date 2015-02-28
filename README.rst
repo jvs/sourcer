@@ -123,16 +123,16 @@ Let's try building a simple AST for the
     from sourcer import *
 
     class Identifier(Struct):
-        def __init__(self):
+        def parse(self):
             self.name = Word
 
     class Abstraction(Struct):
-        def __init__(self):
+        def parse(self):
             self.parameter = '\\' >> Word
             self.body = '. ' >> Expr
 
     class Application(LeftAssoc):
-        def __init__(self):
+        def parse(self):
             self.left = Operand
             self.operator = ' '
             self.right = Operand
@@ -169,7 +169,7 @@ tokenizer for the lambda calculus.
 
     from sourcer import *
 
-    class LambdaTokens(Tokenizer):
+    class LambdaTokens(TokenSyntax):
         def __init__(self):
             self.Word = r'\w+'
             self.Symbol = AnyChar(r'(\.)')
@@ -177,7 +177,7 @@ tokenizer for the lambda calculus.
 
     # Run the tokenizer on a lambda term with a bunch of random whitespace.
     Tokens = LambdaTokens()
-    ans1 = Tokens.run('\n (   x  y\n\t) ')
+    ans1 = tokenize(Tokens, '\n (   x  y\n\t) ')
 
     # Assert that we didn't get any space tokens.
     assert len(ans1) == 4
@@ -208,6 +208,97 @@ used:
 .. code:: python
 
     Symbol = r'[(\\.)]'
+
+
+Example 5: Parsing Significant Indentation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We can use sourcer to parse languages with significant indentation. Here's a
+bare-bones example to demonstrate one possible approach.
+
+.. code:: python
+
+    from sourcer import *
+
+    class TestTokens(TokenSyntax):
+        def __init__(self):
+            # Let's just use words, newlines, and spaces in this example.
+            self.Word = r'\w+'
+            self.Newline = r'\n'
+            # In this case, we'll say that an indent is a newline followed by
+            # some spaces, followed by a word.
+            self.Indent = r'(?<=\n) +(?=\w)'
+            # And let's just throw out all other space characters.
+            self.Space = Skip(' +')
+
+    # All our token classes are attributes of this ``Tokens`` object. It's
+    # essentially a namespace for our token classes.
+    Tokens = TestTokens()
+
+    class InlineStatement(Struct):
+        def parse(self):
+            # Let's say an inline-statement is just some word tokens. We'll use
+            # ``Content`` to get the string content of each token (since in this
+            # case, we don't care about the tokens themselves).
+            self.words = Some(Content(Tokens.Word))
+
+        def __repr__(self):
+            # We'll define a ``repr`` method so that we can easily check the
+            # parse results. We'll just put a semicolon after each statement.
+            return '%s;' % ' '.join(self.words)
+
+    class Block(Struct):
+        def parse(self, indent=''):
+            # A block is a bunch of statements at the same indentation,
+            # all separated by some newline tokens.
+            self.statements = Statement(indent) // Some(Tokens.Newline)
+
+        def __repr__(self):
+            # In this case, we'll put a space between each statement and enclose
+            # the whole block in curly braces. This will make it easy for us to
+            # tell if our parse results look right.
+            return '{%s}' % ' '.join(repr(i) for i in self.statements)
+
+    def Statement(indent):
+        # Let's say there are two ways to get a statement:
+        # - Get an inline-statement with the current indentation.
+        # - Get a block that is indented farther than the current indentation.
+        return (CurrentIndent(indent) >> InlineStatement
+            | IncreaseIndent(indent) ** Block)
+
+    def CurrentIndent(indent):
+        # The point of this function is to return a parsing expression that
+        # matches the current indent (which is provided as an argument).
+        return Return('') if indent == '' else indent
+
+    def IncreaseIndent(current):
+        # To see if the next indentation is more than the current indentation,
+        # we peek at the next token, using ``Expect``, and we get its string
+        # content using ``Content``. The ``^`` operator means "require". In this
+        # case, we require that the next indentation is longer than the current
+        # indentation.
+        token = Expect(Content(Tokens.Indent))
+        return token ^ (lambda token: len(current) < len(token))
+
+    # Let's say that a program is a block, optionally surrounded by newlines.
+    # (The ``>>`` and ``<<`` operators discard the newlines in this case.)
+    OptNewlines = List(Tokens.Newline)
+    Program = OptNewlines >> Block << OptNewlines
+
+    test = '''
+    print foo
+    while true
+        print bar
+        if baz
+            then break
+    exit
+    '''
+
+    # Let's parse the test case and then use ``repr`` to make sure that we get
+    # back what we expect.
+    ans = tokenize_and_parse(Tokens, Program, test)
+    expect = '{print foo; while true; {print bar; if baz; {then break;}} exit;}'
+    assert repr(ans) == expect
 
 
 More Examples

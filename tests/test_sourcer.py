@@ -11,26 +11,28 @@ Int = Transform(Pattern(r'\d+'), int)
 Name = Pattern(r'\w+')
 Negation = collections.namedtuple('Negation', 'operator, right')
 
-T = Tokenizer()
+T = TokenSyntax()
 T.Number = r'\d+'
+
+AnyInst = lambda *classes: Where(lambda x: isinstance(x, classes))
 
 
 class TestSomePotentiallyUsefulStrategies(unittest.TestCase):
     def test_tokenize_indentation(self):
-        '''Use Backtrack and Lookback to recognize indentation tokens.'''
-        T = Tokenizer()
+        '''Use Backtrack to recognize indentation tokens.'''
+        T = TokenSyntax()
         T.Word = r'\w+'
         T.Newline = r'[\n\r]'
 
         # If we look back and see a newline, or if we can't backtrack at all,
         # then we know we're at the start of a fresh new line.
-        Startline = Lookback(T.Newline) | Start
+        Startline = (Backtrack() >> T.Newline) | Start
 
         # An indent token is a non-empty sequence of spaces and tabs at the
         # start of a line.
         T.Indent = Right(Startline, Regex(r'[ \t]+'))
 
-        tokens = T.run('  foo\n    bar\n   baz\nqux')
+        tokens = tokenize(T, '  foo\n    bar\n   baz\nqux')
         contents = [t.content for t in tokens]
         self.assertIsInstance(tokens[0], T.Indent)
         self.assertIsInstance(tokens[3], T.Indent)
@@ -85,7 +87,7 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_simple_struct(self):
         class Pair(Struct):
-            def __init__(self):
+            def parse(self):
                 self.left = Int
                 self.sep = ','
                 self.right = Int
@@ -98,13 +100,13 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_two_simple_structs(self):
         class NumberPair(Struct):
-            def __init__(self):
+            def parse(self):
                 self.left = Int
                 self.sep = ','
                 self.right = Int
 
         class LetterPair(Struct):
-            def __init__(self):
+            def parse(self):
                 self.left = 'A'
                 self.sep = ','
                 self.right = 'B'
@@ -191,12 +193,12 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(ans, 'B')
 
     def test_ordered_choice_third(self):
-        T = Or(*'ABC')
+        T = reduce(Or, 'ABC')
         ans = parse(T, 'C')
         self.assertEqual(ans, 'C')
 
     def test_and_operator(self):
-        Vowel = Or(*'AEIOU')
+        Vowel = reduce(Or, 'AEIOU')
         Prefix = 'ABCD' & Vowel
         T = (Prefix, Any)
         ans = parse(T, 'ABCDE')
@@ -210,13 +212,13 @@ class TestSimpleExpressions(unittest.TestCase):
         self.assertEqual(ans, ('A', 'A'))
 
     def test_empty_alt_term(self):
-        T = Middle('(', Alt('A', ','), ')')
+        T = '(' >> Alt('A', ',') << ')'
         ans = parse(T, '()')
         self.assertEqual(ans, [])
 
     def test_left_assoc_struct(self):
         class Dot(LeftAssoc):
-            def __init__(self):
+            def parse(self):
                 self.left = Name
                 self.op = '.'
                 self.right = Name
@@ -232,7 +234,7 @@ class TestSimpleExpressions(unittest.TestCase):
 
     def test_right_assoc_struct(self):
         class Arrow(RightAssoc):
-            def __init__(self):
+            def parse(self):
                 self.left = Name
                 self.op = ' -> '
                 self.right = Name
@@ -315,7 +317,7 @@ class TestSimpleExpressions(unittest.TestCase):
 
 class TestOperatorPrecedenceTable(unittest.TestCase):
     def grammar(self):
-        Parens = Middle('(', ForwardRef(lambda: Expr), ')')
+        Parens = '(' >> ForwardRef(lambda: Expr) << ')'
         Expr = OperatorPrecedence(
             Int | Parens,
             Prefix('+', '-'),
@@ -391,7 +393,7 @@ class TestArithmeticExpressions(unittest.TestCase):
     def grammar(self):
         F = ForwardRef(lambda: Factor)
         E = ForwardRef(lambda: Expr)
-        Parens = Middle('(', E, ')')
+        Parens = '(' >> E << ')'
         Negate = Transform(('-', F), lambda p: Negation(*p))
         Factor = Int | Parens | Negate
         Term = ReduceLeft(Factor, Or('*', '/'), Factor) | Factor
@@ -447,7 +449,7 @@ class TestCalculator(unittest.TestCase):
     def grammar(self):
         F = ForwardRef(lambda: Factor)
         E = ForwardRef(lambda: Expr)
-        Parens = Middle('(', E, ')')
+        Parens = '(' >> E << ')'
         Negate = Transform(Right('-', F), lambda x: -x)
         Factor = Int | Parens | Negate
         operators = {
@@ -484,10 +486,10 @@ class TestCalculator(unittest.TestCase):
 
 class TestEagerLambdaCalculus(unittest.TestCase):
     def grammar(self):
-        Parens = Middle('(', ForwardRef(lambda: Expr), ')')
+        Parens = '(' >> ForwardRef(lambda: Expr) << ')'
 
         class Identifier(Struct):
-            def __init__(self):
+            def parse(self):
                 self.name = Name
 
             def __repr__(self):
@@ -497,7 +499,7 @@ class TestEagerLambdaCalculus(unittest.TestCase):
                 return env.get(self.name, self.name)
 
         class Abstraction(Struct):
-            def __init__(self):
+            def parse(self):
                 self.symbol = '\\'
                 self.parameter = Name
                 self.separator = '.'
@@ -515,7 +517,7 @@ class TestEagerLambdaCalculus(unittest.TestCase):
                 return callback
 
         class Application(LeftAssoc):
-            def __init__(self):
+            def parse(self):
                 self.left = Operand
                 self.operator = ' '
                 self.right = Operand
@@ -551,37 +553,37 @@ class TestEagerLambdaCalculus(unittest.TestCase):
             self.assertEqual(ans, expectation)
 
 
-class TestTokenizer(unittest.TestCase):
+class TestTokens(unittest.TestCase):
     def tokenize(self, tokenizer, source):
-        tokens = tokenizer.run(source)
+        tokens = tokenize(tokenizer, source)
         return [t.content for t in tokens]
 
     def test_numbers_and_spaces(self):
-        T = Tokenizer()
+        T = TokenSyntax()
         T.Word = r'\w+'
         T.Space = r'\s+'
         ans = self.tokenize(T, 'A B C')
         self.assertEqual(ans, list('A B C'))
 
     def test_numbers_and_spaces_with_regexes(self):
-        T = Tokenizer()
+        T = TokenSyntax()
         T.Word = Regex(r'\w+')
         T.Space = re.compile(r'\s+')
         ans = self.tokenize(T, 'A B C')
         self.assertEqual(ans, list('A B C'))
 
     def test_skip_spaces(self):
-        T = Tokenizer()
+        T = TokenSyntax()
         T.Number = r'\d+'
         T.Space = Skip(r'\s+')
         ans = self.tokenize(T, '1 2 3')
         self.assertEqual(ans, list('123'))
 
     def test_token_types(self):
-        T = Tokenizer()
+        T = TokenSyntax()
         T.Number = r'\d+'
         T.Space = Skip(r'\s+')
-        tokens = T.run('1 2 3')
+        tokens = tokenize(T, '1 2 3')
         self.assertIsInstance(tokens, list)
         self.assertEqual(len(tokens), 3)
         for index, token in enumerate(tokens):
@@ -589,14 +591,14 @@ class TestTokenizer(unittest.TestCase):
             self.assertEqual(token.content, str(index + 1))
 
     def test_one_char_in_string(self):
-        T = Tokenizer()
+        T = TokenSyntax()
         T.Symbol = AnyChar('(.*[;,])?')
         sample = '[]().*;;'
         ans = self.tokenize(T, sample)
         self.assertEqual(ans, list(sample))
 
     def test_init_style(self):
-        class FooTokens(Tokenizer):
+        class FooTokens(TokenSyntax):
             def __init__(self):
                 self.Space = Skip(r'\s+')
                 self.Word = r'[a-zA-Z_][a-zA-Z_0-9]*'
@@ -606,18 +608,18 @@ class TestTokenizer(unittest.TestCase):
         self.assertEqual(ans, ['This', 'is', 'a', 'test', 'everybody'])
 
     def test_tokenize_and_parse(self):
-        class CalcTokens(Tokenizer):
+        class CalcTokens(TokenSyntax):
             def __init__(self):
                 self.Space = Skip(r'\s+')
                 self.Number = r'\d+'
                 self.Operator = AnyChar('+*-/')
         class Factor(LeftAssoc):
-            def __init__(self):
+            def parse(self):
                 self.left = Operand
                 self.operator = Or('/', '*')
                 self.right = Operand
         class Term(LeftAssoc):
-            def __init__(self):
+            def parse(self):
                 self.left = Factor | Operand
                 self.operator = Or('+', '-')
                 self.right = Factor | Operand
@@ -635,14 +637,14 @@ class TestSignificantIndentation(unittest.TestCase):
         # superclass. Also, consider providing a constructor that accepts
         # keyword arguments. (Also, consider implementing __repr__, too.)
         class Command(Struct):
-            def __init__(self):
-                self.message = Middle('print ', Word, '\n')
+            def parse(self):
+                self.message = 'print ' >> Word << '\n'
             def __eq__(self, other):
                 return (isinstance(other, Command)
                     and self.message == other.message)
         class Loop(Struct):
-            def __init__(self):
-                self.count = Middle('loop ', Int, ' times\n')
+            def parse(self):
+                self.count = 'loop ' >> Int << ' times\n'
                 self.body = Block
             def __eq__(self, other):
                 return (isinstance(other, Loop)
@@ -655,7 +657,7 @@ class TestSignificantIndentation(unittest.TestCase):
             return Some(IndentedStatement(indent))
         Indent = Pattern('[ \t]*')
         Block = Bind(Expect(Indent), IndentedBlock)
-        Program = Middle('\n', Block, Indent)
+        Program = '\n' >> Block << Indent
         ans1 = parse(Program, '''
             print alfa
             print bravo
@@ -717,8 +719,8 @@ class TestSignificantIndentation(unittest.TestCase):
     def test_careful_body(self):
         Word = Pattern(r'\w+')
         class Command(Struct):
-            def __init__(self):
-                self.message = Middle('print ', Word, '\n')
+            def parse(self):
+                self.message = 'print ' >> Word << '\n'
             def __eq__(self, other):
                 return (isinstance(other, Command)
                     and self.message == other.message)
@@ -727,8 +729,8 @@ class TestSignificantIndentation(unittest.TestCase):
         # to other rules.
         def Loop(indent):
             class LoopClass(Struct):
-                def __init__(self):
-                    self.count = Middle('loop ', Int, ' times\n')
+                def parse(self):
+                    self.count = 'loop ' >> Int << ' times\n'
                     self.body = Opt(Block(indent))
                 def __eq__(self, other):
                     return (hasattr(other, 'count')
@@ -741,7 +743,7 @@ class TestSignificantIndentation(unittest.TestCase):
             indent = Require(Expect(Indent), lambda i: len(current) < len(i))
             return Bind(indent, lambda i: List(IndentedStatement(i)))
         Indent = Pattern(' *')
-        Program = Middle('\n', Block(''), Indent)
+        Program = '\n' >> Block('') << Indent
         def cmd(message):
             ans = Command()
             ans.message = message
@@ -775,13 +777,25 @@ class TestSignificantIndentation(unittest.TestCase):
 class RegressionTests(unittest.TestCase):
     def test_stack_depth(self):
         test = ('(1+' * 100) + '1' + (')' * 100)
-        Parens = Middle('(', ForwardRef(lambda: Add), ')')
+        Parens = '(' >> ForwardRef(lambda: Add) << ')'
         Term = Parens | '1'
         Add = (Term, '+', Term) | Term
         ans = parse(Add, test)
         self.assertIsInstance(ans, tuple)
         self.assertEqual(ans[0], '1')
         self.assertEqual(ans[1], '+')
+
+    def test_infinite_list(self):
+        InfLoop = List('')
+        ans = parse_prefix(InfLoop, 'abc')
+        self.assertIsInstance(ans, ParseResult)
+        self.assertEqual(ans.value, [])
+        self.assertEqual(ans.pos, 0)
+
+    def test_infinite_operators(self):
+        InfOp = OperatorPrecedence(Int, Prefix(''))
+        ans = parse(InfOp, '123')
+        self.assertEqual(ans, 123)
 
 
 if __name__ == '__main__':
