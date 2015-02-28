@@ -213,44 +213,77 @@ used:
 Example 5: Parsing Significant Indentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+We can use sourcer to parse languages with significant indentation. Here's a
+bare-bones example to demonstrate one possible approach.
+
 .. code:: python
 
     from sourcer import *
 
     class TestTokens(TokenSyntax):
         def __init__(self):
+            # Let's just use words, newlines, and spaces in this example.
             self.Word = r'\w+'
             self.Newline = r'\n'
+            # In this case, we'll say that an indent is a newline followed by
+            # some spaces, followed by a word.
             self.Indent = r'(?<=\n) +(?=\w)'
+            # And let's just throw out all other space characters.
             self.Space = Skip(' +')
 
+    # All our token classes are attributes of this ``Tokens`` object. It's
+    # essentially a namespace for our token classes.
     Tokens = TestTokens()
 
     class InlineStatement(Struct):
         def parse(self):
+            # Let's say an inline-statement is just some word tokens. And let's
+            # use ``Content`` to just get the string content of each token.
             self.words = Some(Content(Tokens.Word))
 
         def __repr__(self):
+            # We'll define a ``repr`` method so that we can easily see if the
+            # parse results looks right. We'll just put a semicolon after each
+            # inline statement.
             return '%s;' % ' '.join(self.words)
 
     class Block(Struct):
         def parse(self, indent=''):
+            # A block is a bunch of statements at the same indentation,
+            # all separated by some newline tokens.
             self.statements = Statement(indent) // Some(Tokens.Newline)
 
         def __repr__(self):
+            # In this case, we'll just put a space between each statement and
+            # enclose the whole block in curly braces. This will make it easy
+            # for use to tell if our parse results look right.
             return '{%s}' % ' '.join(repr(i) for i in self.statements)
 
     def Statement(indent):
+        # We'll say there are two ways to get a statement:
+        # - See an inline-statement with the current indentation.
+        # - See a block that is indented farther than the current indentation.
         return (CurrentIndent(indent) >> InlineStatement
             | IncreaseIndent(indent) ** Block)
 
     def CurrentIndent(indent):
+        # If the current indent is the empty string, then we don't need to
+        # consume an input. (We don't have tokens for zero-indentation.)
+        # So in this case, we use ``Return``. Otherwise, we need to match the
+        # current indentation, so we simply return it.
         return Return('') if indent == '' else indent
 
     def IncreaseIndent(current):
+        # To see if the next indentation is more than the current indentation,
+        # we peek at the next token, using ``Expect``, and we get its string
+        # content using ``Content``. The ``^`` operator means "require". In this
+        # case, we require that the next indentation is longer than the current
+        # indentation.
         token = Expect(Content(Tokens.Indent))
         return token ^ (lambda token: len(current) < len(token))
 
+    # Let's say that a program is a block, optionally surrounded by newlines.
+    # (The ``>>`` and ``<<`` operators discard the newlines in this case.)
     OptNewlines = List(Tokens.Newline)
     Program = OptNewlines >> Block << OptNewlines
 
@@ -262,6 +295,9 @@ Example 5: Parsing Significant Indentation
             then break
     exit
     '''
+
+    # Let's parse the test case and then use ``repr`` to make sure that we get
+    # back what we expect.
     ans = tokenize_and_parse(Tokens, Program, test)
     expect = '{print foo; while true; {print bar; if baz; {then break;}} exit;}'
     assert repr(ans) == expect
