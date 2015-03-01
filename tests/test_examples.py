@@ -1,6 +1,6 @@
 '''Search all our doc comments for "Example" blocks and try executing them.'''
 import re
-import sourcer
+import sourcer.expressions
 
 
 def run_examples(package):
@@ -30,4 +30,4 @@ def run_examples(package):
 
 
 if __name__ == '__main__':
-    run_examples(sourcer)
+    run_examples(sourcer.expressions)
