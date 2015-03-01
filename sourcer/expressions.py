@@ -59,7 +59,8 @@ class ExpressionMetaClass(type, ParsingOperand):
 
 class Struct(object):
     __metaclass__ = ExpressionMetaClass
-    def parse(self): pass
+    def parse(self):
+        raise NotImplementedError('parse')
 
 
 class __Self(object):
