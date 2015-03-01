@@ -4,19 +4,22 @@ from collections import namedtuple
 
 class ParsingOperand(object):
     '''
-    This mixin-style class adds support for parsing operators::
-        a & b  ==  And(a, b)
-        a | b  ==  Or(a, b)
-        a / b  ==  Alt(a, b, allow_trailer=True)
-        a // b ==  Alt(a, b, allow_trailer=False)
-        ~a     ==  Opt(a)
-        a << b ==  Left(a, b)
-        a >> b ==  Right(a, b)
-        a ^ b  ==  Require(a, b)
-        a * b  ==  Transform(a, b)
-        a ** b ==  Bind(a, b)
+    This mixin adds support for parsing operators::
+
+        Operator  Verbose Form      Description
+        ========  ================  ===================
+        a | b     Or(a, b)          ordered choice
+        a / b     Alt(a, b, True)   alternation
+        a // b    Alt(a, b, False)  separated list
+        ~a        Opt(a)            optional value
+        a >> b    Right(a, b)       discard a
+        a << b    Left(a, b)        discard b
+        a ^ b     Require(a, b)     predicate
+        a * b     Transform(a, b)   transform
+        a ** b    Bind(a, b)        context sensitivity
+        a & b     And(a, b)         lookahead
+        ========  ===============   ===================
     '''
-    # MUST: use a table in the doc comment.
     def __and__(self, other): return And(self, other)
     def __rand__(self, other): return And(other, self)
     def __or__(self, other): return Or(self, other)
