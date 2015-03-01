@@ -41,6 +41,18 @@ class ParsingOperand(object):
 
 
 class ExpressionMetaClass(type, ParsingOperand):
+    '''
+    This metaclass allows classes like ``Any`` and ``End`` to be used in parsing
+    expressions.
+
+    Example::
+
+        from sourcer import *
+        Msg = Start >> 'foo/' >> Any << ('/bar' | End)
+        r1 = parse(Msg, 'foo/7/bar')
+        r2 = parse(Msg, 'foo/7')
+        assert r1 == '7' and r2 == '7'
+    '''
     def __repr__(self):
         return self.__name__
 
