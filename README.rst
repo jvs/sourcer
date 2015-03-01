@@ -309,3 +309,9 @@ More Examples
 Parsing `Excel formula <https://github.com/jvs/sourcer/tree/master/examples>`_
 and some corresponding
 `test cases <https://github.com/jvs/sourcer/blob/master/tests/test_excel.py>`_.
+
+
+Background
+----------
+`Parsing expression grammar
+<http://en.wikipedia.org/wiki/Parsing_expression_grammar>`_.
