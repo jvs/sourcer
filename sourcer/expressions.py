@@ -36,8 +36,9 @@ class ParsingOperand(object):
     def __rshift__(self, other): return Right(self, other)
     def __rrshift__(self, other): return Right(other, self)
     def __mul__(self, other): return Transform(self, other)
-    def __pow__(self, other): return Bind(self, other)
     def __xor__(self, other): return Require(self, other)
+    def __pow__(self, other): return Bind(self, other)
+    def __rpow__(self, other): return Bind(other, self)
 
 
 class ExpressionMetaClass(type, ParsingOperand):
