@@ -50,6 +50,7 @@ from .precedence import (
 
 from .tokens import (
     AnyChar,
+    AnyString,
     Content,
     Pattern,
     Regex,

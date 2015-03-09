@@ -46,6 +46,10 @@ def AnyChar(pattern):
     return Regex('[%s]' % re.escape(pattern))
 
 
+def AnyString(*strings):
+    return Regex('|'.join(re.escape(i) for i in strings))
+
+
 def Content(token):
     return Transform(token, lambda token: token.content)
 
