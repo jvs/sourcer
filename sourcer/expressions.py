@@ -59,6 +59,11 @@ class ExpressionMetaClass(type, ParsingOperand):
 
 
 class Struct(object):
+    '''
+    Use this class to define the nodes of your abstract syntax tree. For each
+    type of node, create a subclass of Struct and define a method called
+    "parse" -- it should indicate how to parse the structure.
+    '''
     __metaclass__ = ExpressionMetaClass
     def parse(self):
         raise NotImplementedError('parse')
