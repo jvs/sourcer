@@ -32,7 +32,10 @@ def compile(expression, is_text=True):
     return parser
 
 
-class ForwardingPointer(object): pass
+class ForwardingPointer(object):
+    def __call__(self, source, pos):
+        ans = yield ParseStep(self.parser, pos)
+        yield ans
 
 
 def _replace_pointers(parser, visited=None):
