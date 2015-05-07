@@ -292,6 +292,10 @@ def Alt(element, separator, allow_trailer=True):
     return _Alt(element, separator, allow_trailer)
 
 
+def AnyOf(*args):
+    return reduce(Or, args)
+
+
 def Backtrack(count=1):
     '''
 
