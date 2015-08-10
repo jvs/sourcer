@@ -68,6 +68,13 @@ class Struct(object):
     def parse(self):
         raise NotImplementedError('parse')
 
+    def _replace(self, **kwargs):
+        cls = self.__class__
+        ans = cls.__new__(cls)
+        for k, v in self.__dict__.iteritems():
+            setattr(ans, k, kwargs.get(k, v))
+        return ans
+
 
 class __Self(object):
 

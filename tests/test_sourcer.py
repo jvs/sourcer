@@ -788,6 +788,25 @@ class TestSignificantIndentation(unittest.TestCase):
                 print baz
             ''')
 
+    def test_replace_method(self):
+        class Foobar(Struct):
+            def parse(self):
+                self.foo = 'foo'
+                self.sep = ':'
+                self.bar = 'bar'
+
+        raw = parse(Foobar, 'foo:bar')
+        self.assertIsInstance(raw, Foobar)
+        self.assertEqual(raw.foo, 'foo')
+        self.assertEqual(raw.sep, ':')
+        self.assertEqual(raw.bar, 'bar')
+
+        cooked = raw._replace(foo='FOO', bar='BAR')
+        self.assertIsInstance(cooked, Foobar)
+        self.assertEqual(cooked.foo, 'FOO')
+        self.assertEqual(cooked.sep, ':')
+        self.assertEqual(cooked.bar, 'BAR')
+
 
 class RegressionTests(unittest.TestCase):
     def test_stack_depth(self):
