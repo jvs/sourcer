@@ -43,13 +43,11 @@ class FunctionCall(Struct):
 
 
 def _normalize_R1C1(token):
-    def visit(n):
+    for n in ('row', 'column'):
         value = getattr(token, 'raw_' + n)
         is_sq = value.startswith('[')
         setattr(token, n, value[1:-1] if is_sq else value)
         setattr(token, n + '_modifier', '[]' if is_sq else '')
-    visit('row')
-    visit('column')
     return token
 
 
