@@ -7,8 +7,8 @@ def parse_formula(formula):
 
 class FormulaTokenizer(TokenSyntax):
     def __init__(self):
-        offset = lambda n: r'(?P<raw_%s>(\d+|\[\-?\d+\]))' % n
-        self.R1C1Ref = 'R%sC%s' % (offset('row'), offset('column'))
+        offset = r'(?P<raw_%s>(\d+|\[\-?\d+\]))'
+        self.R1C1Ref = 'R%sC%s' % (offset % 'row', offset % 'column')
         self.A1Ref = Verbose(r'''
             (?P<column_modifier>\$?)
             (?P<column>I[A-V]|[A-H][A-Z]|[A-Z])
