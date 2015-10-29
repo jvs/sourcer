@@ -65,6 +65,26 @@ class Struct(object):
     "parse" -- it should indicate how to parse the structure.
     '''
     __metaclass__ = ExpressionMetaClass
+
+    def __init__(self, *args, **kwargs):
+        fields = struct_fields(self.__class__)
+        visited = set()
+
+        for field, arg in zip(fields, args):
+            name = field[0]
+            setattr(self, name, arg)
+            visited.add(name)
+
+        for name, value in kwargs.iteritems():
+            assert name not in visited
+            setattr(self, name, value)
+            visited.add(name)
+
+        for field in fields:
+            name = field[0]
+            if not hasattr(self, name):
+                setattr(self, name, None)
+
     def parse(self):
         raise NotImplementedError('parse')
 
@@ -328,3 +348,14 @@ def Backtrack(count=1):
 
 def Where(test):
     return Any ^ test
+
+
+def struct_fields(cls, *args):
+    ans = []
+    class AttributeRecorder(cls):
+        def __setattr__(self, name, value):
+            ans.append((name, value))
+            cls.__setattr__(self, name, value)
+    recorder = AttributeRecorder.__new__(AttributeRecorder)
+    recorder.parse(*args)
+    return ans

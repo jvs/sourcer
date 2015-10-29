@@ -3,7 +3,7 @@ from .precedence import *
 
 
 def compile_struct(node, *args):
-    fields = _struct_fields(node, *args)
+    fields = struct_fields(node, *args)
     if issubclass(node, (LeftAssoc, RightAssoc)):
         return _compile_assoc_struct(node, fields)
     else:
@@ -36,15 +36,4 @@ def _build_struct(node, fields, values):
     ans = node.__new__(node)
     for field, value in zip(fields, values):
         setattr(ans, field[0], value)
-    return ans
-
-
-def _struct_fields(cls, *args):
-    ans = []
-    class AttributeRecorder(cls):
-        def __setattr__(self, name, value):
-            ans.append((name, value))
-            cls.__setattr__(self, name, value)
-    recorder = AttributeRecorder.__new__(AttributeRecorder)
-    recorder.parse(*args)
     return ans

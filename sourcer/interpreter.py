@@ -2,7 +2,7 @@ from .expressions import Left, End
 from .compiler import *
 
 
-# This module raises this exception when it cannot parse an input sequence.
+# Sourcer raises this exception when it cannot parse an input sequence.
 class ParseError(Exception): pass
 
 
