@@ -13,14 +13,14 @@ pack_tuple = (lambda *args: args)
 
 
 def ReduceLeft(left, op, right, transform=pack_tuple):
-    expr = (left, Some((op, right)))
+    expr = (left, List((op, right)))
     assoc = lambda first, rest: transform(first, *rest)
     xform = lambda pair: reduce(assoc, pair[1], pair[0])
     return Transform(expr, xform)
 
 
 def ReduceRight(left, op, right, transform=pack_tuple):
-    expr = (Some((left, op)), right)
+    expr = (List((left, op)), right)
     assoc = lambda prev, next: transform(next[0], next[1], prev)
     xform = lambda pair: reduce(assoc, reversed(pair[0]), pair[1])
     return Transform(expr, xform)

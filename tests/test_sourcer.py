@@ -832,5 +832,39 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(ans, 123)
 
 
+class TestPerformanceWithManyOperators(unittest.TestCase):
+    def grammar(self):
+        Parens = '(' >> ForwardRef(lambda: Expr) << ')'
+        Var = Pattern(r'[A-Z]')
+        Expr = OperatorPrecedence(
+            Var | Int | Parens,
+            Prefix('+', '-'),
+            Postfix('%'),
+            InfixRight('^'),
+            InfixLeft('*', '/'),
+            InfixLeft('+', '-'),
+            InfixLeft(' by '),
+            InfixLeft(' to '),
+            InfixLeft('<', '<=', '>=', '>'),
+            InfixLeft('==', '!='),
+            InfixLeft(' and '),
+            InfixLeft(' or '),
+            InfixRight(' implies ', '->'),
+            InfixLeft(' foo '),
+            InfixLeft(' bar '),
+            InfixLeft(' baz '),
+            InfixLeft(' fiz '),
+            InfixLeft(' buz '),
+            InfixLeft(' zim '),
+            InfixLeft(' zam '),
+        )
+        return Expr
+
+    def test_long_expression(self):
+        source = '++1+2--3*4^5->A->B implies 1<2 and -X to +Y by --Z%'
+        ans = parse(self.grammar(), source)
+        self.assertIsInstance(ans, Operation)
+
+
 if __name__ == '__main__':
     unittest.main()
