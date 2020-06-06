@@ -82,10 +82,19 @@ class TestExpression2(unittest.TestCase):
             else_ = Space >> 'else' >> Space >> Word
 
         result = parse(If << End, 'if foo then bar else baz')
+        self.assertEqual(result, If(
+            if_=Word('foo'),
+            then_=Word('bar'),
+            else_=Word('baz'),
+        ))
+
+        # Sanity-check the basic parts.
         self.assertIsInstance(result, If)
         self.assertEqual(result.if_, Word('foo'))
         self.assertEqual(result.then_, Word('bar'))
         self.assertEqual(result.else_, Word('baz'))
+
+        # Sanity-check the utilities.
         self.assertEqual(result._fields, ('if_', 'then_', 'else_'))
         self.assertEqual(result._asdict(), {
             'if_': Word('foo'),
