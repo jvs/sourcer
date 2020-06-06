@@ -73,15 +73,17 @@ class TestExpression2(unittest.TestCase):
         ])
 
     def test_simple_struct(self):
-        Space = Regex(r'\s+')
+        Space = TokenPattern(r'\s+', is_dropped=True)
         Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
 
         class If(Struct):
-            if_ = 'if' >> Space >> Word
-            then_ = Space >> 'then' >> Space >> Word
-            else_ = Space >> 'else' >> Space >> Word
+            if_ = 'if' >> Word
+            then_ = 'then' >> Word
+            else_ = 'else' >> Word
 
-        result = parse(If << End, 'if foo then bar else baz')
+        parser = Parser(start=If << End, tokens=[Space, Word])
+
+        result = parser('if foo then bar else baz')
         self.assertEqual(result, If(
             if_=Word('foo'),
             then_=Word('bar'),

@@ -216,8 +216,11 @@ class List(Expr):
             item = self.expr.parse(text, pos)
             if not item.is_success:
                 break
-            result.append(item.value)
             pos = item.pos
+            value = item.value
+            if isinstance(value, Token) and value.is_dropped:
+                continue
+            result.append(value)
             if not saw_commit and item.is_commit:
                 saw_commit = True
         return Success(result, pos, is_commit=saw_commit)
@@ -392,16 +395,17 @@ class Token(metaclass=MetaExpr):
             return isinstance(other, Token) and self.value == other.value
 
 
-def TokenClass(pattern):
+def TokenClass(pattern, is_dropped=False):
     class TokenClass(Token):
         def __repr__(self):
             return f'Token({self.value!r})'
     TokenClass.pattern = conv(pattern)
+    TokenClass.is_dropped = is_dropped
     return TokenClass
 
 
-def TokenPattern(pattern):
-    return TokenClass(Regex(pattern))
+def TokenPattern(pattern, is_dropped=False):
+    return TokenClass(Regex(pattern), is_dropped=is_dropped)
 
 
 def Tokenizer(*exprs):
