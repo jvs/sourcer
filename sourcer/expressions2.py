@@ -331,29 +331,31 @@ class Some(DerivedExpr):
 
 
 class Struct(metaclass=MetaExpr):
+    def __init__(self, **kw):
+        if set(kw.keys()) != set(self._fields):
+            raise Exception(f'Expected fields: {self._fields!r}')
+        for k, v in kw.items():
+            setattr(self, k, v)
+
     @classmethod
     def parse(cls, text, pos):
         names, exprs = [], []
         for name, value in vars(cls).items():
-            if not inspect.ismethod(value):
+            if not name.startswith('_') and not inspect.ismethod(value):
                 names.append(name)
                 exprs.append(conv(value))
 
-        names = tuple(names)
-
-        def init(values):
-            obj = cls()
-            obj._fields = names
-            for name, value in zip(names, values):
-                setattr(obj, name, value)
-            return obj
-
-        delegate = Transform(Seq(*exprs), init)
+        cls._fields = tuple(names)
+        delegate = Transform(Seq(*exprs), lambda vals: cls(**dict(zip(names, vals))))
         cls.parse = delegate.parse
         return delegate.parse(text, pos)
 
     def _asdict(self):
         return {k: getattr(self, k) for k in self._fields}
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+            all(getattr(self, x) == getattr(other, x) for x in self._fields))
 
 
 class Token(metaclass=MetaExpr):
@@ -396,6 +398,10 @@ def TokenClass(pattern):
             return f'Token({self.value!r})'
     TokenClass.pattern = conv(pattern)
     return TokenClass
+
+
+def TokenPattern(pattern):
+    return TokenClass(Regex(pattern))
 
 
 def Tokenizer(*exprs):
