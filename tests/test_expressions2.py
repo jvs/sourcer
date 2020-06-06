@@ -56,9 +56,8 @@ class TestExpression2(unittest.TestCase):
             parse(Any, [])
 
     def test_simple_choice_expressions(self):
-        Int = Regex(r'[0-9]+') * int
         Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
-        Number = TokenClass(Int)
+        Number = TokenClass(Regex(r'[0-9]+') * int)
         Comma = TokenPattern(r'\s*,\s*')
         Elements = ((Word | Number) / Comma) << End
 
@@ -103,6 +102,55 @@ class TestExpression2(unittest.TestCase):
             'then_': Word('bar'),
             'else_': Word('baz'),
         })
+
+    def test_simple_operator_precedence(self):
+        Space = TokenPattern(r'\s+', is_dropped=True)
+        Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
+        Number = TokenClass(Regex(r'[0-9]+') * int)
+        Symbol = TokenPattern(r'[\+\-\*\/\(\)\%\^]')
+        Parens = '(' >> Lazy(lambda: Expr) << ')'
+
+        Expr = OperatorPrecedence(
+            Word | Number | Parens,
+            Prefix(Choice('+', '-')),
+            Postfix('%'),
+            RightAssoc('^'),
+            LeftAssoc(Choice('*', '/')),
+            LeftAssoc(Choice('+', '-')),
+        )
+
+        parser = Parser(start=Expr, tokens=[Space, Word, Number, Symbol])
+
+        # Short names.
+        N = Number
+        S = Symbol
+        In = InfixOp
+        Pr = PrefixOp
+        Ps = PostfixOp
+
+        result = parser('1 + 2 * 3')
+        self.assertEqual(result, In(N(1), S('+'), In(N(2), S('*'), N(3))))
+
+        result = parser('1 + 2 ^ -3 ^ 4 / 5%')
+        self.assertEqual(result,
+            In(
+                N(1),
+                S('+'),
+                In(
+                    In(
+                        N(2),
+                        S('^'),
+                        In(
+                            Pr(S('-'), N(3)),
+                            S('^'),
+                            N(4),
+                        ),
+                    ),
+                    S('/'),
+                    Ps(N(5), S('%')),
+                )
+            )
+        )
 
 
 if __name__ == '__main__':

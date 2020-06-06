@@ -427,8 +427,8 @@ class Transform(Expr):
 
 
 InfixOp = namedtuple('Infix', 'left, operator, right')
-PrefixOp = namedtuple('Prefix', 'operator, right')
-PostfixOp = namedtuple('Prefix', 'left, operator')
+PrefixOp = namedtuple('PrefixOp', 'operator, right')
+PostfixOp = namedtuple('PostfixOp', 'left, operator')
 
 
 class OperatorPrecedenceRule:
@@ -474,6 +474,19 @@ class RightAssoc(OperatorPrecedenceRule):
                 i -= 1
             return acc
         return Transform(expr, associate)
+
+
+class Postfix(OperatorPrecedenceRule):
+    def build(self, operand):
+        expr = Seq(operand, List(self.operators))
+        return Transform(expr, lambda seq: reduce(PostfixOp, seq[1], seq[0]))
+
+
+class Prefix(OperatorPrecedenceRule):
+    def build(self, operand):
+        expr = Seq(List(self.operators), operand)
+        make_op = lambda acc, op: PrefixOp(op, acc)
+        return Transform(expr, lambda seq: reduce(make_op, reversed(seq[0]), seq[1]))
 
 
 def OperatorPrecedence(atom, *rules):
