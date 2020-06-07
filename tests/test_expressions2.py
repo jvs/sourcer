@@ -2,7 +2,26 @@ import unittest
 from sourcer.expressions2 import *
 
 
-class TestExpression2(unittest.TestCase):
+class TestExpressions2(unittest.TestCase):
+    def test_many_nested_parentheses(self):
+        Bal = Lazy(lambda: Balanced)
+        Balanced = End | Seq('(', Opt(Bal), ')', Opt(Bal))
+        depth = 1001
+        text = ('(' * depth) + (')' * depth)
+        result = parse(Balanced << End, text)
+
+        count = 0
+        while result:
+            assert isinstance(result, list)
+            assert len(result) == 4
+            assert result[0] == '('
+            assert result[2] == ')'
+            assert result[3] is None
+            result = result[1]
+            count += 1
+
+        self.assertEqual(count, depth)
+
     def test_simple_alernation(self):
         Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
         Comma = TokenPattern(r'\s*,\s*')

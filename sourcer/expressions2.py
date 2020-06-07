@@ -7,7 +7,18 @@ import typing
 
 
 def parse(expr, text, pos=0):
-    result = conv(expr).parse(text, pos)
+    expr = conv(expr)
+    stack = [expr._parse(text, pos)]
+    result = None
+    while stack:
+        top = stack[-1]
+        result = top.send(result)
+        if isinstance(result, Step):
+            stack.append(result.expr._parse(text, result.pos))
+            result = None
+        else:
+            stack.pop()
+    assert result is not None
     if result.is_success:
         return result.value
     else:
@@ -84,10 +95,10 @@ class DerivedExpr(Expr):
     def derive(self):
         raise NotImplementedError('derive')
 
-    def parse(self, text, pos):
+    def _parse(self, text, pos):
         delegate = self.derive()
-        self.parse = delegate.parse
-        return delegate.parse(text, pos)
+        self._parse = delegate._parse
+        return delegate._parse(text, pos)
 
 
 class Alt(Expr):
@@ -96,12 +107,12 @@ class Alt(Expr):
         self.separator = conv(separator)
         self.allow_trailer = allow_trailer
 
-    def parse(self, text, pos):
+    def _parse(self, text, pos):
         result = []
         result_pos = pos
         saw_commit = False
         while True:
-            item = self.expr.parse(text, pos)
+            item = yield Step(self.expr, pos)
             if not item.is_success:
                 break
             if not saw_commit and item.is_commit:
@@ -109,7 +120,7 @@ class Alt(Expr):
             result.append(item.value)
             pos = item.pos
             result_pos = pos
-            skipped = self.separator.parse(text, pos)
+            skipped = yield Step(self.separator, pos)
             if not skipped.is_success:
                 break
             if not saw_commit and skipped.is_commit:
@@ -117,75 +128,77 @@ class Alt(Expr):
             pos = skipped.pos
             if self.allow_trailer:
                 result_pos = pos
-        return Success(result, result_pos, is_commit=saw_commit)
+        yield Success(result, result_pos, is_commit=saw_commit)
 
 
 class Any(metaclass=MetaExpr):
     @classmethod
-    def parse(cls, text, pos):
-        return Success(text[pos], pos + 1) if pos < len(text) else Failure(cls, pos)
+    def _parse(cls, text, pos):
+        yield Success(text[pos], pos + 1) if pos < len(text) else Failure(cls, pos)
 
 
 class Choice(Expr):
     def __init__(self, *exprs):
         self.exprs = [conv(x) for x in exprs]
 
-    def parse(self, text, pos):
+    def _parse(self, text, pos):
         best_failure = None
         for expr in self.exprs:
-            result = expr.parse(text, pos)
+            result = yield Step(expr, pos)
 
             # Consume the "is_commit" flag.
             if result.is_success:
                 if result.is_commit:
-                    return Success(result.value, result.pos, is_commit=False)
+                    yield Success(result.value, result.pos, is_commit=False)
                 else:
-                    return result
+                    yield result
+                return
 
             # Consume the "is_abort" flag.
             if result.is_abort:
-                return Failure(result.expr, result.pos, is_abort=False)
+                yield Failure(result.expr, result.pos, is_abort=False)
+                return
 
             # Keep track of the failure that consumed the most input.
             if best_failure is None or best_failure.pos < result.pos:
                 best_failure = result
 
-        return best_failure if best_failure is not None else Failure(self, pos)
+        yield best_failure if best_failure is not None else Failure(self, pos)
 
 
 class Commit(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
 
-    def parse(self, text, pos):
-        result = parse(text, pos, self.expr)
-        return result.commit() if result.is_success else result
+    def _parse(self, text, pos):
+        result = yield Step(self.expr, pos)
+        yield result.commit() if result.is_success else result
 
 
 class Expect(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
 
-    def parse(self, text, pos):
-        result = self.expr.parse(text, pos)
-        return result.backtrack(pos) if result.is_success else result
+    def _parse(self, text, pos):
+        result = yield Step(self.expr, pos)
+        yield result.backtrack(pos) if result.is_success else result
 
 
 class ExpectNot(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
 
-    def parse(self, text, pos):
-        result = self.expr.parse(text, pos)
-        return Failure(self, pos) if result.is_success else Success(None, pos)
+    def _parse(self, text, pos):
+        result = yield Step(self.expr, pos)
+        yield Failure(self, pos) if result.is_success else Success(None, pos)
 
 
 class Fail(Expr):
     def __init__(self, message):
         self.message = message
 
-    def parse(self, text, pos):
-        return Failure(self, pos)
+    def _parse(self, text, pos):
+        yield Failure(self, pos)
 
 
 class Lazy(DerivedExpr):
@@ -209,11 +222,11 @@ class List(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
 
-    def parse(self, text, pos):
+    def _parse(self, text, pos):
         result = []
         saw_commit = False
         while True:
-            item = self.expr.parse(text, pos)
+            item = yield Step(self.expr, pos)
             if not item.is_success:
                 break
             pos = item.pos
@@ -223,7 +236,7 @@ class List(Expr):
             result.append(value)
             if not saw_commit and item.is_commit:
                 saw_commit = True
-        return Success(result, pos, is_commit=saw_commit)
+        yield Success(result, pos, is_commit=saw_commit)
 
 
 class Literal(Expr):
@@ -231,20 +244,22 @@ class Literal(Expr):
         self.value = value
         self._delegate = Require(Any, lambda x: x == self.value)
 
-    def parse(self, text, pos):
+    def _parse(self, text, pos):
         if isinstance(text, str):
             return self._parse_str(text, pos)
         else:
-            return self._delegate.parse(text, pos)
+            return self._delegate._parse(text, pos)
 
     def _parse_str(self, text, pos):
         if not isinstance(self.value, str):
-            return Failure(self, pos)
+            yield Failure(self, pos)
+            return
+
         end = pos + len(self.value)
         if end <= len(text) and self.value == text[pos:end]:
-            return Success(self.value, end)
+            yield Success(self.value, end)
         else:
-            return Failure(self, pos)
+            yield Failure(self, pos)
 
 
 class Opt(DerivedExpr):
@@ -259,8 +274,8 @@ class Pass(Expr):
     def __init__(self, value):
         self.value = value
 
-    def parse(self, text, pos):
-        return Success(self.value, pos)
+    def _parse(self, text, pos):
+        yield Success(self.value, pos)
 
 
 class Regex(Expr):
@@ -271,18 +286,20 @@ class Regex(Expr):
             raise TypeError('Expected Pattern object')
         self.pattern = pattern
 
-    def parse(self, text, pos):
+    def _parse(self, text, pos):
         if isinstance(text, str):
             m = self.pattern.match(text, pos)
-            return Success(m.group(0), m.end()) if m else Failure(self, pos)
+            yield Success(m.group(0), m.end()) if m else Failure(self, pos)
+            return
 
         if pos >= len(text):
-            return Failure(self, pos)
+            yield Failure(self, pos)
+            return
 
         item = text[pos]
         value = item.value if isinstance(item, Token) else item
         match = self.pattern.fullmatch(value)
-        return Success(item, pos + 1) if match else Failure(self, pos)
+        yield Success(item, pos + 1) if match else Failure(self, pos)
 
 
 class Require(Expr):
@@ -290,12 +307,12 @@ class Require(Expr):
         self.expr = conv(expr)
         self.pred = pred
 
-    def parse(self, text, pos):
-        result = self.expr.parse(text, pos)
+    def _parse(self, text, pos):
+        result = yield Step(self.expr, pos)
         if not result.is_success or self.pred(result.value):
-            return result
+            yield result
         else:
-            return Failure(self, pos)
+            yield Failure(self, pos)
 
 
 class Right(DerivedExpr):
@@ -311,18 +328,19 @@ class Seq(Expr):
     def __init__(self, *exprs):
         self.exprs = [conv(x) for x in exprs]
 
-    def parse(self, text, pos):
+    def _parse(self, text, pos):
         result = []
         saw_commit = False
         for expr in self.exprs:
-            item = expr.parse(text, pos)
+            item = yield Step(expr, pos)
             if not item.is_success:
-                return item.abort() if saw_commit else item
+                yield item.abort() if saw_commit else item
+                return
             if not saw_commit and item.is_commit:
                 saw_commit = True
             result.append(item.value)
             pos = item.pos
-        return Success(result, pos, is_commit=saw_commit)
+        yield Success(result, pos, is_commit=saw_commit)
 
 
 class Some(DerivedExpr):
@@ -341,7 +359,7 @@ class Struct(metaclass=MetaExpr):
             setattr(self, k, v)
 
     @classmethod
-    def parse(cls, text, pos):
+    def _parse(cls, text, pos):
         names, exprs = [], []
         for name, value in vars(cls).items():
             if not name.startswith('_') and not inspect.ismethod(value):
@@ -350,8 +368,8 @@ class Struct(metaclass=MetaExpr):
 
         cls._fields = tuple(names)
         delegate = Transform(Seq(*exprs), lambda vals: cls(**dict(zip(names, vals))))
-        cls.parse = delegate.parse
-        return delegate.parse(text, pos)
+        cls._parse = delegate._parse
+        return delegate._parse(text, pos)
 
     def _asdict(self):
         return {k: getattr(self, k) for k in self._fields}
@@ -367,7 +385,7 @@ class Token(metaclass=MetaExpr):
         self.pos = pos
 
     @classmethod
-    def parse(cls, text, pos):
+    def _parse(cls, text, pos):
         if isinstance(text, str):
             return cls._parse_str(text, pos)
         else:
@@ -375,18 +393,18 @@ class Token(metaclass=MetaExpr):
 
     @classmethod
     def _parse_str(cls, text, pos):
-        result = cls.pattern.parse(text, pos)
+        result = yield Step(cls.pattern, pos)
         if isinstance(result, Success):
             token = cls(result.value, pos)
-            return Success(token, result.pos)
+            yield Success(token, result.pos)
         else:
-            return result
+            yield result
 
     @classmethod
     def _parse_item(cls, text, pos):
         delegate = Require(Any, lambda x: isinstance(x, cls))
-        cls._parse_item = delegate.parse
-        return delegate.parse(text, pos)
+        cls._parse_item = delegate._parse
+        return delegate._parse(text, pos)
 
     def __eq__(self, other):
         if isinstance(other, str):
@@ -417,13 +435,13 @@ class Transform(Expr):
         self.expr = expr
         self.func = func
 
-    def parse(self, text, pos):
-        result = self.expr.parse(text, pos)
+    def _parse(self, text, pos):
+        result = yield Step(self.expr, pos)
         if isinstance(result, Success):
             value = self.func(result.value)
-            return Success(value, result.pos)
+            yield Success(value, result.pos)
         else:
-            return result
+            yield result
 
 
 InfixOp = namedtuple('Infix', 'left, operator, right')
@@ -491,6 +509,9 @@ class Prefix(OperatorPrecedenceRule):
 
 def OperatorPrecedence(atom, *rules):
     return reduce(lambda acc, rule: rule.build(acc), rules, atom)
+
+
+Step = namedtuple('Step', 'expr, pos')
 
 
 class Success:
