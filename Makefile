@@ -16,6 +16,7 @@ test: clean
 
 test2: clean2
 	python3 -m tests.test_expressions2
+	python3 -m tests.test_metasyntax
 
 upload:
 	python setup.py sdist upload -r pypi

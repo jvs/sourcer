@@ -1,6 +1,5 @@
 from collections import namedtuple
 from functools import reduce
-import inspect
 import re
 import types
 import typing
@@ -30,27 +29,28 @@ class ParseError(Exception):
 
 
 class Parser:
-    def __init__(self, start, tokens=None):
-        if isinstance(tokens, (list, tuple)):
-            self.tokenizer = Tokenizer(*tokens)
+    def __init__(self, start, tokens=None, transform_tokens=None):
         self.start = conv(start)
+        self._tokenizer = Tokenizer(*tokens) if tokens else None
+        self.transform_tokens = transform_tokens
 
     def __call__(self, text):
         return self.parse(text)
 
     def parse(self, text):
-        if isinstance(text, str) and hasattr(self, 'tokenizer'):
+        if isinstance(text, str) and self._tokenizer:
             text = self._tokenize(text)
         return parse(self.start, text)
 
     def tokenize(self, text):
-        if hasattr(self, 'tokenizer'):
+        if self._tokenizer:
             return self._tokenize(text)
         else:
-            raise ParseError('Grammar does not have any token definitions.')
+            raise ParseError('Parser does not have any token definitions.')
 
     def _tokenize(self, text):
-        return parse(self.tokenizer, text)
+        tokens = parse(self._tokenizer, text)
+        return self.transform_tokens(tokens) if self.transform_tokens else tokens
 
 
 class Expr:
@@ -139,7 +139,14 @@ class Any(metaclass=MetaExpr):
 
 class Choice(Expr):
     def __init__(self, *exprs):
-        self.exprs = [conv(x) for x in exprs]
+        # Flatten any nested Choice expressions.
+        self.exprs = []
+        for x in exprs:
+            x = conv(x)
+            if isinstance(x, Choice):
+                self.exprs.extend(x.exprs)
+            else:
+                self.exprs.append(x)
 
     def _parse(self, text, pos):
         best_failure = None
@@ -343,6 +350,20 @@ class Seq(Expr):
         yield Success(result, pos, is_commit=saw_commit)
 
 
+class Skip(Expr):
+    def __init__(self, expr):
+        self.expr = conv(expr)
+
+    def _parse(self, text, pos):
+        while True:
+            item = yield Step(self.expr, pos)
+            if item.is_success:
+                pos = item.pos
+            else:
+                break
+        yield Success(None, pos)
+
+
 class Some(DerivedExpr):
     def __init__(self, expr):
         self.expr = conv(expr)
@@ -362,7 +383,7 @@ class Struct(metaclass=MetaExpr):
     def _parse(cls, text, pos):
         names, exprs = [], []
         for name, value in vars(cls).items():
-            if not name.startswith('_') and not inspect.ismethod(value):
+            if not name.startswith('_') and not callable(value):
                 names.append(name)
                 exprs.append(conv(value))
 
