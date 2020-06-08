@@ -22,22 +22,13 @@ class Grammar:
 def _create_parser(grammar):
     tree = metaparser.parse(grammar)
 
-    env = {
-        'Any': Any,
-        'End': End,
-        'Expect': Expect,
-        'ExpectNot': ExpectNot,
-        'Literal': Literal,
-        'Skip': Skip,
-        'Token': TokenClass,
-    }
+    from . import expressions2
+    env = dict(vars(expressions2))
+
+    # Let 'Token' be an alias for 'TokenClass'.
+    env['Token'] = TokenClass
 
     def lazy(name):
-        def tmp():
-            print(f'looking up {name!r}')
-            print(f'  found: {env[name]!r}')
-            return env[name]
-        return Lazy(tmp)
         return Lazy(lambda: env[name])
 
     for stmt in tree:

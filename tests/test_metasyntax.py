@@ -22,10 +22,8 @@ class TestMetasyntax(unittest.TestCase):
         ''')
         tree = grammar.parse('barzim')
         self.assertIsInstance(tree, grammar.Foo)
-        self.assertEqual(tree._asdict(), {
-            'bar': 'bar',
-            'baz': 'zim',
-        })
+        self.assertEqual(tree, grammar.Foo(bar='bar', baz='zim'))
+        self.assertEqual(tree._asdict(), {'bar': 'bar', 'baz': 'zim'})
 
 
 if __name__ == '__main__':
