@@ -25,8 +25,13 @@ def _create_parser(grammar):
     from . import expressions2
     env = dict(vars(expressions2))
 
-    # Let 'Token' be an alias for 'TokenClass'.
-    env['Token'] = TokenClass
+    env.update({
+        # Let 'Token' be an alias for 'TokenClass'.
+        'Token': TokenClass,
+        'True': True,
+        'False': False,
+        'None': None,
+    })
 
     def lazy(name):
         return Lazy(lambda: env[name])
@@ -128,7 +133,7 @@ class ArgList(Struct):
     args = Commit('(') >> (Ex / ',') << ')'
 
     def evaluate(self, env):
-        return [_evaluate(env, x) for x in args]
+        return [_evaluate(env, x) for x in self.args]
 
 
 MetaExpr = OperatorPrecedence(
