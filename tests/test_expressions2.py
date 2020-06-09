@@ -171,6 +171,44 @@ class TestExpressions2(unittest.TestCase):
             )
         )
 
+    def test_visit_and_transform(self):
+        Space = TokenPattern(r'\s+', is_dropped=True)
+        Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
+        Symbol = TokenPattern('=')
+        Parens = '(' >> Lazy(lambda: Expr) << ')'
+
+        Expr = OperatorPrecedence(
+            Word | Parens,
+            Prefix('not'),
+            LeftAssoc('and'),
+            LeftAssoc('or'),
+            RightAssoc('implies'),
+        )
+
+        class Let(Struct):
+            name = Word << '='
+            value = Expr
+
+        parser = Parser(start=List(Let | Expr) << End, tokens=[Space, Word, Symbol])
+        tree = parser('foo = bar\nfiz implies buz implies zim')
+
+        def find_words(tree):
+            words = set()
+            for x in visit(tree):
+                if isinstance(x, Word):
+                    words.add(x.value)
+            return words
+
+        self.assertEqual(find_words(tree),
+            {'foo', 'bar', 'fiz', 'implies', 'buz', 'zim'})
+
+        def xform(tree):
+            return Word(tree.value.upper()) if isinstance(tree, Word) else tree
+
+        other = transform(tree, xform)
+        self.assertEqual(find_words(other),
+            {'FOO', 'BAR', 'FIZ', 'IMPLIES', 'BUZ', 'ZIM'})
+
 
 if __name__ == '__main__':
     unittest.main()

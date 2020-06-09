@@ -395,6 +395,14 @@ class Struct(metaclass=MetaExpr):
     def _asdict(self):
         return {k: getattr(self, k) for k in self._fields}
 
+    def _replace(self, **kw):
+        if not kw:
+            return self
+        for field in self._fields:
+            if field not in kw:
+                kw[field] = getattr(self, field)
+        return self.__class__(**kw)
+
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
             all(getattr(self, x) == getattr(other, x) for x in self._fields))
@@ -530,6 +538,44 @@ class Prefix(OperatorPrecedenceRule):
 
 def OperatorPrecedence(atom, *rules):
     return reduce(lambda acc, rule: rule.build(acc), rules, atom)
+
+
+def visit(tree):
+    if isinstance(tree, (InfixOp, Postfix, PrefixOp, Token, Struct)):
+        yield tree
+
+    if isinstance(tree, (list, InfixOp, Postfix, PrefixOp)):
+        for item in tree:
+            yield from visit(item)
+
+    if isinstance(tree, Struct):
+        for field in tree._fields:
+            yield from visit(getattr(tree, field))
+
+
+def transform(tree, callback):
+    if isinstance(tree, list):
+        return [transform(x, callback) for x in tree]
+
+    if isinstance(tree, Token):
+        return callback(tree)
+
+    if not isinstance(tree, (InfixOp, PostfixOp, PrefixOp, Struct)):
+        return tree
+
+    has_changes = False
+    updates = {}
+    for field in tree._fields:
+        was = getattr(tree, field)
+        now = transform(was, callback)
+        updates[field] = now
+        if not has_changes and was is not now:
+            has_changes = True
+
+    if has_changes:
+        tree = tree._replace(**updates)
+
+    return callback(tree)
 
 
 Step = namedtuple('Step', 'expr, pos')
