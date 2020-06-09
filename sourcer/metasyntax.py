@@ -129,11 +129,22 @@ Atom = Choice(
 )
 
 
+class KeywordArg(Struct):
+    name = Name << Commit(Choice('=', ':'))
+    value = Ex
+
+
 class ArgList(Struct):
-    args = Commit('(') >> (Ex / ',') << ')'
+    args = Commit('(') >> ((KeywordArg | Ex) / ',') << ')'
 
     def evaluate(self, env):
-        return [_evaluate(env, x) for x in self.args]
+        a, k = [], {}
+        for arg in self.args:
+            if isinstance(arg, KeywordArg):
+                k[arg.name] = _evaluate(env, arg.value)
+            else:
+                a.append(_evaluate(env, arg))
+        return a, k
 
 
 MetaExpr = OperatorPrecedence(
@@ -204,6 +215,7 @@ def _evaluate(env, obj):
         func = _evaluate(env, obj.left)
         if not callable(func):
             raise Exception(f'Not a callable function: {obj.left!r}')
-        return func(*_evaluate(env, obj.operator))
+        args, kwargs = _evaluate(env, obj.operator)
+        return func(*args, **kwargs)
 
     raise Exception(f'Unexpected expression: {obj!r}')

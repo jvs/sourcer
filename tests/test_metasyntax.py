@@ -42,7 +42,7 @@ class TestMetasyntax(unittest.TestCase):
             Parens = '(' >> Expr << ')'
 
             Symbol = Token(`[\+\-\*\/\(\)\%\^]`)
-            Space = Token(`\s+`, True)
+            Space = Token(`\s+`, is_dropped=True)
         ''')
         tree = g.parse('1 * (2 + 3) - four / 5')
         self.assertEqual(tree, g.InfixOp(
