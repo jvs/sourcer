@@ -172,6 +172,10 @@ class Choice(Expr):
 
         yield best_failure if best_failure is not None else Failure(self, pos)
 
+    def __repr__(self):
+        parts = ', '.join(repr(x) for x in self.exprs)
+        return f'Choice({parts})'
+
 
 class Commit(Expr):
     def __init__(self, expr):
@@ -180,6 +184,9 @@ class Commit(Expr):
     def _parse(self, text, pos):
         result = yield Step(self.expr, pos)
         yield result.commit() if result.is_success else result
+
+    def __repr__(self):
+        return f'Commit({self.expr!r})'
 
 
 class Expect(Expr):
@@ -224,6 +231,9 @@ class Left(DerivedExpr):
     def derive(self):
         return Transform(Seq(self.expr1, self.expr2), lambda x: x[0])
 
+    def __repr__(self):
+        return f'Left({self.expr1!r}, {self.expr2!r})'
+
 
 class List(Expr):
     def __init__(self, expr):
@@ -267,6 +277,9 @@ class Literal(Expr):
             yield Success(self.value, end)
         else:
             yield Failure(self, pos)
+
+    def __repr__(self):
+        return f'Literal({self.value!r})'
 
 
 class Opt(DerivedExpr):
@@ -329,6 +342,9 @@ class Right(DerivedExpr):
 
     def derive(self):
         return Transform(Seq(self.expr1, self.expr2), lambda x: x[1])
+
+    def __repr__(self):
+        return f'Right({self.expr1!r}, {self.expr2!r})'
 
 
 class Seq(Expr):
@@ -460,7 +476,7 @@ def TokenClass(pattern, is_dropped=False):
             name = self.__class__.__name__
             if name == 'TokenClass':
                 name = 'Token'
-            return f'{name}({self.value!r})'
+            return f'{name}({self.value!r}, pos={self.pos})'
     TokenClass.pattern = conv(pattern)
     TokenClass.is_dropped = is_dropped
     return TokenClass
@@ -487,6 +503,8 @@ class Transform(Expr):
         else:
             yield result
 
+    def __repr__(self):
+        return f'Transform({self.expr!r})'
 
 InfixOp = namedtuple('Infix', 'left, operator, right')
 PrefixOp = namedtuple('PrefixOp', 'operator, right')
