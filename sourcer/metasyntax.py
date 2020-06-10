@@ -25,13 +25,7 @@ def _create_parser(grammar):
     from . import expressions2
     env = dict(vars(expressions2))
 
-    env.update({
-        # Let 'Token' be an alias for 'TokenClass'.
-        'Token': TokenClass,
-        'True': True,
-        'False': False,
-        'None': None,
-    })
+    env.update({'True': True, 'False': False, 'None': None, '__tokens__': []})
 
     def lazy(name):
         return Lazy(lambda: env[name])
@@ -45,11 +39,7 @@ def _create_parser(grammar):
     if 'start' not in env:
         raise Exception('Expected "start" definition.')
 
-    parser = Parser(
-        start=env['start'],
-        tokens=[v for v in env.values()
-            if isinstance(v, type) and issubclass(v, Token)],
-    )
+    parser = Parser(start=env['start'], tokens=[v for v in env['__tokens__']])
     return env, parser
 
 
@@ -102,6 +92,7 @@ class Let(Struct):
         if isinstance(result, type) and issubclass(result, Token):
             result.__name__ = self.name
         env[self.name] = result
+        return result
 
 
 class ClassDef(Struct):
@@ -114,6 +105,22 @@ class ClassDef(Struct):
         for field in self.fields:
             setattr(cls, field.name, _evaluate(env, field.value))
         env[self.name] = cls
+        return cls
+
+
+class TokenDef(Struct):
+    is_ignored = Opt(Choice('ignore', 'ignored'))
+    child = 'token' >> (ClassDef | Let)
+
+    @property
+    def name(self):
+        return self.child.name
+
+    def evaluate(self, env):
+        result = self.child.evaluate(env)
+        if isinstance(self.child, Let) or self.is_ignored:
+            env[self.name] = TokenClass(result, is_dropped=self.is_ignored)
+        env['__tokens__'].append(env[self.name])
 
 
 class ListLiteral(Struct):
@@ -160,7 +167,7 @@ MetaExpr = OperatorPrecedence(
 )
 
 metaparser = Parser(
-    start=Skip(Newline) >> ((ClassDef | Let) / Sep) << End,
+    start=Skip(Newline) >> ((TokenDef | ClassDef | Let) / Sep) << End,
     tokens=[
         Whitespace,
         Word,

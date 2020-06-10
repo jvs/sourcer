@@ -403,7 +403,11 @@ class Struct(metaclass=MetaExpr):
     def _parse(cls, text, pos):
         names, exprs = [], []
         for name, value in vars(cls).items():
-            if not name.startswith('_') and not callable(value):
+            if not (
+                name.startswith('_')
+                or callable(value)
+                or isinstance(value, property)
+            ):
                 names.append(name)
                 exprs.append(conv(value))
 

@@ -37,12 +37,12 @@ class TestMetasyntax(unittest.TestCase):
                 LeftAssoc('+' | '-'),
             )
 
-            Word = Token(`[_a-zA-Z][_a-zA-Z0-9]*`)
-            Number = Token(`[0-9]+`)
+            token Word = `[_a-zA-Z][_a-zA-Z0-9]*`
+            token Number = `[0-9]+`
             Parens = '(' >> Expr << ')'
 
-            Symbol = Token(`[\+\-\*\/\(\)\%\^]`)
-            Space = Token(`\s+`, is_dropped=True)
+            token Symbol = `[\+\-\*\/\(\)\%\^]`
+            ignored token Space = `\s+`
         ''')
         tree = g.parse('1 * (2 + 3) - four / 5')
         self.assertEqual(tree, g.InfixOp(
