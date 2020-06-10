@@ -209,6 +209,30 @@ class TestExpressions2(unittest.TestCase):
         self.assertEqual(find_words(other),
             {'FOO', 'BAR', 'FIZ', 'IMPLIES', 'BUZ', 'ZIM'})
 
+    def test_using_struct_as_token(self):
+        Space = TokenPattern(r'\s+', is_dropped=True)
+        Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
+        Offset = Regex('\d+|\[\-?\d+\]')
+
+        class R1C1Ref(Struct):
+            row = 'R' >> Offset
+            col = 'C' >> Offset
+
+        class A1Ref(Struct):
+            col_mod = Opt('$')
+            col = Regex(r'[A-Z]?[A-Z]')
+            row_mod = Opt('$')
+            row = Regex(r'\d+')
+
+        CellRef = R1C1Ref | A1Ref
+
+        parser = Parser(start=List(CellRef | Word) << End, tokens=[CellRef, Space, Word])
+        result = parser('R[11]C[22] implies $AZ33')
+        self.assertEqual(result, [
+            R1C1Ref(row='[11]', col='[22]'),
+            Word('implies'),
+            A1Ref(col_mod='$', col='AZ', row_mod=None, row='33'),
+        ])
 
 if __name__ == '__main__':
     unittest.main()

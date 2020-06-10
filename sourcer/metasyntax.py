@@ -98,7 +98,10 @@ class Let(Struct):
     value = Ex
 
     def evaluate(self, env):
-        env[self.name] = _evaluate(env, self.value)
+        result = _evaluate(env, self.value)
+        if isinstance(result, type) and issubclass(result, Token):
+            result.__name__ = self.name
+        env[self.name] = result
 
 
 class ClassDef(Struct):

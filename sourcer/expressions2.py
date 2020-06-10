@@ -305,7 +305,7 @@ class Regex(Expr):
 
         item = text[pos]
         value = item.value if isinstance(item, Token) else item
-        match = self.pattern.fullmatch(value)
+        match = self.pattern.fullmatch(value) if isinstance(value, str) else None
         yield Success(item, pos + 1) if match else Failure(self, pos)
 
 
@@ -374,8 +374,12 @@ class Some(DerivedExpr):
 
 class Struct(metaclass=MetaExpr):
     def __init__(self, **kw):
+        if not hasattr(self, '_fields'):
+            self.__class__._parse('', 0)
+
         if set(kw.keys()) != set(self._fields):
             raise Exception(f'Expected fields: {self._fields!r}')
+
         for k, v in kw.items():
             setattr(self, k, v)
 
@@ -388,7 +392,10 @@ class Struct(metaclass=MetaExpr):
                 exprs.append(conv(value))
 
         cls._fields = tuple(names)
-        delegate = Transform(Seq(*exprs), lambda vals: cls(**dict(zip(names, vals))))
+        delegate = Choice(
+            Transform(Seq(*exprs), lambda vals: cls(**dict(zip(names, vals)))),
+            Require(Any, lambda x: isinstance(x, cls)),
+        )
         cls._parse = delegate._parse
         return delegate._parse(text, pos)
 
@@ -406,6 +413,11 @@ class Struct(metaclass=MetaExpr):
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
             all(getattr(self, x) == getattr(other, x) for x in self._fields))
+
+    def __repr__(self):
+        name = self.__class__.__name__
+        fields = ', '.join(f'{x}={getattr(self, x)!r}' for x in self._fields)
+        return f'{name}({fields})'
 
 
 class Token(metaclass=MetaExpr):
@@ -445,7 +457,10 @@ class Token(metaclass=MetaExpr):
 def TokenClass(pattern, is_dropped=False):
     class TokenClass(Token):
         def __repr__(self):
-            return f'Token({self.value!r})'
+            name = self.__class__.__name__
+            if name == 'TokenClass':
+                name = 'Token'
+            return f'{name}({self.value!r})'
     TokenClass.pattern = conv(pattern)
     TokenClass.is_dropped = is_dropped
     return TokenClass
