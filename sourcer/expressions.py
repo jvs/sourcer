@@ -7,16 +7,27 @@ import typing
 
 def parse(expr, text, pos=0):
     expr = conv(expr)
-    stack = [expr._parse(text, pos)]
+    key = (pos, id(expr))
+    generator = expr._parse(text, pos)
+    stack = [(key, generator)]
+    memo = {}
     result = None
     while stack:
-        top = stack[-1]
-        result = top.send(result)
+        key, generator = stack[-1]
+        result = generator.send(result)
         if isinstance(result, Step):
-            stack.append(result.expr._parse(text, result.pos))
-            result = None
+            expr, pos = result.expr, result.pos
+            key = (pos, id(expr))
+            if key in memo:
+                result = memo[key]
+            else:
+                generator = expr._parse(text, pos)
+                stack.append((key, generator))
+                result = None
         else:
             stack.pop()
+            memo[key] = result
+
     assert result is not None
     if result.is_success:
         return result.value
