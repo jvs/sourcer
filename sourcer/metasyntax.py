@@ -49,7 +49,7 @@ def _create_parser(grammar):
 
 Whitespace = TokenPattern(r'[ \t]+', is_ignored=True)
 Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
-Symbol = TokenPattern(r'<<|>>|\/\/|[=;,:\|\/\*\+\?\!\(\)\[\]\{\}]')
+Symbol = TokenPattern(r'<<|>>|=>|\/\/|[=;,:\|\/\*\+\?\!\(\)\[\]\{\}]')
 StringLiteral = TokenPattern(
     r'("([^"\\]|\\.)*")|'
     r"('([^'\\]|\\.)*')|"
@@ -128,7 +128,7 @@ class TokenDef(Struct):
 class Template(Struct):
     name = Commit('template') >> Name
     params = '(' >> (Name / ',') << ')'
-    body = _wrap(Choice('=', ':')) >> Ex
+    body = _wrap(Choice('=', ':', '=>')) >> Ex
 
     def evaluate(self, env):
         def wrapper(*a, **k):

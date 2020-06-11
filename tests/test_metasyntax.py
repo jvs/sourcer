@@ -88,8 +88,8 @@ class TestMetasyntax(unittest.TestCase):
         g = Grammar('''
             start = Term
 
-            template wrap(a, b) = b >> a << b
-            template extend(x) = wrap(x, Newline?)
+            template wrap(a, b) => b >> a << b
+            template extend(x) => wrap(x, Newline?)
 
             Term = Word / extend(Cont)
 
