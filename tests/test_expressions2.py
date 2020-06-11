@@ -212,7 +212,7 @@ class TestExpressions2(unittest.TestCase):
     def test_using_struct_as_token(self):
         Space = TokenPattern(r'\s+', is_ignored=True)
         Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
-        Offset = Regex('\d+|\[\-?\d+\]')
+        Offset = Regex(r'\d+|\[\-?\d+\]')
 
         class R1C1Ref(Struct):
             row = 'R' >> Offset
