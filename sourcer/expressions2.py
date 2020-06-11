@@ -592,9 +592,24 @@ def visit(tree):
             yield from visit(getattr(tree, field))
 
 
-def transform(tree, callback):
+def transform(tree, *callbacks):
+    if not callbacks:
+        return tree
+
+    if len(callbacks) == 1:
+        callback = callbacks[0]
+    else:
+        def callback(tree):
+            for f in callbacks:
+                tree = f(tree)
+            return tree
+
+    return _transform(tree, callback)
+
+
+def _transform(tree, callback):
     if isinstance(tree, list):
-        return [transform(x, callback) for x in tree]
+        return [_transform(x, callback) for x in tree]
 
     if isinstance(tree, Token):
         return callback(tree)
@@ -606,7 +621,7 @@ def transform(tree, callback):
     updates = {}
     for field in tree._fields:
         was = getattr(tree, field)
-        now = transform(was, callback)
+        now = _transform(was, callback)
         updates[field] = now
         if not has_changes and was is not now:
             has_changes = True

@@ -234,5 +234,45 @@ class TestExpressions2(unittest.TestCase):
             A1Ref(col_mod='$', col='AZ', row_mod=None, row='33'),
         ])
 
+    def test_using_multiple_transforms(self):
+        from sourcer.metasyntax import Grammar
+        g = Grammar(r'''
+            start = Expr << End
+            class Expr {
+                left: Word
+                right: Word
+            }
+            token Word = `[_a-zA-Z][_a-zA-Z0-9]*`
+            ignored token Space = `\s+`
+        ''')
+
+        result = g.parse('FOO BAR')
+
+        self.assertEqual(result, g.Expr(
+            left=g.Word('FOO'),
+            right=g.Word('BAR'),
+        ))
+
+        def xform1(tree):
+            if isinstance(tree, g.Word):
+                return g.Word(tree.value.lower())
+            else:
+                return tree
+
+        def xform2(tree):
+            if isinstance(tree, g.Expr):
+                return g.Expr(left=tree.right, right=tree.left)
+            else:
+                return tree
+
+        other1 = transform(result, xform1, xform2)
+        other2 = transform(result, xform2, xform1)
+        self.assertEqual(other1, other2)
+        self.assertEqual(other1, g.Expr(
+            left=g.Word('bar'),
+            right=g.Word('foo'),
+        ))
+
+
 if __name__ == '__main__':
     unittest.main()
