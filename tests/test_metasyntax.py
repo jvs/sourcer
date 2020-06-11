@@ -25,6 +25,26 @@ class TestMetasyntax(unittest.TestCase):
         self.assertEqual(tree, grammar.Foo(bar='bar', baz='zim'))
         self.assertEqual(tree._asdict(), {'bar': 'bar', 'baz': 'zim'})
 
+    def test_simple_grammar_with_a_token_class(self):
+        g = Grammar('''
+            start = Any* << End
+            token class HyphenatedWord {
+                left = Word
+                right = Commit("-") >> Word
+            }
+            token Word = `[_a-zA-Z][_a-zA-Z0-9]*`
+            token Hyphen = "-"
+
+            ignored token Space = " "
+        ''')
+        result = g.parse('foo-bar and fiz-buz now')
+        self.assertEqual(result, [
+            g.HyphenatedWord(left=g.Word('foo'), right=g.Word('bar')),
+            g.Word('and'),
+            g.HyphenatedWord(left=g.Word('fiz'), right=g.Word('buz')),
+            g.Word('now'),
+        ])
+
     def test_grammar_with_operator_precedence(self):
         g = Grammar(r'''
             start = Expr
