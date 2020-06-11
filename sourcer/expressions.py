@@ -405,13 +405,17 @@ class Struct(metaclass=MetaExpr):
     def _parse(cls, text, pos):
         names, exprs = [], []
         for name, value in vars(cls).items():
-            if not (
-                name.startswith('_')
-                or callable(value)
-                or isinstance(value, property)
-            ):
-                names.append(name)
-                exprs.append(conv(value))
+            # Ignore definitions that start with an underscore, and ignore all
+            # property objects.
+            if name.startswith('_') or isinstance(value, property):
+                continue
+
+            # Ignore callable objects, unless they're also Expr objects.
+            if callable(value) and not isinstance(value, Expr):
+                continue
+
+            names.append(name)
+            exprs.append(conv(value))
 
         cls._fields = tuple(names)
         delegate = Choice(
@@ -512,7 +516,7 @@ class Transform(Expr):
     def __repr__(self):
         return f'Transform({self.expr!r})'
 
-InfixOp = namedtuple('Infix', 'left, operator, right')
+InfixOp = namedtuple('InfixOp', 'left, operator, right')
 PrefixOp = namedtuple('PrefixOp', 'operator, right')
 PostfixOp = namedtuple('PostfixOp', 'left, operator')
 

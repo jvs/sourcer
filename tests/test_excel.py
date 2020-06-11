@@ -161,15 +161,31 @@ class TestExcelFormulas(unittest.TestCase):
             cell=g.A1Ref(col_modifier=None, col='E', row_modifier=None, row='9'),
         ))
 
-    def _test_func_call_with_simple_range(self):
+    def test_func_call_with_simple_range(self):
         result = g.parse('=SUM(B5:B15)')
-        self.assertEqual(result, g.FunctionCall(
-            name=g.Word('SUM'),
-            arguments=[g.InfixOp(
-                g.A1Ref(col_modifier=None, col='B', row_modifier=None, row='5'),
-                g.ShortSymbol(':'),
-                g.A1Ref(col_modifier=None, col='B', row_modifier=None, row='15'),
-            )]
+        self.assertEqual(result,  g.FunctionCall(
+            name=g.Word('SUM', pos=1),
+            arguments=[
+                g.InfixOp(
+                    left=g.CellRef(
+                        book=None,
+                        sheet=None,
+                        cell=g.A1Ref(
+                            col_modifier=None, col='B',
+                            row_modifier=None, row='5',
+                        ),
+                    ),
+                    operator=g.ShortSymbol(':', pos=7),
+                    right=g.CellRef(
+                        book=None,
+                        sheet=None,
+                        cell=g.A1Ref(
+                            col_modifier=None, col='B',
+                            row_modifier=None, row='15',
+                        ),
+                    ),
+                ),
+            ],
         ))
 
     def test_coarse_grained_failures(self):
