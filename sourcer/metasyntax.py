@@ -43,7 +43,7 @@ def _create_parser(grammar):
     return env, parser
 
 
-Whitespace = TokenPattern(r'[ \t]+', is_dropped=True)
+Whitespace = TokenPattern(r'[ \t]+', is_ignored=True)
 Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
 Symbol = TokenPattern(r'<<|>>|\/\/|[=;,:\|\/\*\+\?\!\(\)\[\]\{\}]')
 StringLiteral = TokenPattern(
@@ -54,7 +54,7 @@ StringLiteral = TokenPattern(
 )
 RegexLiteral = TokenPattern(r'`([^`\\]|\\.)*`')
 Newline = TokenPattern(r'[\r\n][\s]*')
-Comment = TokenPattern(r'#[^\r\n]*', is_dropped=True)
+Comment = TokenPattern(r'#[^\r\n]*', is_ignored=True)
 
 def transform_tokens(tokens):
     result = []
@@ -119,7 +119,7 @@ class TokenDef(Struct):
     def evaluate(self, env):
         result = self.child.evaluate(env)
         if isinstance(self.child, Let) or self.is_ignored:
-            env[self.name] = TokenClass(result, is_dropped=self.is_ignored)
+            env[self.name] = TokenClass(result, is_ignored=self.is_ignored)
         env['__tokens__'].append(env[self.name])
 
 

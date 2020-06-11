@@ -91,7 +91,7 @@ class TestExpressions2(unittest.TestCase):
         ])
 
     def test_simple_struct(self):
-        Space = TokenPattern(r'\s+', is_dropped=True)
+        Space = TokenPattern(r'\s+', is_ignored=True)
         Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
 
         class If(Struct):
@@ -123,7 +123,7 @@ class TestExpressions2(unittest.TestCase):
         })
 
     def test_simple_operator_precedence(self):
-        Space = TokenPattern(r'\s+', is_dropped=True)
+        Space = TokenPattern(r'\s+', is_ignored=True)
         Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
         Number = TokenClass(Regex(r'[0-9]+') * int)
         Symbol = TokenPattern(r'[\+\-\*\/\(\)\%\^]')
@@ -172,7 +172,7 @@ class TestExpressions2(unittest.TestCase):
         )
 
     def test_visit_and_transform(self):
-        Space = TokenPattern(r'\s+', is_dropped=True)
+        Space = TokenPattern(r'\s+', is_ignored=True)
         Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
         Symbol = TokenPattern('=')
         Parens = '(' >> Lazy(lambda: Expr) << ')'
@@ -210,7 +210,7 @@ class TestExpressions2(unittest.TestCase):
             {'FOO', 'BAR', 'FIZ', 'IMPLIES', 'BUZ', 'ZIM'})
 
     def test_using_struct_as_token(self):
-        Space = TokenPattern(r'\s+', is_dropped=True)
+        Space = TokenPattern(r'\s+', is_ignored=True)
         Word = TokenPattern(r'[_a-zA-Z][_a-zA-Z0-9]*')
         Offset = Regex('\d+|\[\-?\d+\]')
 

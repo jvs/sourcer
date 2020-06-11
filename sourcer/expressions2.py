@@ -246,10 +246,12 @@ class List(Expr):
             item = yield Step(self.expr, pos)
             if not item.is_success:
                 break
+
             pos = item.pos
             value = item.value
-            if isinstance(value, Token) and value.is_dropped:
+            if isinstance(value, Token) and value._is_ignored:
                 continue
+
             result.append(value)
             if not saw_commit and item.is_commit:
                 saw_commit = True
@@ -474,7 +476,7 @@ class Token(metaclass=MetaExpr):
             return isinstance(other, Token) and self.value == other.value
 
 
-def TokenClass(pattern, is_dropped=False):
+def TokenClass(pattern, is_ignored=False):
     class TokenClass(Token):
         def __repr__(self):
             name = self.__class__.__name__
@@ -482,12 +484,12 @@ def TokenClass(pattern, is_dropped=False):
                 name = 'Token'
             return f'{name}({self.value!r}, pos={self.pos})'
     TokenClass.pattern = conv(pattern)
-    TokenClass.is_dropped = is_dropped
+    TokenClass._is_ignored = is_ignored
     return TokenClass
 
 
-def TokenPattern(pattern, is_dropped=False):
-    return TokenClass(Regex(pattern), is_dropped=is_dropped)
+def TokenPattern(pattern, is_ignored=False):
+    return TokenClass(Regex(pattern), is_ignored=is_ignored)
 
 
 def Tokenizer(*exprs):
