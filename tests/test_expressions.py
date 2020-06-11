@@ -1,8 +1,8 @@
 import unittest
-from sourcer.expressions2 import *
+from sourcer.expressions import *
 
 
-class TestExpressions2(unittest.TestCase):
+class TestExpressions(unittest.TestCase):
     def test_many_nested_parentheses(self):
         Bal = Lazy(lambda: Balanced)
         Balanced = End | Seq('(', Opt(Bal), ')', Opt(Bal))

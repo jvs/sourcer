@@ -1,7 +1,7 @@
 from ast import literal_eval
 import re
 
-from .expressions2 import *
+from .expressions import *
 
 
 class Grammar:
@@ -22,8 +22,8 @@ class Grammar:
 def _create_parser(grammar):
     tree = metaparser.parse(grammar)
 
-    from . import expressions2
-    env = dict(vars(expressions2))
+    from . import expressions
+    env = dict(vars(expressions))
 
     env.update({'True': True, 'False': False, 'None': None, '__tokens__': []})
 
