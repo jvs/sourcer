@@ -37,11 +37,12 @@ class TestMetasyntax(unittest.TestCase):
                 LeftAssoc('+' | '-'),
             )
 
-            token Word = `[_a-zA-Z][_a-zA-Z0-9]*`
-            token Number = `[0-9]+`
             Parens = '(' >> Expr << ')'
 
+            token Word = `[_a-zA-Z][_a-zA-Z0-9]*`
+            token Number = `[0-9]+`
             token Symbol = `[\+\-\*\/\(\)\%\^]`
+
             ignored token Space = `\s+`
         ''')
         tree = g.parse('1 * (2 + 3) - four / 5')
