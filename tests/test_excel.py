@@ -163,7 +163,7 @@ class TestExcelFormulas(unittest.TestCase):
 
     def test_func_call_with_simple_range(self):
         result = g.parse('=SUM(B5:B15)')
-        self.assertEqual(result,  g.FunctionCall(
+        self.assertEqual(result, g.FunctionCall(
             name=g.Word('SUM', pos=1),
             arguments=[
                 g.InfixOp(
