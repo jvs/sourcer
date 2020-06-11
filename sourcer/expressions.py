@@ -67,7 +67,6 @@ class Expr:
         a << b    Left(a, b)        discard b
         a ^ b     Require(a, b)     predicate
         a * b     Transform(a, b)   transform
-        a ** b    Bind(a, b)        context sensitivity
         ========  ===============   ===================
     """
     def __invert__(self): return Opt(self)
@@ -497,7 +496,7 @@ def TokenPattern(pattern, is_ignored=False):
 
 
 def Tokenizer(*exprs):
-    return List(Choice(*exprs)) << End
+    return Left(List(Choice(*exprs)), End)
 
 
 class Transform(Expr):
