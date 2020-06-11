@@ -1,4 +1,5 @@
 from ast import literal_eval
+import itertools
 import re
 
 from .expressions import *
@@ -34,7 +35,10 @@ def _create_parser(grammar):
         env[stmt.name] = lazy(stmt.name)
 
     for stmt in tree:
-        stmt.evaluate(env)
+        result = stmt.evaluate(env)
+        env[stmt.name] = result
+        if isinstance(stmt, TokenDef):
+            env['__tokens__'].append(result)
 
     if 'start' not in env:
         raise Exception('Expected "start" definition.')
@@ -91,7 +95,6 @@ class Let(Struct):
         result = _evaluate(env, self.value)
         if isinstance(result, type) and issubclass(result, Token):
             result.__name__ = self.name
-        env[self.name] = result
         return result
 
 
@@ -104,7 +107,6 @@ class ClassDef(Struct):
         cls.__name__ = self.name
         for field in self.fields:
             setattr(cls, field.name, _evaluate(env, field.value))
-        env[self.name] = cls
         return cls
 
 
@@ -119,8 +121,22 @@ class TokenDef(Struct):
     def evaluate(self, env):
         result = self.child.evaluate(env)
         if isinstance(self.child, Let) or self.is_ignored:
-            env[self.name] = TokenClass(result, is_ignored=self.is_ignored)
-        env['__tokens__'].append(env[self.name])
+            result = TokenClass(result, is_ignored=self.is_ignored)
+        return result
+
+
+class Template(Struct):
+    name = Commit('template') >> Name
+    params = '(' >> (Name / ',') << ')'
+    body = _wrap(Choice('=', ':')) >> Ex
+
+    def evaluate(self, env):
+        def wrapper(*a, **k):
+            subenv = dict(env)
+            for param, value in itertools.chain(zip(self.params, a), k.items()):
+                subenv[param] = value
+            return _evaluate(subenv, self.body)
+        return wrapper
 
 
 class ListLiteral(Struct):
@@ -167,7 +183,7 @@ MetaExpr = OperatorPrecedence(
 )
 
 metaparser = Parser(
-    start=Skip(Newline) >> ((TokenDef | ClassDef | Let) / Sep) << End,
+    start=Skip(Newline) >> ((TokenDef | ClassDef | Template | Let) / Sep) << End,
     tokens=[
         Whitespace,
         Word,

@@ -84,6 +84,24 @@ class TestMetasyntax(unittest.TestCase):
             ),
         ))
 
+    def test_simple_template(self):
+        g = Grammar('''
+            start = Term
+
+            template wrap(a, b) = b >> a << b
+            template extend(x) = wrap(x, Newline?)
+
+            Term = Word / extend(Cont)
+
+            token Word = `[_a-zA-Z][_a-zA-Z0-9]*`
+            token Cont = `\-`
+            token Newline = `\n+`
+
+            ignored token Space = `\s+`
+        ''')
+        result = g.parse('foo - bar \n - \n baz')
+        self.assertEqual(result, [g.Word('foo'), g.Word('bar'), g.Word('baz')])
+
 
 if __name__ == '__main__':
     unittest.main()
