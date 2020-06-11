@@ -122,6 +122,7 @@ class TokenDef(Struct):
         result = self.child.evaluate(env)
         if isinstance(self.child, Let) or self.is_ignored:
             result = TokenClass(result, is_ignored=self.is_ignored)
+            result.__name__ = self.name
         return result
 
 

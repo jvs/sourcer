@@ -1,6 +1,6 @@
 import unittest
 
-from sourcer.metasyntax import Grammar
+from sourcer import Grammar
 
 
 class TestMetasyntax(unittest.TestCase):

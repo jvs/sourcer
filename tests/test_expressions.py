@@ -1,5 +1,5 @@
 import unittest
-from sourcer.expressions import *
+from sourcer import *
 
 
 class TestExpressions(unittest.TestCase):
