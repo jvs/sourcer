@@ -110,7 +110,7 @@ class ClassDef(Struct):
 
 class TokenDef(Struct):
     is_ignored = Opt(Choice('ignore', 'ignored'))
-    child = 'token' >> (ClassDef | Let)
+    child = Commit('token') >> (ClassDef | Let)
 
     @property
     def name(self):
