@@ -7,26 +7,29 @@ import typing
 
 def parse(expr, text, pos=0):
     expr = conv(expr)
-    key = (pos, id(expr))
-    generator = expr._parse(text, pos)
+    key = (pos, expr)
+    ctx = ParsingContext()
+    generator = expr._parse(ctx, text, pos)
     stack = [(key, generator)]
     memo = {}
     result = None
     while stack:
         key, generator = stack[-1]
         result = generator.send(result)
+
         if isinstance(result, Step):
             expr, pos = result.expr, result.pos
-            key = (pos, id(expr))
+            key = (pos, expr)
             if key in memo:
                 result = memo[key]
             else:
-                generator = expr._parse(text, pos)
+                generator = expr._parse(ctx, text, pos)
                 stack.append((key, generator))
                 result = None
-        else:
-            stack.pop()
-            memo[key] = result
+            continue
+
+        stack.pop()
+        memo[key] = result
 
     assert result is not None
     if result.is_success:
@@ -35,8 +38,17 @@ def parse(expr, text, pos=0):
         raise ParseError(result.error_message())
 
 
+class ParsingContext:
+    def __init__(self):
+        self.checkpoints = []
+        self.commits = []
+
+
 class ParseError(Exception):
     """Indicates that the `parse` function failed."""
+
+
+ErrorTree = namedtuple('ErrorTree', 'failure, replacement')
 
 
 class Parser:
@@ -105,10 +117,10 @@ class DerivedExpr(Expr):
     def derive(self):
         raise NotImplementedError('derive')
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         delegate = self.derive()
         self._parse = delegate._parse
-        return delegate._parse(text, pos)
+        return delegate._parse(ctx, text, pos)
 
 
 class All(Expr):
@@ -116,7 +128,7 @@ class All(Expr):
         self.aggregator = aggregator
         self.exprs = [conv(x) for x in exprs]
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         result = None
         best_failure = Failure(self, pos)
 
@@ -139,7 +151,7 @@ class Alt(Expr):
         self.separator = conv(separator)
         self.allow_trailer = allow_trailer
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         result = []
         result_pos = pos
         while True:
@@ -160,8 +172,43 @@ class Alt(Expr):
 
 class Any(metaclass=MetaExpr):
     @classmethod
-    def _parse(cls, text, pos):
+    def _parse(cls, ctx, text, pos):
         yield Success(text[pos], pos + 1) if pos < len(text) else Failure(cls, pos)
+
+
+class Checkpoint(Expr):
+    def __init__(self, expr):
+        self.expr = conv(expr)
+        self._recoveries = []
+        self._recovery = None
+
+    def add_recovery(self, expr):
+        self._recoveries.append(conv(expr))
+        self._recovery = None
+
+    def _parse(self, ctx, text, pos):
+        ctx.checkpoints.append(self)
+        ctx.commits.append(False)
+        result = yield Step(self.expr, pos)
+        saw_commit = ctx.commits.pop()
+
+        if result.is_success or not saw_commit:
+            yield result
+            return
+
+        if self._recovery is None:
+            self._recovery = Shortest(*self._recovery)
+
+        replacement = yield Step(self._recovery, pos)
+        if replacement.is_success:
+            tree = ErrorTree(result, replacement)
+            yield Success(tree, replacement.pos)
+        else:
+            raise ParseError(result.error_message())
+
+
+    def __repr__(self):
+        return f'Checkpoint({self.expr!r})'
 
 
 class Choice(DerivedExpr):
@@ -187,8 +234,11 @@ class Commit(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
 
-    def _parse(self, text, pos):
-        return self.expr._parse(text, pos)
+    def _parse(self, ctx, text, pos):
+        result = yield Step(self.expr, pos)
+        if result.is_success and ctx.commits:
+            ctx.commits[-1] = True
+        yield result
 
     def __repr__(self):
         return f'Commit({self.expr!r})'
@@ -198,7 +248,7 @@ class Expect(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         result = yield Step(self.expr, pos)
         yield Success(result.value, pos) if result.is_success else result
 
@@ -207,7 +257,7 @@ class ExpectNot(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         result = yield Step(self.expr, pos)
         yield Failure(self, pos) if result.is_success else Success(None, pos)
 
@@ -216,7 +266,7 @@ class Fail(Expr):
     def __init__(self, message):
         self.message = message
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         yield Failure(self, pos)
 
 
@@ -244,7 +294,7 @@ class List(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         result = []
         while True:
             item = yield Step(self.expr, pos)
@@ -262,11 +312,11 @@ class Literal(Expr):
         self.value = value
         self._delegate = Require(Any, lambda x: x == self.value)
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         if isinstance(text, str):
             return self._parse_str(text, pos)
         else:
-            return self._delegate._parse(text, pos)
+            return self._delegate._parse(ctx, text, pos)
 
     def _parse_str(self, text, pos):
         if not isinstance(self.value, str):
@@ -306,7 +356,7 @@ class Pass(Expr):
     def __init__(self, value):
         self.value = value
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         yield Success(self.value, pos)
 
 
@@ -318,7 +368,7 @@ class Regex(Expr):
             raise TypeError('Expected Pattern object')
         self.pattern = pattern
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         if isinstance(text, str):
             m = self.pattern.match(text, pos)
             yield Success(m.group(0), m.end()) if m else Failure(self, pos)
@@ -339,7 +389,7 @@ class Require(Expr):
         self.expr = conv(expr)
         self.pred = pred
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         result = yield Step(self.expr, pos)
         if not result.is_success or self.pred(result.value):
             yield result
@@ -363,7 +413,7 @@ class Seq(Expr):
     def __init__(self, *exprs):
         self.exprs = [conv(x) for x in exprs]
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         result = []
         for expr in self.exprs:
             item = yield Step(expr, pos)
@@ -391,7 +441,7 @@ class Skip(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         while True:
             item = yield Step(self.expr, pos)
             if item.is_success:
@@ -416,7 +466,7 @@ class Some(DerivedExpr):
 class Struct(metaclass=MetaExpr):
     def __init__(self, **kw):
         if not hasattr(self, '_fields'):
-            self.__class__._parse('', 0)
+            self.__class__._init_fields()
 
         if set(kw.keys()) != set(self._fields):
             raise Exception(f'Expected fields: {self._fields!r}')
@@ -425,7 +475,7 @@ class Struct(metaclass=MetaExpr):
             setattr(self, k, v)
 
     @classmethod
-    def _parse(cls, text, pos):
+    def _init_fields(cls):
         names, exprs = [], []
         for name, value in vars(cls).items():
             # Ignore definitions that start with an underscore, and ignore all
@@ -446,7 +496,11 @@ class Struct(metaclass=MetaExpr):
             Require(Any, lambda x: isinstance(x, cls)),
         )
         cls._parse = delegate._parse
-        return delegate._parse(text, pos)
+
+    @classmethod
+    def _parse(cls, ctx, text, pos):
+        cls._init_fields()
+        return cls._parse(ctx, text, pos)
 
     def _asdict(self):
         return {k: getattr(self, k) for k in self._fields}
@@ -475,11 +529,11 @@ class Token(metaclass=MetaExpr):
         self.pos = pos
 
     @classmethod
-    def _parse(cls, text, pos):
+    def _parse(cls, ctx, text, pos):
         if isinstance(text, str):
             return cls._parse_str(text, pos)
         else:
-            return cls._parse_item(text, pos)
+            return cls._parse_item(ctx, text, pos)
 
     @classmethod
     def _parse_str(cls, text, pos):
@@ -491,10 +545,10 @@ class Token(metaclass=MetaExpr):
             yield result
 
     @classmethod
-    def _parse_item(cls, text, pos):
+    def _parse_item(cls, ctx, text, pos):
         delegate = Require(Any, lambda x: isinstance(x, cls))
         cls._parse_item = delegate._parse
-        return delegate._parse(text, pos)
+        return delegate._parse(ctx, text, pos)
 
     def __eq__(self, other):
         if isinstance(other, str):
@@ -528,7 +582,7 @@ class Transform(Expr):
         self.expr = expr
         self.func = func
 
-    def _parse(self, text, pos):
+    def _parse(self, ctx, text, pos):
         result = yield Step(self.expr, pos)
         if isinstance(result, Success):
             value = self.func(result.value)

@@ -26,7 +26,7 @@ def _create_parser(grammar):
     from . import expressions
     env = dict(vars(expressions))
 
-    env.update({'True': True, 'False': False, 'None': None, '__tokens__': []})
+    env.update({'True': True, 'False': False, 'None': None, '#tokens': []})
 
     def lazy(name):
         return Lazy(lambda: env[name])
@@ -36,15 +36,24 @@ def _create_parser(grammar):
 
     for stmt in tree:
         result = stmt.evaluate(env)
+        if _contains_commit(result):
+            result = Checkpoint(result)
         env[stmt.name] = result
         if isinstance(stmt, TokenDef):
-            env['__tokens__'].append(result)
+            env['#tokens'].append(result)
 
     if 'start' not in env:
         raise Exception('Expected "start" definition.')
 
-    parser = Parser(start=env['start'], tokens=[v for v in env['__tokens__']])
+    parser = Parser(start=env['start'], tokens=[v for v in env['#tokens']])
     return env, parser
+
+
+def _contains_commit(tree):
+    for child in visit(tree):
+        if isinstance(child, Commit):
+            return True
+    return False
 
 
 Whitespace = TokenPattern(r'[ \t]+', is_ignored=True)
