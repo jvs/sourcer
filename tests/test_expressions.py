@@ -273,6 +273,11 @@ class TestExpressions(unittest.TestCase):
             right=g.Word('foo'),
         ))
 
+    def test_skip_to_expression(self):
+        Start = SkipTo('foo') >> 'foo' << End
+        result = parse(Start, 'barbazfoo')
+        self.assertEqual(result, 'foo')
+
 
 if __name__ == '__main__':
     unittest.main()

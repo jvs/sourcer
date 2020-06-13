@@ -392,6 +392,10 @@ class Skip(Expr):
         yield Success(None, pos)
 
 
+def SkipTo(expr):
+    return Skip(ExpectNot(expr) >> Any)
+
+
 class Some(DerivedExpr):
     def __init__(self, expr):
         self.expr = conv(expr)
