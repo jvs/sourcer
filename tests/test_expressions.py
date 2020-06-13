@@ -278,6 +278,21 @@ class TestExpressions(unittest.TestCase):
         result = parse(Start, 'barbazfoo')
         self.assertEqual(result, 'foo')
 
+    def test_shortest_and_longest_expression(self):
+        until_foo = SkipTo('foo') >> 'foo'
+        until_bar = SkipTo('bar') >> 'bar'
+        word = Regex(r'[a-z]+')
+        punc = Regex(r'[\.\!\?]')
+        space = ' '
+
+        start = ['foo', space, Shortest(until_foo, until_bar), space, word, punc]
+        result = parse(start << End, 'foo fizz buzz @ bar foo!')
+        self.assertEqual(result, ['foo', ' ', 'bar', ' ', 'foo', '!'])
+
+        start = ['foo', space, Longest(until_foo, until_bar), punc]
+        result = parse(start << End, 'foo fizz buzz @ bar foo!')
+        self.assertEqual(result, ['foo', ' ', 'foo', '!'])
+
 
 if __name__ == '__main__':
     unittest.main()

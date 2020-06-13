@@ -111,6 +111,28 @@ class DerivedExpr(Expr):
         return delegate._parse(text, pos)
 
 
+class All(Expr):
+    def __init__(self, aggregator, *exprs):
+        self.aggregator = aggregator
+        self.exprs = [conv(x) for x in exprs]
+
+    def _parse(self, text, pos):
+        result = None
+        best_failure = Failure(self, pos)
+
+        for expr in self.exprs:
+            next_result = yield Step(expr, pos)
+            if next_result.is_success:
+                result, should_stop = self.aggregator(result, next_result)
+                if should_stop:
+                    yield result
+                    return
+            elif best_failure is None or best_failure.pos < next_result.pos:
+                best_failure = next_result
+
+        yield result if result else best_failure
+
+
 class Alt(Expr):
     def __init__(self, expr, separator, allow_trailer=False):
         self.expr = conv(expr)
@@ -147,7 +169,7 @@ class Any(metaclass=MetaExpr):
         yield Success(text[pos], pos + 1) if pos < len(text) else Failure(cls, pos)
 
 
-class Choice(Expr):
+class Choice(DerivedExpr):
     def __init__(self, *exprs):
         # Flatten any nested Choice expressions.
         self.exprs = []
@@ -158,29 +180,8 @@ class Choice(Expr):
             else:
                 self.exprs.append(x)
 
-    def _parse(self, text, pos):
-        best_failure = None
-        for expr in self.exprs:
-            result = yield Step(expr, pos)
-
-            # Consume the "is_commit" flag.
-            if result.is_success:
-                if result.is_commit:
-                    yield Success(result.value, result.pos, is_commit=False)
-                else:
-                    yield result
-                return
-
-            # Consume the "is_abort" flag.
-            if result.is_abort:
-                yield Failure(result.expr, result.pos, is_abort=False)
-                return
-
-            # Keep track of the failure that consumed the most input.
-            if best_failure is None or best_failure.pos < result.pos:
-                best_failure = result
-
-        yield best_failure if best_failure is not None else Failure(self, pos)
+    def derive(self):
+        return All(lambda was, now: (now, True), *self.exprs)
 
     def __repr__(self):
         parts = ', '.join(repr(x) for x in self.exprs)
@@ -294,6 +295,17 @@ class Literal(Expr):
         return f'Literal({self.value!r})'
 
 
+class Longest(DerivedExpr):
+    def __init__(self, *exprs):
+        self.exprs = [conv(x) for x in exprs]
+
+    def derive(self):
+        def aggregate(was, now):
+            result = now if was is None or now.pos > was.pos else was
+            return (result, False)
+        return All(aggregate, *self.exprs)
+
+
 class Opt(DerivedExpr):
     def __init__(self, expr):
         self.expr = conv(expr)
@@ -376,6 +388,17 @@ class Seq(Expr):
             result.append(item.value)
             pos = item.pos
         yield Success(result, pos, is_commit=saw_commit)
+
+
+class Shortest(DerivedExpr):
+    def __init__(self, *exprs):
+        self.exprs = [conv(x) for x in exprs]
+
+    def derive(self):
+        def aggregate(was, now):
+            result = now if was is None or now.pos < was.pos else was
+            return (result, False)
+        return All(aggregate, *self.exprs)
 
 
 class Skip(Expr):
