@@ -142,25 +142,20 @@ class Alt(Expr):
     def _parse(self, text, pos):
         result = []
         result_pos = pos
-        saw_commit = False
         while True:
             item = yield Step(self.expr, pos)
             if not item.is_success:
                 break
-            if not saw_commit and item.is_commit:
-                saw_commit = True
             result.append(item.value)
             pos = item.pos
             result_pos = pos
             skipped = yield Step(self.separator, pos)
             if not skipped.is_success:
                 break
-            if not saw_commit and skipped.is_commit:
-                saw_commit = True
             pos = skipped.pos
             if self.allow_trailer:
                 result_pos = pos
-        yield Success(result, result_pos, is_commit=saw_commit)
+        yield Success(result, result_pos)
 
 
 class Any(metaclass=MetaExpr):
@@ -193,8 +188,7 @@ class Commit(Expr):
         self.expr = conv(expr)
 
     def _parse(self, text, pos):
-        result = yield Step(self.expr, pos)
-        yield result.commit() if result.is_success else result
+        return self.expr._parse(text, pos)
 
     def __repr__(self):
         return f'Commit({self.expr!r})'
@@ -206,7 +200,7 @@ class Expect(Expr):
 
     def _parse(self, text, pos):
         result = yield Step(self.expr, pos)
-        yield result.backtrack(pos) if result.is_success else result
+        yield Success(result.value, pos) if result.is_success else result
 
 
 class ExpectNot(Expr):
@@ -252,21 +246,15 @@ class List(Expr):
 
     def _parse(self, text, pos):
         result = []
-        saw_commit = False
         while True:
             item = yield Step(self.expr, pos)
             if not item.is_success:
                 break
-
             pos = item.pos
             value = item.value
-            if isinstance(value, Token) and value._is_ignored:
-                continue
-
-            result.append(value)
-            if not saw_commit and item.is_commit:
-                saw_commit = True
-        yield Success(result, pos, is_commit=saw_commit)
+            if not isinstance(value, Token) or not value._is_ignored:
+                result.append(value)
+        yield Success(result, pos)
 
 
 class Literal(Expr):
@@ -377,17 +365,15 @@ class Seq(Expr):
 
     def _parse(self, text, pos):
         result = []
-        saw_commit = False
         for expr in self.exprs:
             item = yield Step(expr, pos)
             if not item.is_success:
-                yield item.abort() if saw_commit else item
+                yield item
                 return
-            if not saw_commit and item.is_commit:
-                saw_commit = True
-            result.append(item.value)
-            pos = item.pos
-        yield Success(result, pos, is_commit=saw_commit)
+            else:
+                result.append(item.value)
+                pos = item.pos
+        yield Success(result, pos)
 
 
 class Shortest(DerivedExpr):
@@ -676,32 +662,13 @@ def _transform(tree, callback):
 Step = namedtuple('Step', 'expr, pos')
 
 
-class Success:
-    def __init__(self, value, pos, is_commit=False):
-        self.value = value
-        self.pos = pos
-        self.is_commit = is_commit
-
-    def backtrack(self, pos):
-        return Success(self.value, pos, is_commit=self.is_commit)
-
-    def commit(self):
-        return self if self.is_commit else Success(self.value, self.pos, is_commit=True)
-
+class Success(namedtuple('Success', 'value, pos')):
     @property
     def is_success(self):
         return True
 
 
-class Failure:
-    def __init__(self, expr, pos, is_abort=False):
-        self.expr = expr
-        self.pos = pos
-        self.is_abort = is_abort
-
-    def abort(self):
-        return self if self.is_abort else Failure(self.expr, self.pos, is_abort=True)
-
+class Failure(namedtuple('Failure', 'expr, pos')):
     @property
     def is_success(self):
         return False
