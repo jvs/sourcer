@@ -5,14 +5,70 @@ import types
 import typing
 
 
-def parse(expr, text, pos=0):
+def parse(expr, text, pos=0, max_errors=16):
+    result, errors = _parse(expr, text, pos, max_errors)
+    if errors:
+        raise ParseError(result, errors)
+    else:
+        return result.value
+
+
+
+def _parse(expr, text, pos, max_errors):
     expr = conv(expr)
-    key = (pos, expr)
     ctx = ParsingContext()
+
+    current_result = _parse_once(ctx, expr, text, pos)
+    errors = []
+
+    while max_errors > 0:
+        max_errors -= 1
+
+        if current_result.is_success:
+            break
+
+        replacement = current_result
+        best_result = current_result
+        best_error = (current_result, None)
+        recoveries = current_result.recoveries or [SkipTo(current_result.expr), Pass(None)]
+
+        for recovery in recoveries:
+            # Remove the previous replacement.
+            _clear_memo_table(ctx.memo, replacement)
+
+            # Get the replacement value from the recovery rule.
+            replacement = _parse_once(ctx, recovery, text, current_result.pos)
+
+            # If we couldn't get a value for this recovery rule, then just skip it.
+            if not replacement.is_success:
+                continue
+
+            # Install the replacement.
+            ctx.memo[current_result.pos, current_result.expr] = replacement
+            next_result = _parse_once(ctx, expr, text, pos)
+
+            if best_result.pos < next_result.pos or next_result.is_success:
+                best_result = next_result
+                best_error = (current_result, replacement)
+
+            # If we successfully parsed the text, then just stop here.
+            if next_result.is_success:
+                break
+
+        current_result = best_result
+        errors.append(best_error)
+
+    return (current_result, errors)
+
+
+def _parse_once(ctx, expr, text, pos):
+    memo = ctx.memo
+    result = None
+
+    key = (pos, expr)
     generator = expr._parse(ctx, text, pos)
     stack = [(key, generator)]
-    memo = {}
-    result = None
+
     while stack:
         key, generator = stack[-1]
         result = generator.send(result)
@@ -31,24 +87,27 @@ def parse(expr, text, pos=0):
         stack.pop()
         memo[key] = result
 
-    assert result is not None
-    if result.is_success:
-        return result.value
-    else:
-        raise ParseError(result.error_message())
+    return result
+
+
+def _clear_memo_table(memo, prev_result):
+    for key in list(memo.keys()):
+        if memo[key] is prev_result:
+            del memo[key]
 
 
 class ParsingContext:
     def __init__(self):
-        self.checkpoints = []
+        self.memo = {}
         self.commits = []
 
 
 class ParseError(Exception):
     """Indicates that the `parse` function failed."""
-
-
-ErrorTree = namedtuple('ErrorTree', 'failure, replacement')
+    def __init__(self, result, errors):
+        super().__init__()
+        self.result = result
+        self.errors = errors
 
 
 class Parser:
@@ -69,7 +128,7 @@ class Parser:
         if self._tokenizer:
             return self._tokenize(text)
         else:
-            raise ParseError('Parser does not have any token definitions.')
+            raise Exception('Parser does not have any token definitions.')
 
     def _tokenize(self, text):
         tokens = parse(self._tokenizer, text)
@@ -139,6 +198,9 @@ class All(Expr):
                 if should_stop:
                     yield result
                     return
+            if next_result.is_error:
+                yield result
+                return
             elif best_failure is None or best_failure.pos < next_result.pos:
                 best_failure = next_result
 
@@ -176,36 +238,34 @@ class Any(metaclass=MetaExpr):
         yield Success(text[pos], pos + 1) if pos < len(text) else Failure(cls, pos)
 
 
+class Assert(Expr):
+    def __init__(self, expr):
+        self.expr = conv(expr)
+
+    def _parse(self, ctx, text, pos):
+        result = yield Step(self.expr, pos)
+        if result.is_success or not result.is_error:
+            yield result
+        else:
+            yield result.as_error()
+
+    def __repr__(self):
+        return f'Assert({self.expr!r})'
+
+
 class Checkpoint(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
-        self._recoveries = []
-        self._recovery = None
-
-    def add_recovery(self, expr):
-        self._recoveries.append(conv(expr))
-        self._recovery = None
 
     def _parse(self, ctx, text, pos):
-        ctx.checkpoints.append(self)
         ctx.commits.append(False)
         result = yield Step(self.expr, pos)
         saw_commit = ctx.commits.pop()
 
-        if result.is_success or not saw_commit:
+        if result.is_success or result.is_error or not saw_commit:
             yield result
-            return
-
-        if self._recovery is None:
-            self._recovery = Shortest(*self._recovery)
-
-        replacement = yield Step(self._recovery, pos)
-        if replacement.is_success:
-            tree = ErrorTree(result, replacement)
-            yield Success(tree, replacement.pos)
         else:
-            raise ParseError(result.error_message())
-
+            yield result.as_error()
 
     def __repr__(self):
         return f'Checkpoint({self.expr!r})'
@@ -358,6 +418,22 @@ class Pass(Expr):
 
     def _parse(self, ctx, text, pos):
         yield Success(self.value, pos)
+
+
+class Recover(Expr):
+    def __init__(self, expr):
+        self.expr = conv(expr)
+        self.recoveries = []
+
+    def add_recovery(self, expr):
+        self.recoveries.append(conv(expr))
+        return self
+
+    def _parse(self, ctx, text, pos):
+        result = yield Step(self.expr, pos)
+        if not result.is_success:
+            result.recoveries.extend(self.recoveries)
+        yield result
 
 
 class Regex(Expr):
@@ -661,10 +737,10 @@ def OperatorPrecedence(atom, *rules):
 
 
 def visit(tree):
-    if isinstance(tree, (InfixOp, Postfix, PrefixOp, Token, Struct)):
+    if isinstance(tree, (InfixOp, PostfixOp, PrefixOp, Token, Struct)):
         yield tree
 
-    if isinstance(tree, (list, InfixOp, Postfix, PrefixOp)):
+    if isinstance(tree, (list, InfixOp, PostfixOp, PrefixOp)):
         for item in tree:
             yield from visit(item)
 
@@ -721,15 +797,30 @@ class Success(namedtuple('Success', 'value, pos')):
     def is_success(self):
         return True
 
+    @property
+    def is_error(self):
+        return False
 
-class Failure(namedtuple('Failure', 'expr, pos')):
+
+
+class Failure:
+    def __init__(self, expr, pos, is_error=False):
+        self.expr = expr
+        self.pos = pos
+        self.is_error = is_error
+        self.recoveries = []
+
     @property
     def is_success(self):
         return False
 
-    def error_message(self):
-        # TODO: Inspect the expr and try to compose a useful error message.
-        return f'Parse error at index {self.pos}: {self.expr!r}'
+    def as_error(self):
+        if self.is_error:
+            return self
+        else:
+            result = Failure(self.expr, self.pos, is_error=True)
+            result.recoveries = list(self.recoveries)
+            return result
 
 
 def conv(obj):

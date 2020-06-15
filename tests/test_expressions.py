@@ -235,7 +235,6 @@ class TestExpressions(unittest.TestCase):
         ])
 
     def test_using_multiple_transforms(self):
-        from sourcer.metasyntax import Grammar
         g = Grammar(r'''
             start = Expr << End
             class Expr {

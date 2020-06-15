@@ -1,4 +1,5 @@
 from ast import literal_eval
+from collections import defaultdict
 import itertools
 import re
 
@@ -34,16 +35,29 @@ def _create_parser(grammar):
     for stmt in tree:
         env[stmt.name] = lazy(stmt.name)
 
+    recoveries = defaultdict(list)
     for stmt in tree:
         result = stmt.evaluate(env)
-        if _contains_commit(result):
+        if _contains_commit(stmt):
             result = Checkpoint(result)
-        env[stmt.name] = result
+        if isinstance(stmt, Recover):
+            recoveries[stmt.name].append(result)
+        else:
+            env[stmt.name] = result
         if isinstance(stmt, TokenDef):
             env['#tokens'].append(result)
 
     if 'start' not in env:
         raise Exception('Expected "start" definition.')
+
+    for name, recovery in recoveries:
+        if name not in env:
+            raise Exception(f'Unknown rule in "recover" definition: {name}.')
+        target = env[name]
+        if not isinstance(target, Recover):
+            target = Recover(target)
+            env[name] = target
+        target.add_recovery(recovery)
 
     parser = Parser(start=env['start'], tokens=[v for v in env['#tokens']])
     return env, parser
@@ -51,7 +65,7 @@ def _create_parser(grammar):
 
 def _contains_commit(tree):
     for child in visit(tree):
-        if isinstance(child, Commit):
+        if isinstance(child, PostfixOp) and getattr(child.operator, 'value', None) == '!':
             return True
     return False
 
@@ -117,6 +131,17 @@ class ClassDef(Struct):
         for field in self.fields:
             setattr(cls, field.name, _evaluate(env, field.value))
         return cls
+
+
+class RecoverDef(Struct):
+    child = Commit('recover') >> Let
+
+    @property
+    def name(self):
+        return self.child.name
+
+    def evaluate(self, env):
+        return self.child.evaluate(env)
 
 
 class TokenDef(Struct):
@@ -193,7 +218,7 @@ MetaExpr = OperatorPrecedence(
 )
 
 metaparser = Parser(
-    start=Skip(Newline) >> ((TokenDef | ClassDef | Template | Let) / Sep) << End,
+    start=Skip(Newline) >> ((TokenDef | ClassDef | RecoverDef | Template | Let) / Sep) << End,
     tokens=[
         Whitespace,
         Word,
