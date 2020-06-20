@@ -14,12 +14,12 @@ class ParseError(Exception):
         self.pos = pos
 
 
-def run(text, pos=0):
+def _main(text, pos=0):
     memo = {}
     result = None
 
     start = $start
-    key = (2, start, pos)
+    key = (0, start, pos)
     gtor = start(text, pos)
     stack = [(key, gtor)]
 
@@ -27,15 +27,16 @@ def run(text, pos=0):
         key, gtor = stack[-1]
         result = gtor.send(result)
 
-        if result[0] != 2:
+        if result[0] == 0:
+            if result in memo:
+                result = memo[key]
+            else:
+                gtor = result[1](text, result[2])
+                stack.append((result, gtor))
+                result = None
+        else:
             stack.pop()
             memo[key] = result
-        elif result in memo:
-            result = memo[key]
-        else:
-            gtor = result[1](text, result[2])
-            stack.append((result, gtor))
-            result = None
 
     if result[0]:
         return result[1]
@@ -47,7 +48,11 @@ def run(text, pos=0):
 Target = namedtuple('Target', 'mode, value, pos')
 
 
-class Choice:
+class Expr:
+    pass
+
+
+class Choice(Expr):
     def __init__(self, *exprs):
         self.exprs = [conv(x) for x in exprs]
 
@@ -56,46 +61,20 @@ class Choice:
         for expr in self.exprs:
             item = out.compile(expr)
             items.append(item)
-            with out.IF(f'{out.is_success(item)} or {out.is_error(item)}'):
+            out(f'if {out.is_success(item)} or {out.is_error(item)}:')
+            with out.indented():
                 out.copy_result(target, item)
             out('else:')
             out.indent += 1
 
         out.fail(target, self, 'pos')
         for item in items:
-            with out.IF(f'{target.pos} < {item.pos}'):
+            out(f'if {target.pos} < {item.pos}:')
+            with out.indented():
                 out.copy_result(target, item)
 
 
-class Drop:
-    def __init__(self, expr1, expr2, drop_left=True):
-        self.expr1 = conv(expr1)
-        self.expr2 = conv(expr2)
-
-    def _compile(self, out, target):
-        item1 = out.compile(self.expr1)
-
-        with out.IF_NOT(out.is_success(item1)):
-            out.copy_result(target, item1)
-
-        with out.ELSE():
-            out(f'pos = {item1.pos}')
-            item2 = out.compile(self.expr2)
-
-            if self.drop_left:
-                out.copy_result(target, item2)
-            else:
-                with out.IF(out.is_success(item2)):
-                    out.succeed(target, item1.value, item2.pos)
-                with out.ELSE():
-                    out.copy_result(target, item2)
-
-
-def Left(expr1, expr2):
-    return Drop(expr1, expr2, drop_left=False)
-
-
-class List:
+class List(Expr):
     def __init__(self, expr, min_length=0):
         self.expr = conv(expr)
         self.min_length = min_length
@@ -106,23 +85,23 @@ class List:
         with out.indented():
             item = out.compile(expr)
 
-            with out.IF(out.is_error(item)):
+            out(f'if {out.is_error(item)}:')
+            with out.indented():
                 out.copy_result(target, item)
 
-            with out.IF_NOT(out.is_success(item)):
+            out(f'if not {out.is_success(item)}:')
+            with out.indented():
                 out('break')
 
-            condition = (
-                f'not isinstance({item.value}, Token) or '
-                f'not {item.value}._is_ignored'
-            )
-            with out.IF(condition):
+            out(f'if not isinstance({item.value}, Token) or not {item.value}._is_ignored:')
+            with out.indented():
                 out(f'{buf}.append({item.value})')
 
             out(f'pos = {item.pos}')
 
         if min_length > 0:
-            with out.IF(f'len({buf}) < min_length'):
+            out(f'if len({buf}) < min_length:')
+            with out.indented():
                 out.fail(target, self, 'pos')
             out('else:')
             out.indent += 1
@@ -130,15 +109,17 @@ class List:
         out.succeed(target, buf, 'pos')
 
 
-class Literal:
+class Literal(Expr):
     def __init__(self, value):
         self.value = value
 
     def _compile(self, out, target):
         value = out.define('value', repr(self.value))
-        with out.IF('isinstance(text, str)'):
+        out('if isinstance(text, str):')
+        with out.indented():
             self._compile_for_text(out, target, value)
-        with out.ELSE():
+        out('else:')
+        with out.indented():
             self._compile_for_items(out, target, value)
 
     def _compile_for_text(self, out, target, value):
@@ -146,76 +127,29 @@ class Literal:
             out.fail(target, self, 'pos')
             return
         end = out.define('end', f'pos + {len(self.value)}')
-        with out.IF(f'text[pos:{end}] == {value}'):
+        out(f'if text[pos:{end}] == {value}:')
+        with out.indented():
             out.succeed(target, value, end)
-        with out.ELSE():
+        out('else:')
+        with out.indented():
             out.fail(target, self, 'pos')
 
     def _compile_for_items(self, out, target, value):
-        with out.IF(f'pos < len(text) and text[pos] == {value}'):
+        out(f'if pos < len(text) and text[pos] == {value}:')
+        with out.indented():
             out.succeed(target, value, 'pos + 1')
-        with out.ELSE():
+        out('else:')
+        with out.indented():
             out.fail(target, self, 'pos')
 
 
-class Opt:
-    def __init__(self, expr):
-        self.expr = conv(expr)
-
-    def _compile(self, out, target):
-        item = out.compile(self.expr)
-        with out.IF(f'{out.is_success(item)} or {out.is_error(item)}'):
-            out.copy_result(target, item)
-        with out.ELSE():
-            out.succeed(target, 'None', 'pos')
-
-
-class Ref:
+class Ref(Expr):
     def __init__(self, rule_name):
         self.rule_name = rule_name
 
     def _compile(self, out, target):
         rule = out.rule_map[self.rule_name]
-        out(f'{target.mode}, {target.value}, {target.pos} = yield (2, {rule}, pos)')
-
-
-class Regex:
-    def __init__(self, pattern):
-        if isinstance(pattern, str):
-            pattern = re.compile(pattern)
-        elif not isinstance(pattern, typing.Pattern):
-            raise TypeError('Expected Pattern object')
-        self.pattern = pattern
-
-    def _compile(self, out, target):
-        pattern = out.define_global('pattern', repr(self.pattern))
-
-        with out.IF('isinstance(text, str)'):
-            match = out.define('match', f'{pattern}.match(text, pos)')
-
-            with out.IF(match):
-                out.succeed(target, f'{match}.group(0)', f'{match}.end()')
-
-            with out.ELSE():
-                out.fail(target, self, 'pos')
-
-        with out.ELIF('pos >= len(text)'):
-            out.fail(target, self, 'pos')
-
-        with out.ELSE():
-            item = out.define('item', 'text[pos]')
-            value = out.define('value',
-                f'{item}.value if isinstance(item, Token) else item')
-            match = out.define('match',
-                f'{pattern}.fullmatch({value}) if isinstance({value}, str) else None')
-            with out.IF(match):
-                out.succeed(target, value, 'pos + 1')
-            with out.ELSE():
-                out.fail(target, self, 'pos')
-
-
-def Right(expr1, expr2):
-    return Drop(expr1, expr2, drop_left=True)
+        out(f'{target.mode}, {target.value}, {target.pos} = yield (0, {rule}, pos)')
 
 
 class Rule:
@@ -224,32 +158,23 @@ class Rule:
         self.expr = conv(expr)
 
 
-class Seq:
-    def __init__(self, *exprs, constructor=None):
+class Seq(Expr):
+    def __init__(self, *exprs):
         self.exprs = [conv(x) for x in exprs]
-        self.constructor = constructor
 
     def _compile(self, out, target):
         items = []
         for expr in self.exprs:
             item = out.compile(expr)
             items.append(item)
-            with out.IF_NOT(out.is_success(item)):
+            out(f'if not {out.is_success(item)}:')
+            with out.indented():
                 out.copy_result(target, item)
             out('else:')
             out.indent += 1
             out(f'pos = {item.pos}')
-
         values = ', '.join(x.value for x in items)
-        if self.constructor is None:
-            value = f'[{values}]'
-        else:
-            value = f'{self.constructor}({values})'
-        out.succeed(target, value, 'pos')
-
-
-def Some(expr):
-    return List(expr, min_length=1)
+        out.succeed(target, f'[{values}]', 'pos')
 
 
 class ProgramBuilder:
@@ -280,30 +205,10 @@ class ProgramBuilder:
         self(f'{name} = {value}')
         return name
 
-    def define_global(self, basename, value):
-        name = self.reserve(basename)
-        self.global_defs.write(f'{name} = {value}')
-        return name
-
-    def ELIF(self, condition):
-        self(f'elif {condition}:')
-        return self.indented()
-
-    def ELSE(self):
-        self('else:')
-        return self.indented()
-
     def fail(self, target, expr, pos):
         self(f'{target.mode} = False')
         self(f'{target.value} = {id(expr)}')
         self(f'{target.pos} = {pos}')
-
-    def IF(self, condition):
-        self(f'if {condition}:')
-        return self.indented()
-
-    def IF_NOT(self, condition):
-        return self.IF(f'not {condition}')
 
     @contextlib.contextmanager
     def indented(self):
@@ -330,22 +235,9 @@ class ProgramBuilder:
             count += 1
 
     def run(self, start, rules):
-        program_text = self.write_program(start, rules)
-        code_object = compile(program_text, '<grammar>', 'exec', optimize=2)
-        module = types.ModuleType(start)
-        exec(code_object, module.__dict__)
-        return module
-
-    def succeed(self, target, value, pos):
-        self(f'{target.mode} = True')
-        self(f'{target.value} = {value}')
-        self(f'{target.pos} = {pos}')
-
-    def write_program(self, start, rules):
         self.buf = io.StringIO()
-        self.global_defs = io.StringIO()
         self.indent = 0
-        self.names = {'pos', 'text', 'source_code'}
+        self.names = {'pos', 'text'}
         self.rule_map = {x.name: self.reserve(f'_parse_{x.name}') for x in rules}
         for rule in rules:
             self(f'def {self.rule_map[rule.name]}(text, pos):')
@@ -353,15 +245,22 @@ class ProgramBuilder:
                 result = self.compile(rule.expr)
                 self(f'yield ({result.mode}, {result.value}, {result.pos})')
                 self('')
-        self(_main_template.replace('$start', self.rule_map[start]))
-        self.global_defs.write(self.buf.getvalue())
-        return self.global_defs.getvalue()
+        self(f'def _main(text, pos=0):')
+        return self.buf.getvalue()
+
+    def succeed(self, target, value, pos):
+        self(f'{target.mode} = True')
+        self(f'{target.value} = {value}')
+        self(f'{target.pos} = {pos}')
 
 
 def conv(obj):
     """Converts a Python object to a parsing expression."""
-    if hasattr(obj, '_compile'):
+    if isinstance(obj, Expr):
         return obj
+
+    if isinstance(obj, list) and len(obj) == 1:
+        return List(obj)
 
     if isinstance(obj, (list, tuple)):
         return Seq(*obj)
@@ -375,12 +274,3 @@ def conv(obj):
         return Regex(obj)
     else:
         return Literal(obj)
-
-
-def compile_rules(start, rules):
-    out = ProgramBuilder()
-    return out.run(start, rules)
-
-
-
-
