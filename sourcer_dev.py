@@ -225,8 +225,9 @@ class Rule:
 
 
 class Seq:
-    def __init__(self, *exprs):
+    def __init__(self, *exprs, constructor=None):
         self.exprs = [conv(x) for x in exprs]
+        self.constructor = constructor
 
     def _compile(self, out, target):
         items = []
@@ -238,8 +239,13 @@ class Seq:
             out('else:')
             out.indent += 1
             out(f'pos = {item.pos}')
+
         values = ', '.join(x.value for x in items)
-        out.succeed(target, f'[{values}]', 'pos')
+        if self.constructor is None:
+            value = f'[{values}]'
+        else:
+            value = f'{self.constructor}({values})'
+        out.succeed(target, value, 'pos')
 
 
 def Some(expr):
