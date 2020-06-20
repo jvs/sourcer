@@ -35,13 +35,13 @@ def _create_parser(grammar):
     for stmt in tree:
         env[stmt.name] = lazy(stmt.name)
 
-    recoveries = defaultdict(list)
+    recovery_groups = defaultdict(list)
     for stmt in tree:
         result = stmt.evaluate(env)
         if _contains_commit(stmt):
             result = Checkpoint(result)
-        if isinstance(stmt, Recover):
-            recoveries[stmt.name].append(result)
+        if isinstance(stmt, RecoverDef):
+            recovery_groups[stmt.name].append(result)
         else:
             env[stmt.name] = result
         if isinstance(stmt, TokenDef):
@@ -50,14 +50,14 @@ def _create_parser(grammar):
     if 'start' not in env:
         raise Exception('Expected "start" definition.')
 
-    for name, recovery in recoveries:
+    for name, recovery_group in recovery_groups.items():
         if name not in env:
             raise Exception(f'Unknown rule in "recover" definition: {name}.')
         target = env[name]
         if not isinstance(target, Recover):
             target = Recover(target)
             env[name] = target
-        target.add_recovery(recovery)
+        target.recovery_rules.extend(recovery_group)
 
     parser = Parser(start=env['start'], tokens=[v for v in env['#tokens']])
     return env, parser

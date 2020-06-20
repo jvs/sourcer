@@ -21,6 +21,12 @@ def _parse(expr, text, pos, max_errors):
     current_result = _parse_once(ctx, expr, text, pos)
     errors = []
 
+    if not current_result.is_success:
+        _clear_memo_table(ctx.memo, current_result)
+
+    base_memo = dict(ctx.memo)
+
+
     while max_errors > 0:
         max_errors -= 1
 
@@ -30,11 +36,13 @@ def _parse(expr, text, pos, max_errors):
         replacement = current_result
         best_result = current_result
         best_error = (current_result, None)
-        recoveries = current_result.recoveries or [SkipTo(current_result.expr), Pass(None)]
+        recovery_rules = current_result.recovery_rules
 
-        for recovery in recoveries:
-            # Remove the previous replacement.
-            _clear_memo_table(ctx.memo, replacement)
+        if not recovery_rules:
+            recovery_rules = [SkipTo(current_result.expr), Pass(None)]
+
+        for recovery in recovery_rules:
+            ctx.memo = dict(base_memo)
 
             # Get the replacement value from the recovery rule.
             replacement = _parse_once(ctx, recovery, text, current_result.pos)
@@ -91,8 +99,12 @@ def _parse_once(ctx, expr, text, pos):
 
 
 def _clear_memo_table(memo, prev_result):
-    for key in list(memo.keys()):
-        if memo[key] is prev_result:
+    pos = prev_result.pos
+    expr = prev_result.expr
+    for key, value in list(memo.items()):
+        # if key[0] == pos or memo[key] is prev_result or memo[key].pos == pos:
+        # if memo[key] is prev_result:
+        if not value.is_success and value.pos == pos and value.expr is expr:
             del memo[key]
 
 
@@ -177,9 +189,12 @@ class DerivedExpr(Expr):
         raise NotImplementedError('derive')
 
     def _parse(self, ctx, text, pos):
-        delegate = self.derive()
-        self._parse = delegate._parse
-        return delegate._parse(ctx, text, pos)
+        if not hasattr(self, '_delegate'):
+            self._delegate = self.derive()
+        yield (yield Step(self._delegate, pos))
+        # yield result
+        # self._parse = delegate._parse
+        # return delegate._parse(ctx, text, pos)
 
 
 class All(Expr):
@@ -201,7 +216,7 @@ class All(Expr):
             if next_result.is_error:
                 yield result
                 return
-            elif best_failure is None or best_failure.pos < next_result.pos:
+            elif best_failure.pos < next_result.pos:
                 best_failure = next_result
 
         yield result if result else best_failure
@@ -218,12 +233,18 @@ class Alt(Expr):
         result_pos = pos
         while True:
             item = yield Step(self.expr, pos)
+            if item.is_error:
+                yield item
+                return
             if not item.is_success:
                 break
             result.append(item.value)
             pos = item.pos
             result_pos = pos
             skipped = yield Step(self.separator, pos)
+            if skipped.is_error:
+                yield skipped
+                return
             if not skipped.is_success:
                 break
             pos = skipped.pos
@@ -256,6 +277,9 @@ class Assert(Expr):
 class Checkpoint(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
+
+    def __call__(self, *a, **k):
+        return self.expr.__call__(*a, **k)
 
     def _parse(self, ctx, text, pos):
         ctx.commits.append(False)
@@ -334,8 +358,16 @@ class Lazy(DerivedExpr):
     def __init__(self, func):
         self.func = func
 
+    def _eval(self):
+        if not hasattr(self, 'value'):
+            self.value = conv(self.func())
+        return self.value
+
     def derive(self):
-        return conv(self.func())
+        return self._eval()
+
+    # def __repr__(self):
+        # return f'Lazy(lambda: {self.value!r})' if has
 
 
 class Left(DerivedExpr):
@@ -358,6 +390,9 @@ class List(Expr):
         result = []
         while True:
             item = yield Step(self.expr, pos)
+            if item.is_error:
+                yield item
+                return
             if not item.is_success:
                 break
             pos = item.pos
@@ -376,7 +411,8 @@ class Literal(Expr):
         if isinstance(text, str):
             return self._parse_str(text, pos)
         else:
-            return self._delegate._parse(ctx, text, pos)
+            # return self._delegate._parse(ctx, text, pos)
+            return self._parse_item(pos)
 
     def _parse_str(self, text, pos):
         if not isinstance(self.value, str):
@@ -388,6 +424,10 @@ class Literal(Expr):
             yield Success(self.value, end)
         else:
             yield Failure(self, pos)
+
+    def _parse_item(self, pos):
+        result = yield Step(self._delegate, pos)
+        yield result
 
     def __repr__(self):
         return f'Literal({self.value!r})'
@@ -423,16 +463,15 @@ class Pass(Expr):
 class Recover(Expr):
     def __init__(self, expr):
         self.expr = conv(expr)
-        self.recoveries = []
+        self.recovery_rules = []
 
-    def add_recovery(self, expr):
-        self.recoveries.append(conv(expr))
-        return self
+    def __call__(self, *a, **k):
+        return self.expr.__call__(*a, **k)
 
     def _parse(self, ctx, text, pos):
         result = yield Step(self.expr, pos)
         if not result.is_success:
-            result.recoveries.extend(self.recoveries)
+            result.recovery_rules.extend(self.recovery_rules)
         yield result
 
 
@@ -465,6 +504,9 @@ class Require(Expr):
         self.expr = conv(expr)
         self.pred = pred
 
+    def __repr__(self):
+        return f'Require({self.expr!r}, {self.pred})'
+
     def _parse(self, ctx, text, pos):
         result = yield Step(self.expr, pos)
         if not result.is_success or self.pred(result.value):
@@ -488,6 +530,10 @@ class Right(DerivedExpr):
 class Seq(Expr):
     def __init__(self, *exprs):
         self.exprs = [conv(x) for x in exprs]
+
+    def __repr__(self):
+        parts = ', '.join(repr(x) for x in self.exprs)
+        return f'Seq({parts})'
 
     def _parse(self, ctx, text, pos):
         result = []
@@ -571,12 +617,17 @@ class Struct(metaclass=MetaExpr):
             Transform(Seq(*exprs), lambda vals: cls(**dict(zip(names, vals)))),
             Require(Any, lambda x: isinstance(x, cls)),
         )
-        cls._parse = delegate._parse
+        # cls._parse = delegate._parse
+        cls._delegate = delegate
 
     @classmethod
     def _parse(cls, ctx, text, pos):
-        cls._init_fields()
-        return cls._parse(ctx, text, pos)
+        if not hasattr(cls, '_delegate'):
+            cls._init_fields()
+        result = yield Step(cls._delegate, pos)
+        yield result
+        # cls._init_fields()
+        # return cls._parse(ctx, text, pos)
 
     def _asdict(self):
         return {k: getattr(self, k) for k in self._fields}
@@ -622,9 +673,12 @@ class Token(metaclass=MetaExpr):
 
     @classmethod
     def _parse_item(cls, ctx, text, pos):
-        delegate = Require(Any, lambda x: isinstance(x, cls))
-        cls._parse_item = delegate._parse
-        return delegate._parse(ctx, text, pos)
+        if not hasattr(cls, '_delegate'):
+            cls._delegate = Require(Any, lambda x: isinstance(x, cls))
+        result = yield Step(cls._delegate, pos)
+        yield result
+        # cls._parse_item = delegate._parse
+        # return delegate._parse(ctx, text, pos)
 
     def __eq__(self, other):
         if isinstance(other, str):
@@ -808,7 +862,10 @@ class Failure:
         self.expr = expr
         self.pos = pos
         self.is_error = is_error
-        self.recoveries = []
+        self.recovery_rules = []
+
+    def __repr__(self):
+        return f'Failure({self.expr!r}, {self.pos!r}, {self.is_error!r})'
 
     @property
     def is_success(self):
@@ -819,7 +876,7 @@ class Failure:
             return self
         else:
             result = Failure(self.expr, self.pos, is_error=True)
-            result.recoveries = list(self.recoveries)
+            result.recovery_rules = list(self.recovery_rules)
             return result
 
 
