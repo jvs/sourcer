@@ -7,9 +7,9 @@ from .expressions import *
 
 
 class Grammar:
-    def __init__(self, grammar):
+    def __init__(self, grammar, transform_tokens=None):
         self.grammar = grammar
-        self._env, self.parser = _create_parser(grammar)
+        self._env, self.parser = _create_parser(grammar, transform_tokens=transform_tokens)
 
     def __getattr__(self, name):
         if name in self._env:
@@ -21,7 +21,7 @@ class Grammar:
         return self.parser.parse(text)
 
 
-def _create_parser(grammar):
+def _create_parser(grammar, transform_tokens=None):
     tree = metaparser.parse(grammar)
 
     from . import expressions
@@ -59,7 +59,11 @@ def _create_parser(grammar):
             env[name] = target
         target.recovery_rules.extend(recovery_group)
 
-    parser = Parser(start=env['start'], tokens=[v for v in env['#tokens']])
+    parser = Parser(
+        start=env['start'],
+        tokens=[v for v in env['#tokens']],
+        transform_tokens=transform_tokens,
+    )
     return env, parser
 
 
