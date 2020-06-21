@@ -158,4 +158,3 @@ def run(text, pos=0):
     else:
         raise ParseError(*result)
 '''
-
