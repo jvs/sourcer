@@ -2,6 +2,54 @@ import re
 import typing
 
 
+class Alt:
+    def __init__(self, expr, separator, allow_trailer=False, min_length=0):
+        self.expr = conv(expr)
+        self.separator = conv(separator)
+        self.allow_trailer = allow_trailer
+
+    def _compile(self, out, target):
+        buf = out.define('buf', '[]')
+        out(f'{target.pos} = pos')
+
+        out('while True:')
+        with out.indented():
+            item = out.compile(self.expr)
+
+            with out.IF(out.is_error(item)):
+                out.copy_result(target, item)
+
+            with out.IF_NOT(out.is_success(item)):
+                out('break')
+
+            out(f'{buf}.append({item.value})')
+            if self.allow_trailer:
+                out.set('pos', item.pos)
+            else:
+                out(f'pos = {target.pos} = {item.pos}')
+
+            sep = out.compile(self.separator)
+            with out.IF(out.is_error(sep)):
+                out.copy_result(target, sep)
+
+            with out.IF_NOT(out.is_success(sep)):
+                out('break')
+
+            out.set('pos', sep.pos)
+
+        if min_length > 0:
+            with out.IF(f'len({buf}) < {self.min_length}'):
+                out.fail(target, self, 'pos')
+            out('else:')
+            out.indent += 1
+
+        # out.succeed:
+        out.set(target.mode, True)
+        out.set(target.value, buf)
+        if self.allow_trailer:
+            out.set(target.pos, 'pos')
+
+
 class Choice:
     def __init__(self, *exprs):
         self.exprs = [conv(x) for x in exprs]
@@ -59,7 +107,7 @@ class List:
         buf = out.define('buf', '[]')
         out('while True:')
         with out.indented():
-            item = out.compile(expr)
+            item = out.compile(self.expr)
 
             with out.IF(out.is_error(item)):
                 out.copy_result(target, item)
@@ -76,8 +124,8 @@ class List:
 
             out(f'pos = {item.pos}')
 
-        if min_length > 0:
-            with out.IF(f'len({buf}) < min_length'):
+        if self.min_length > 0:
+            with out.IF(f'len({buf}) < {self.min_length}'):
                 out.fail(target, self, 'pos')
             out('else:')
             out.indent += 1
