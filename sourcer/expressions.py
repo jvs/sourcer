@@ -3,10 +3,11 @@ import typing
 
 
 class Alt:
-    def __init__(self, expr, separator, allow_trailer=False, min_length=0):
+    def __init__(self, expr, separator, allow_trailer=False, allow_empty=True):
         self.expr = conv(expr)
         self.separator = conv(separator)
         self.allow_trailer = allow_trailer
+        self.allow_empty = allow_empty
 
     def _compile(self, out, target):
         buf = out.define('buf', '[]')
@@ -37,8 +38,8 @@ class Alt:
 
             out.set('pos', sep.pos)
 
-        if min_length > 0:
-            with out.IF(f'len({buf}) < {self.min_length}'):
+        if not self.allow_empty:
+            with out.IF(f'not {buf}'):
                 out.fail(target, self, 'pos')
             out('else:')
             out.indent += 1
@@ -99,9 +100,9 @@ def Left(expr1, expr2):
 
 
 class List:
-    def __init__(self, expr, min_length=0):
+    def __init__(self, expr, allow_empty=True):
         self.expr = conv(expr)
-        self.min_length = min_length
+        self.allow_empty = allow_empty
 
     def _compile(self, out, target):
         buf = out.define('buf', '[]')
@@ -124,8 +125,8 @@ class List:
 
             out(f'pos = {item.pos}')
 
-        if self.min_length > 0:
-            with out.IF(f'len({buf}) < {self.min_length}'):
+        if not self.allow_empty:
+            with out.IF(f'not {buf}'):
                 out.fail(target, self, 'pos')
             out('else:')
             out.indent += 1
@@ -252,7 +253,7 @@ class Seq:
 
 
 def Some(expr):
-    return List(expr, min_length=1)
+    return List(expr, allow_empty=False)
 
 
 def conv(obj):
