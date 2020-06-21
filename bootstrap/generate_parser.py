@@ -1,4 +1,7 @@
+from ast import literal_eval
+import sourcer.expressions
 from .metasyntax import Grammar, transform_tokens
+
 
 g = Grammar(r'''
     ignored token Space = `[ \t]+`
@@ -81,4 +84,21 @@ g = Grammar(r'''
 
 
 result = g.parse(g.grammar)
-print(result)
+
+
+def convert_tokens(node):
+    if isinstance(node, (g.Symbol, g.Word)):
+        return node.value
+
+    if isinstance(node, g.StringLiteral):
+        return sourcer.expressions.Literal(literal_eval(node.value))
+
+    if isinstance(node, g.RegexLiteral):
+        # Strip the backticks.
+        return sourcer.expressions.Regex(node.value[1:-1])
+
+    return node
+
+
+converted = g.transform(result, convert_tokens)
+print(converted)

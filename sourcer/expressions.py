@@ -1,4 +1,3 @@
-import re
 import typing
 
 
@@ -138,6 +137,9 @@ class Literal:
     def __init__(self, value):
         self.value = value
 
+    def __repr__(self):
+        return f'Literal({self.value!r})'
+
     def _compile(self, out, target):
         value = out.define('value', repr(self.value))
         with out.IF('isinstance(text, str)'):
@@ -185,14 +187,18 @@ class Ref:
 
 class Regex:
     def __init__(self, pattern):
-        if isinstance(pattern, str):
-            pattern = re.compile(pattern)
-        elif not isinstance(pattern, typing.Pattern):
-            raise TypeError('Expected Pattern object')
+        if isinstance(pattern, typing.Pattern):
+            pattern = pattern.pattern
+        if not isinstance(pattern, str):
+            raise TypeError('Expected str')
         self.pattern = pattern
 
+    def __repr__(self):
+        return f'Regex({self.pattern!r})'
+
     def _compile(self, out, target):
-        pattern = out.define_global('pattern', repr(self.pattern))
+        out.add_import('re')
+        pattern = out.define_global('pattern', f're.compile({self.pattern!r})')
 
         with out.IF('isinstance(text, str)'):
             match = out.define('match', f'{pattern}.match(text, pos)')

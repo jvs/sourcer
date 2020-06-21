@@ -18,6 +18,9 @@ class ProgramBuilder:
         self.buf.write(text)
         self.buf.write('\n')
 
+    def add_import(self, path):
+        self.imports.add(path)
+
     def copy_result(self, target, result):
         for field in target._fields:
             self(f'{getattr(target, field)} = {getattr(result, field)}')
@@ -107,6 +110,7 @@ class ProgramBuilder:
 
     def write_program(self, start, rules):
         self.buf = io.StringIO()
+        self.imports = set()
         self.global_defs = io.StringIO()
         self.indent = 0
         self.names = {'pos', 'text', 'source_code'}
@@ -118,7 +122,14 @@ class ProgramBuilder:
                 self(f'yield ({result.mode}, {result.value}, {result.pos})')
                 self('')
         self(_main_template.replace('$start', self.rule_map[start]))
-        self.global_defs.write(self.buf.getvalue())
+
+        result = io.StringIO()
+        for imp in self.imports:
+            result.write('import ')
+            result.write(imp)
+            result.write('\n')
+        result.write(self.global_defs.getvalue())
+        result.write(self.buf.getvalue())
         return self.global_defs.getvalue()
 
 
