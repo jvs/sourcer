@@ -177,11 +177,14 @@ class Opt:
 
 
 class Ref:
-    def __init__(self, rule_name):
-        self.rule_name = rule_name
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return f'Ref({self.name!r})'
 
     def _compile(self, out, target):
-        rule = out.rule_map[self.rule_name]
+        rule = out.rule_map[self.name]
         out(f'{target.mode}, {target.value}, {target.pos} = yield (2, {rule}, pos)')
 
 

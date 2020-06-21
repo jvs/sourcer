@@ -50,16 +50,19 @@ g = Grammar(r'''
         | TemplateDef
         | RuleDef
 
+    class Ref {
+        name: Word
+    }
+
     class ListLiteral {
         elements: "[" >> (Expr / ",") << "]"
     }
 
     Atom = ("(" >> wrap(Expr) << ")")
-        | Word
+        | Ref
         | StringLiteral
         | RegexLiteral
         | ListLiteral
-
 
     class KeywordArg {
         name: Name << ("=" | ":")
@@ -96,6 +99,9 @@ def convert_tokens(node):
     if isinstance(node, g.RegexLiteral):
         # Strip the backticks.
         return sourcer.expressions.Regex(node.value[1:-1])
+
+    if isinstance(node, g.Ref):
+        return sourcer.expressions.Ref(node.name)
 
     return node
 
