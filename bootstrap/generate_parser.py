@@ -24,6 +24,8 @@ g = Grammar(r'''
 
     template wrap(x) => Skip(Newline) >> x << Skip(Newline)
 
+    Comma = wrap(",")
+
     class RuleDef {
         name: Name << ("=" | ":")
         value: Expr
@@ -41,7 +43,7 @@ g = Grammar(r'''
 
     class TemplateDef {
         name: "template" >> Name
-        params: wrap("(") >> (Name / ",") << ")"
+        params: wrap("(") >> (wrap(Name) / Comma) << ")"
         body: wrap("=" | ":" | "=>") >> Expr
     }
 
@@ -55,7 +57,7 @@ g = Grammar(r'''
     }
 
     class ListLiteral {
-        elements: "[" >> (Expr / ",") << "]"
+        elements: "[" >> (wrap(Expr) / Comma) << "]"
     }
 
     Atom = ("(" >> wrap(Expr) << ")")
@@ -70,7 +72,7 @@ g = Grammar(r'''
     }
 
     class ArgList {
-        args: "(" >> (wrap(KeywordArg | Expr) / wrap(",")) << ")"
+        args: "(" >> (wrap(KeywordArg | Expr) / Comma) << ")"
     }
 
     Expr = OperatorPrecedence(
@@ -78,7 +80,7 @@ g = Grammar(r'''
         Postfix(ArgList),
         Postfix("?" | "*" | "+" | "!"),
         LeftAssoc(wrap("/" | "//")),
-        LeftAssoc(wrap("<<" | ">>")),
+        LeftAssoc(wrap("<<" | ">>" | "<<!" | "!>>")),
         LeftAssoc(wrap("|")),
     )
 
