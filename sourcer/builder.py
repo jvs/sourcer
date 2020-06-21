@@ -54,9 +54,7 @@ class ProgramBuilder:
         return self.indented()
 
     def fail(self, target, expr, pos):
-        self(f'{target.mode} = False')
-        self(f'{target.value} = {id(expr)}')
-        self(f'{target.pos} = {pos}')
+        self.set_result(target, mode=False, value=id(expr), pos=pos)
 
     def IF(self, condition):
         self(f'if {condition}:')
@@ -96,10 +94,16 @@ class ProgramBuilder:
         exec(code_object, module.__dict__)
         return module
 
+    def set(self, target, value):
+        self(f'{target} = {value}')
+
+    def set_result(self, target, mode, value, pos):
+        self.set(target.mode, mode)
+        self.set(target.value, value)
+        self.set(target.pos, pos)
+
     def succeed(self, target, value, pos):
-        self(f'{target.mode} = True')
-        self(f'{target.value} = {value}')
-        self(f'{target.pos} = {pos}')
+        self.set_result(target, mode=True, value=value, pos=pos)
 
     def write_program(self, start, rules):
         self.buf = io.StringIO()
