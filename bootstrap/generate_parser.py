@@ -1,5 +1,5 @@
 from ast import literal_eval
-import sourcer.expressions
+import sourcer.expressions as sr
 from .metasyntax import Grammar, transform_tokens
 
 
@@ -94,14 +94,43 @@ def convert_tokens(node):
         return node.value
 
     if isinstance(node, g.StringLiteral):
-        return sourcer.expressions.Literal(literal_eval(node.value))
+        return sr.Literal(literal_eval(node.value))
 
     if isinstance(node, g.RegexLiteral):
         # Strip the backticks.
-        return sourcer.expressions.Regex(node.value[1:-1])
+        return sr.Regex(node.value[1:-1])
 
     if isinstance(node, g.Ref):
-        return sourcer.expressions.Ref(node.name)
+        return sr.Ref(node.name)
+
+    if isinstance(node, g.ListLiteral):
+        return sr.Seq(*node.elements)
+
+    if isinstance(node, g.PostfixOp):
+        classes = {
+            '?': sr.Opt,
+            '*': sr.List,
+            '+': sr.Some,
+            # '!': sr.Commit,
+        }
+        if isinstance(node.operator, str) and node.operator in classes:
+            return classes[node.operator](node.left)
+
+    if isinstance(node, g.InfixOp) and node.operator == '|':
+        left, right = node.left, node.right
+        left = list(left.exprs) if isinstance(left, sr.Choice) else [left]
+        right = list(right.exprs) if isinstance(right, sr.Choice) else [right]
+        return sr.Choice(*left, *right)
+
+    if isinstance(node, g.InfixOp):
+        classes = {
+            '/': lambda a, b: sr.Alt(a, b, allow_trailer=True),
+            '//': lambda a, b: sr.Alt(a, b, allow_trailer=False),
+            '<<': sr.Left,
+            '>>': sr.Right,
+            # '<<!': lambda a, b: sr.Left(a, sr.Commit(b)),
+            # '!>>': lambda a, b: sr.Left(sr.Commit(a), b),
+        }
 
     return node
 
