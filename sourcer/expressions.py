@@ -8,6 +8,14 @@ class Alt:
         self.allow_trailer = allow_trailer
         self.allow_empty = allow_empty
 
+    def __repr__(self):
+        result = f'Alt({self.expr!r}, {self.separator!r}'
+        if self.allow_trailer:
+            result += ', allow_trailer=True'
+        if not self.allow_empty:
+            result += ', allow_empty=False'
+        return result + ')'
+
     def _compile(self, out, target):
         buf = out.define('buf', '[]')
         out(f'{target.pos} = pos')
@@ -53,6 +61,10 @@ class Alt:
 class Choice:
     def __init__(self, *exprs):
         self.exprs = [conv(x) for x in exprs]
+
+    def __repr__(self):
+        values = ', '.join(repr(x) for x in self.exprs)
+        return f'Choice({values})'
 
     def _compile(self, out, target):
         items = []
@@ -102,6 +114,10 @@ class List:
     def __init__(self, expr, allow_empty=True):
         self.expr = conv(expr)
         self.allow_empty = allow_empty
+
+    def __repr__(self):
+        cls = 'List' if self.allow_empty else 'Some'
+        return f'{cls}({self.expr!r})'
 
     def _compile(self, out, target):
         buf = out.define('buf', '[]')
@@ -167,6 +183,9 @@ class Literal:
 class Opt:
     def __init__(self, expr):
         self.expr = conv(expr)
+
+    def __repr__(self):
+        return f'Opt({self.expr!r})'
 
     def _compile(self, out, target):
         item = out.compile(self.expr)
@@ -241,6 +260,13 @@ class Seq:
     def __init__(self, *exprs, constructor=None):
         self.exprs = [conv(x) for x in exprs]
         self.constructor = constructor
+
+    def __repr__(self):
+        values = ', '.join(repr(x) for x in self.exprs)
+        if self.constructor is None:
+            return f'Seq({values})'
+        else:
+            return f'Seq({values}, constructor={self.constructor!r})'
 
     def _compile(self, out, target):
         items = []
