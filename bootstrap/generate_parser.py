@@ -137,4 +137,6 @@ def convert_tokens(node):
 
 
 converted = g.transform(result, convert_tokens)
-print(converted)
+for item in converted:
+    print('\n')
+    print(item)
