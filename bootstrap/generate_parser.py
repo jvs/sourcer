@@ -131,6 +131,7 @@ def convert_tokens(node):
             # '<<!': lambda a, b: sr.Left(a, sr.Commit(b)),
             # '!>>': lambda a, b: sr.Left(sr.Commit(a), b),
         }
+        return classes[node.operator](node.left, node.right)
 
     return node
 

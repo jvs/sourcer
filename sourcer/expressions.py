@@ -86,6 +86,10 @@ class Drop:
     def __init__(self, expr1, expr2, drop_left=True):
         self.expr1 = conv(expr1)
         self.expr2 = conv(expr2)
+        self.drop_left = drop_left
+
+    def __repr__(self):
+        return f'Drop({self.expr1!r}, {self.expr2!r}, drop_left={self.drop_left})'
 
     def _compile(self, out, target):
         item1 = out.compile(self.expr1)
