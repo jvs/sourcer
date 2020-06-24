@@ -1,6 +1,5 @@
 from ast import literal_eval
 import sourcer.expressions as sr
-import sourcer.metasyntax as meta
 from .metasyntax import Grammar, transform_tokens
 
 
@@ -120,7 +119,7 @@ def convert_tokens(node):
         if isinstance(left, sr.Ref) and left.name in classes:
             return classes[left.name](*node.operator.args)
         elif isinstance(left, sr.Ref):
-            return meta.Call(left.name, node.operator.args)
+            return sr.Call(left.name, node.operator.args)
 
         raise NotImplementedError('Currently, function-calls only work for names.')
 
@@ -152,7 +151,7 @@ def convert_tokens(node):
         return classes[node.operator](node.left, node.right)
 
     if isinstance(node, g.RuleDef):
-        return meta.Rule(node.name, node.expr)
+        return sr.Rule(node.name, node.expr)
 
     return node
 

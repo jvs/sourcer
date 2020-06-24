@@ -16,6 +16,14 @@ class Alt:
             result += ', allow_empty=False'
         return result + ')'
 
+    def _eval(self, env):
+        return Alt(
+            expr=self.expr._eval(env),
+            separator=self.separator._eval(env),
+            allow_trailer=self.allow_trailer,
+            allow_empty=self.allow_empty,
+        )
+
     def _compile(self, out, target):
         buf = out.define('buf', '[]')
         out(f'{target.pos} = pos')
@@ -57,6 +65,25 @@ class Alt:
             out.set(target.pos, 'pos')
 
 
+class Call:
+    def __init__(self, func, args):
+        self.func = func
+        self.args = [conv(x) for x in args]
+
+    def __repr__(self):
+        return f'Call({self.func!r}, {self.args!r})'
+
+    def _eval(self, env):
+        if isinstance(self.func, str) and self.func in env:
+            func_value = env[self.func]
+            if callable(func_value):
+                return func_value(env, *self.args)
+            else:
+                raise Exception(f'Not callable: {func_value!r}')
+
+        return self
+
+
 class Choice:
     def __init__(self, *exprs):
         self.exprs = [conv(x) for x in exprs]
@@ -64,6 +91,9 @@ class Choice:
     def __repr__(self):
         values = ', '.join(repr(x) for x in self.exprs)
         return f'Choice({values})'
+
+    def _eval(self, env):
+        return Choice(*[x._eval(env) for x in self.exprs])
 
     def _compile(self, out, target):
         items = []
@@ -89,6 +119,13 @@ class Drop:
 
     def __repr__(self):
         return f'Drop({self.expr1!r}, {self.expr2!r}, drop_left={self.drop_left})'
+
+    def _eval(self, env):
+        return Drop(
+            expr1=self.expr1._eval(env),
+            expr2=self.expr2._eval(env),
+            drop_left=self.drop_left,
+        )
 
     def _compile(self, out, target):
         item1 = out.compile(self.expr1)
@@ -121,6 +158,9 @@ class List:
     def __repr__(self):
         cls = 'List' if self.allow_empty else 'Some'
         return f'{cls}({self.expr!r})'
+
+    def _eval(self, env):
+        return List(expr=self.expr._eval(env), allow_empty=self.allow_empty)
 
     def _compile(self, out, target):
         buf = out.define('buf', '[]')
@@ -158,6 +198,9 @@ class Literal:
     def __repr__(self):
         return f'Literal({self.value!r})'
 
+    def _eval(self, env):
+        return self
+
     def _compile(self, out, target):
         value = out.define('value', repr(self.value))
         with out.IF('isinstance(text, str)'):
@@ -186,6 +229,9 @@ class Opt:
     def __init__(self, expr):
         self.expr = conv(expr)
 
+    def _eval(self, env):
+        return Opt(self.expr._eval(env))
+
     def __repr__(self):
         return f'Opt({self.expr!r})'
 
@@ -204,6 +250,9 @@ class Ref:
     def __repr__(self):
         return f'Ref({self.name!r})'
 
+    def _eval(self, env):
+        return env.get(self.name, self)
+
     def _compile(self, out, target):
         rule = out.rule_map[self.name]
         out(f'{target.mode}, {target.value}, {target.pos} = yield (2, {rule}, pos)')
@@ -219,6 +268,9 @@ class Regex:
 
     def __repr__(self):
         return f'Regex({self.pattern!r})'
+
+    def _eval(self, env):
+        return self
 
     def _compile(self, out, target):
         out.add_import('re')
@@ -252,6 +304,18 @@ def Right(expr1, expr2):
     return Drop(expr1, expr2, drop_left=True)
 
 
+class Rule:
+    def __init__(self, name, expr):
+        self.name = name
+        self.expr = conv(expr)
+
+    def __repr__(self):
+        return f'Rule({self.name!r}, {self.expr!r})'
+
+    def _eval(self, env):
+        return Rule(self.name, self.expr._eval(env))
+
+
 class Seq:
     def __init__(self, *exprs, constructor=None):
         self.exprs = [conv(x) for x in exprs]
@@ -263,6 +327,12 @@ class Seq:
             return f'Seq({values})'
         else:
             return f'Seq({values}, constructor={self.constructor!r})'
+
+    def _eval(self, env):
+        return Seq(
+            *[x._eval(env) for x in self.exprs],
+            constructor=self.constructor,
+        )
 
     def _compile(self, out, target):
         items = []
@@ -290,6 +360,9 @@ class Skip:
     def __repr__(self):
         return f'Skip({self.expr!r})'
 
+    def _eval(self, env):
+        return Skip(self.expr._eval(env))
+
     def _compile(self, out, target):
         out('while True:')
         with out.indented():
@@ -310,16 +383,38 @@ def Some(expr):
     return List(expr, allow_empty=False)
 
 
+class Template:
+    def __init__(self, name, params, expr):
+        self.name = name
+        self.params = params
+        self.expr = conv(expr)
+
+    def __repr__(self):
+        return f'Template({self.name!r}, {self.params!r}, {self.expr!r})'
+
+    def __apply__(self, env, *args):
+        sub = dict(env)
+        for param, arg in zip(self.params, args):
+            sub[param] = arg
+        return self.expr._eval(sub)
+
+
 # Operator precedence parsing:
 
 class OperatorPrecedence:
     def __init__(self, atom, *rules):
-        self.atom = atom
-        self.rules = rules
+        self.atom = conv(atom)
+        self.rules = [conv(x) for x in rules]
 
     def __repr__(self):
         rules = ', '.join(repr(x) for x in self.rules)
         return f'OperatorPrecedence({self.atom!r}, {rules})'
+
+    def _eval(self, env):
+        return OperatorPrecedence(
+            self.atom._eval(env),
+            *[x._eval(env) for x in self.rules],
+        )
 
     def _compile(self, out, target):
         prev = self.atom
@@ -336,6 +431,12 @@ class OperatorPrecedenceRule:
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.operators!r})'
+
+    def _eval(self, env):
+        result = self.__class__(*[x._eval(env) for x in self.operators])
+        if self.operand is not None:
+            result.operand = self.operand._eval(env)
+        return result
 
 
 class LeftAssoc(OperatorPrecedenceRule):
