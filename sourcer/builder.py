@@ -23,7 +23,7 @@ class ProgramBuilder:
 
     def copy_result(self, target, result):
         for field in target._fields:
-            self(f'{getattr(target, field)} = {getattr(result, field)}')
+            self.set(getattr(target, field), getattr(result, field))
 
     def compile(self, expr):
         was = self.indent
@@ -139,6 +139,29 @@ class ParseError(Exception):
         self.is_error = (mode is None)
         self.expr_code = expr_code
         self.pos = pos
+
+
+class Node:
+    pass
+
+
+class Infix(Node):
+    def __init__(self, left, operator, right):
+        self.left = left
+        self.operator = operator
+        self.right = right
+
+
+class Postfix(Node):
+    def __init__(self, left, operator):
+        self.left = left
+        self.operator = operator
+
+
+class Prefix(Node):
+    def __init__(self, operator, right):
+        self.operator = operator
+        self.right = right
 
 
 def run(text, pos=0):

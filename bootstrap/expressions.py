@@ -723,6 +723,7 @@ class Transform(Expr):
     def __repr__(self):
         return f'Transform({self.expr!r})'
 
+
 InfixOp = namedtuple('InfixOp', 'left, operator, right')
 PrefixOp = namedtuple('PrefixOp', 'operator, right')
 PostfixOp = namedtuple('PostfixOp', 'left, operator')

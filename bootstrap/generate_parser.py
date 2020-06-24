@@ -1,5 +1,6 @@
 from ast import literal_eval
 import sourcer.expressions as sr
+import sourcer.metasyntax as meta
 from .metasyntax import Grammar, transform_tokens
 
 
@@ -28,7 +29,7 @@ g = Grammar(r'''
 
     class RuleDef {
         name: Name << ("=" | ":")
-        value: Expr
+        expr: Expr
     }
 
     class ClassDef {
@@ -108,6 +109,21 @@ def convert_tokens(node):
     if isinstance(node, g.ListLiteral):
         return sr.Seq(*node.elements)
 
+    if isinstance(node, g.PostfixOp) and isinstance(node.operator, g.ArgList):
+        left = node.left
+        classes = {
+            'LeftAssoc': sr.LeftAssoc,
+            'OperatorPrecedence': sr.OperatorPrecedence,
+            'Postfix': sr.Postfix,
+            'Skip': sr.Skip,
+        }
+        if isinstance(left, sr.Ref) and left.name in classes:
+            return classes[left.name](*node.operator.args)
+        elif isinstance(left, sr.Ref):
+            return meta.Call(left.name, node.operator.args)
+
+        raise NotImplementedError('Currently, function-calls only work for names.')
+
     if isinstance(node, g.PostfixOp):
         classes = {
             '?': sr.Opt,
@@ -134,6 +150,9 @@ def convert_tokens(node):
             # '!>>': lambda a, b: sr.Left(sr.Commit(a), b),
         }
         return classes[node.operator](node.left, node.right)
+
+    if isinstance(node, g.RuleDef):
+        return meta.Rule(node.name, node.expr)
 
     return node
 

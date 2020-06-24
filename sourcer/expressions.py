@@ -24,10 +24,9 @@ class Alt:
         with out.indented():
             item = out.compile(self.expr)
 
-            with out.IF(out.is_error(item)):
-                out.copy_result(target, item)
-
             with out.IF_NOT(out.is_success(item)):
+                with out.IF(out.is_error(item)):
+                    out.copy_result(target, item)
                 out('break')
 
             out(f'{buf}.append({item.value})')
@@ -37,10 +36,10 @@ class Alt:
                 out(f'pos = {target.pos} = {item.pos}')
 
             sep = out.compile(self.separator)
-            with out.IF(out.is_error(sep)):
-                out.copy_result(target, sep)
 
             with out.IF_NOT(out.is_success(sep)):
+                with out.IF(out.is_error(sep)):
+                    out.copy_result(target, sep)
                 out('break')
 
             out.set('pos', sep.pos)
@@ -98,7 +97,7 @@ class Drop:
             out.copy_result(target, item1)
 
         with out.ELSE():
-            out(f'pos = {item1.pos}')
+            out.set('pos', item1.pos)
             item2 = out.compile(self.expr2)
 
             if self.drop_left:
@@ -129,10 +128,9 @@ class List:
         with out.indented():
             item = out.compile(self.expr)
 
-            with out.IF(out.is_error(item)):
-                out.copy_result(target, item)
-
             with out.IF_NOT(out.is_success(item)):
+                with out.IF(out.is_error(item)):
+                    out.copy_result(target, item)
                 out('break')
 
             condition = (
@@ -254,12 +252,6 @@ def Right(expr1, expr2):
     return Drop(expr1, expr2, drop_left=True)
 
 
-class Rule:
-    def __init__(self, name, expr):
-        self.name = name
-        self.expr = conv(expr)
-
-
 class Seq:
     def __init__(self, *exprs, constructor=None):
         self.exprs = [conv(x) for x in exprs]
@@ -291,8 +283,206 @@ class Seq:
         out.succeed(target, value, 'pos')
 
 
+class Skip:
+    def __init__(self, expr):
+        self.expr = conv(expr)
+
+    def __repr__(self):
+        return f'Skip({self.expr!r})'
+
+    def _compile(self, out, target):
+        out('while True:')
+        with out.indented():
+            item = out.compile(self.expr)
+
+            with out.IF(out.is_success(item)):
+                out.set('pos', item.pos)
+
+            with out.ELSE():
+                with out.IF(out.is_error(item)):
+                    out.copy_result(target, item)
+                out('break')
+
+        out.succeed(target, None, 'pos')
+
+
 def Some(expr):
     return List(expr, allow_empty=False)
+
+
+# Operator precedence parsing:
+
+class OperatorPrecedence:
+    def __init__(self, atom, *rules):
+        self.atom = atom
+        self.rules = rules
+
+    def __repr__(self):
+        rules = ', '.join(repr(x) for x in self.rules)
+        return f'OperatorPrecedence({self.atom!r}, {rules})'
+
+    def _compile(self, out, target):
+        prev = self.atom
+        for rule in self.rules:
+            rule.operand = prev
+            prev = rule
+        return prev._compile(out, target)
+
+
+class OperatorPrecedenceRule:
+    def __init__(self, *operators):
+        self.operators = conv(operators[0]) if len(operators) == 1 else Choice(*operators)
+        self.operand = None
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.operators!r})'
+
+
+class LeftAssoc(OperatorPrecedenceRule):
+    def _compile(self, out, target):
+        is_first = out.define('is_first', True)
+        out('while True:')
+        with out.indented():
+            with out.IF(f'not {is_first}'):
+                operator = out.compile(self.operators)
+
+                with out.IF_NOT(out.is_success(operator)):
+                    with out.IF(out.is_error(operator)):
+                        out.copy_result(target, operator)
+                    out('break')
+
+                out.set('pos', operator.pos)
+
+            item = out.compile(self.operand)
+
+            with out.IF_NOT(out.is_success(item)):
+                with out.IF(out.is_error(operator)):
+                    out.copy_result(target, operator)
+                out('break')
+
+            out(f'pos = {target.pos} = {item.pos}')
+
+            with out.IF(is_first):
+                out.set(is_first, False)
+                out.set(target.value, item.value)
+
+            with out.ELSE():
+                value = f'Infix({target.value}, {operator.value}, {item.value})'
+                out.set(target.value, value)
+
+                if isinstance(self, NonAssoc):
+                    out('break')
+
+
+class NonAssoc(LeftAssoc):
+    pass
+
+
+class RightAssoc(OperatorPrecedenceRule):
+    def _compile(self, out, target):
+        backup = out.define('backup', None)
+        prev = out.define('prev', None)
+        out('while True:')
+        with out.indented():
+            item = out.compile(self.operand)
+
+            with out.IF_NOT(out.is_success(item)):
+                with out.IF(f'{out.is_error(item)} or {prev} is None'):
+                    out.copy_result(target, item)
+
+                with out.ELIF(f'{backup} is None'):
+                    out.set(target.mode, True)
+                    out.set(target.value, f'{prev}.left')
+
+                with out.ELSE():
+                    out.set(f'{backup}.right', f'{prev}.left')
+
+                out('break')
+
+            out(f'pos = {target.pos} = {item.pos}')
+            operator = out.compile(self.operators)
+
+            with out.IF(out.is_success(operator)):
+                value = f'Infix({item.value}, {operator.value}, None)'
+
+                with out.IF(f'{prev} is None'):
+                    out.set(prev, value)
+                    out.set(target.value, prev)
+
+                with out.ELSE():
+                    out.set(backup, prev)
+                    out(f'{backup}.right = {prev} = {value}')
+
+            with out.ELSE():
+                with out.IF(out.is_error(operator)):
+                    out.copy_result(target, operator)
+
+                with out.ELIF(f'{prev} is None'):
+                    out.set(target.mode, True)
+                    out.set(target.value, item.value)
+
+                with out.ELSE():
+                    out.set(target.mode, True)
+                    out.set(f'{prev}.right', item.value)
+
+                out('break')
+
+
+class Postfix(OperatorPrecedenceRule):
+    def _compile(self, out, target):
+        item = out.compile(self.operand)
+        out.copy(target, item)
+
+        with out.IF(out.is_success(item)):
+            out.set('pos', item.pos)
+            out('while True:')
+            with out.indented():
+                op = out.compile(self.operators)
+
+                with out.IF_NOT(out.is_success(op)):
+                    with out.IF(out.is_error(op)):
+                        out.copy_result(target, op)
+                    with out.ELSE():
+                        out.set(target.pos, 'pos')
+                    out('break')
+
+                out.set('pos', op.pos)
+                out.set(target.value, f'Postfix({target.value}, {op.value})')
+
+
+class Prefix(OperatorPrecedenceRule):
+    def _compile(self, out, target):
+        prev = out.define('prev', None)
+        out('while True:')
+        with out.indented():
+            op = out.compile(self.operators)
+
+            with out.IF(out.is_success(op)):
+                out.set('pos', op.pos)
+
+                with out.IF(f'{prev} is None'):
+                    out(f'{target.value} = {prev} = Prefix({op.value}, None)')
+
+                with out.ELSE():
+                    value = out.define('value', f'Prefix({op.value}, None)')
+                    out.set(f'{prev}.right', value)
+                    out.set(prev, value)
+
+            with out.ELSE():
+                with out.IF(out.is_error(op)):
+                    out.copy_result(target, op)
+                    out('break')
+
+                item = out.compile(self.operand)
+                with out.IF(f'{prev} is None or not {out.is_success(item)}'):
+                    out.copy_result(target, item)
+
+                with out.ELSE():
+                    out.set(f'{prev}.right', item.value)
+                    out.set(target.pos, item.pos)
+                    out.set(target.mode, True)
+
+                out('break')
 
 
 def conv(obj):
