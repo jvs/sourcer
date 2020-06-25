@@ -118,10 +118,8 @@ def convert_tokens(node):
         }
         if isinstance(left, sr.Ref) and left.name in classes:
             return classes[left.name](*node.operator.args)
-        elif isinstance(left, sr.Ref):
-            return sr.Call(left.name, node.operator.args)
-
-        raise NotImplementedError('Currently, function-calls only work for names.')
+        else:
+            return sr.Call(left, node.operator.args)
 
     if isinstance(node, g.PostfixOp):
         classes = {
@@ -152,6 +150,8 @@ def convert_tokens(node):
 
     if isinstance(node, g.RuleDef):
         return sr.Rule(node.name, node.expr)
+
+    # TODO: Construct the remaining sourcer objects.
 
     return node
 

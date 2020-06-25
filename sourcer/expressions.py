@@ -59,7 +59,7 @@ class Alt:
             out.indent += 1
 
         # out.succeed:
-        out.set(target.mode, True)
+        out.set(target.mode, out.SUCCESS)
         out.set(target.value, buf)
         if self.allow_trailer:
             out.set(target.pos, 'pos')
@@ -74,14 +74,14 @@ class Call:
         return f'Call({self.func!r}, {self.args!r})'
 
     def _eval(self, env):
-        if isinstance(self.func, str) and self.func in env:
-            func_value = env[self.func]
-            if callable(func_value):
-                return func_value(env, *self.args)
-            else:
-                raise Exception(f'Not callable: {func_value!r}')
-
-        return self
+        func = self.func._eval(env)
+        if callable(func):
+            return func(
+                *[x._eval(env) for x in self.args if not isinstance(x, KeywordArg)],
+                **{x.name: x._eval(env) for x in self.args if isinstance(x, KeywordArg)},
+            )
+        else:
+            raise Exception(f'Not callable: {func!r}')
 
 
 class Choice:
@@ -109,6 +109,33 @@ class Choice:
         for item in items:
             with out.IF(f'{target.pos} < {item.pos}'):
                 out.copy_result(target, item)
+
+
+class Class:
+    def __init__(self, name, fields):
+        self.name = name
+        self.fields = fields
+
+    def __repr__(self):
+        fields = ', '.join(repr(x) for x in self.fields)
+        return f'Class({self.name!r}, [{fields}])'
+
+    def _eval(self, env):
+        return Class(self.name, [x._eval(env) for x in self.fields])
+
+    def _compile(self, out, target):
+        defs = out.global_defs
+
+        params = ', '.join(x.name for x in self.fields)
+        defs.write(f'class {self.name}(Node):\n')
+        defs.write(f'    def __init__(self, {params}):\n')
+        for field in self.fields:
+            defs.write(f'        self.{name} = {name}\n')
+        defs.write('\n\n')
+
+        fields = (x.expr for x in self.fields)
+        delegate = Seq(*fields, constructor=self.name)
+        return out.compile(delegate, target=target)
 
 
 class Drop:
@@ -146,6 +173,18 @@ class Drop:
                     out.copy_result(target, item2)
 
 
+class KeywordArg:
+    def __init__(self, name, expr):
+        self.name = name
+        self.expr = conv(expr)
+
+    def __repr__(self):
+        return f'KeywordArg({self.name!r}, {self.expr!r})'
+
+    def _eval(self, env):
+        return KeywordArg(self.name, self.expr._eval(env))
+
+
 def Left(expr1, expr2):
     return Drop(expr1, expr2, drop_left=False)
 
@@ -173,11 +212,7 @@ class List:
                     out.copy_result(target, item)
                 out('break')
 
-            condition = (
-                f'not isinstance({item.value}, Token) or '
-                f'not {item.value}._is_ignored'
-            )
-            with out.IF(condition):
+            with out.IF(f'{item.mode} != {out.IGNORE}'):
                 out(f'{buf}.append({item.value})')
 
             out(f'pos = {item.pos}')
@@ -255,7 +290,8 @@ class Ref:
 
     def _compile(self, out, target):
         rule = out.rule_map[self.name]
-        out(f'{target.mode}, {target.value}, {target.pos} = yield (2, {rule}, pos)')
+        out(f'{target.mode}, {target.value}, {target.pos}'
+            f' = yield ({out.CONTINUE}, {rule}, pos)')
 
 
 class Regex:
@@ -318,6 +354,8 @@ class Rule:
 
 class Seq:
     def __init__(self, *exprs, constructor=None):
+        if isinstance(constructor, type):
+            constructor = constructor.__name__
         self.exprs = [conv(x) for x in exprs]
         self.constructor = constructor
 
@@ -392,11 +430,54 @@ class Template:
     def __repr__(self):
         return f'Template({self.name!r}, {self.params!r}, {self.expr!r})'
 
-    def __apply__(self, env, *args):
+    def __apply__(self, env, *args, **kwargs):
         sub = dict(env)
         for param, arg in zip(self.params, args):
             sub[param] = arg
+        # TODO: Raise an exception if any kwargs aren't actual parameters.
+        sub.update(kwargs)
         return self.expr._eval(sub)
+
+    def _eval(self, env):
+        return Template(self.name, self.params, self.expr._eval(env))
+
+
+class Token:
+    def __init__(self, name, expr, is_ignored=False):
+        self.name = name
+        self.expr = conv(expr)
+        self.is_ignored = is_ignored
+
+    def __repr__(self):
+        return f'Token({self.name!r}, {self.expr!r}, is_ignored={self.is_ignored})'
+
+    def _eval(self, env):
+        return self
+
+    def _compile(self, out, target):
+        out.global_defs.write(f'class {self.name}(Token): pass\n')
+
+        with out.IF('isinstance(text, str)'):
+            result = out.compile(self.expr)
+            if self.is_ignored:
+                out.set_result(mode=out.IGNORE, value=None, pos=result.pos)
+            else:
+                out.succeed(target, f'{self.name}({result.value})', result.pos)
+
+        with out.ELIF('pos < len(text)'):
+            value = out.define('value', 'text[pos]')
+
+            with out.IF(f'isinstance({value}, {self.name})'):
+                if self.is_ignored:
+                    out.set_result(mode=out.IGNORE, value=None, pos='pos + 1')
+                else:
+                    out.succeed(target, value, 'pos + 1')
+
+            with out.ELSE():
+                out.fail(target, self, 'pos')
+
+        with out.ELSE():
+            out.fail(target, self, 'pos')
 
 
 # Operator precedence parsing:
@@ -492,7 +573,7 @@ class RightAssoc(OperatorPrecedenceRule):
                     out.copy_result(target, item)
 
                 with out.ELIF(f'{backup} is None'):
-                    out.set(target.mode, True)
+                    out.set(target.mode, out.SUCCESS)
                     out.set(target.value, f'{prev}.left')
 
                 with out.ELSE():
@@ -519,11 +600,11 @@ class RightAssoc(OperatorPrecedenceRule):
                     out.copy_result(target, operator)
 
                 with out.ELIF(f'{prev} is None'):
-                    out.set(target.mode, True)
+                    out.set(target.mode, out.SUCCESS)
                     out.set(target.value, item.value)
 
                 with out.ELSE():
-                    out.set(target.mode, True)
+                    out.set(target.mode, out.SUCCESS)
                     out.set(f'{prev}.right', item.value)
 
                 out('break')
@@ -581,7 +662,7 @@ class Prefix(OperatorPrecedenceRule):
                 with out.ELSE():
                     out.set(f'{prev}.right', item.value)
                     out.set(target.pos, item.pos)
-                    out.set(target.mode, True)
+                    out.set(target.mode, out.SUCCESS)
 
                 out('break')
 

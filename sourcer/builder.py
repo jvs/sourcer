@@ -1,7 +1,10 @@
 from collections import namedtuple
+from string import Template
 import contextlib
 import io
 import types
+
+from . import expressions
 
 
 def compile_rules(start, rules):
@@ -13,6 +16,12 @@ Target = namedtuple('Target', 'mode, value, pos')
 
 
 class ProgramBuilder:
+    SUCCESS = 1
+    IGNORE = 2
+    CONTINUE = 3
+    FAILURE = False
+    ERROR = None
+
     def __call__(self, text):
         self.buf.write('    ' * self.indent)
         self.buf.write(text)
@@ -25,14 +34,15 @@ class ProgramBuilder:
         for field in target._fields:
             self.set(getattr(target, field), getattr(result, field))
 
-    def compile(self, expr):
+    def compile(self, expr, target=None):
         was = self.indent
-        try:
+        if target is None:
             target = Target(
                 mode=self.reserve('mode'),
                 value=self.reserve('value'),
                 pos=self.reserve('pos'),
             )
+       try:
             expr._compile(self, target)
             return target
         finally:
@@ -45,7 +55,7 @@ class ProgramBuilder:
 
     def define_global(self, basename, value):
         name = self.reserve(basename)
-        self.global_defs.write(f'{name} = {value}')
+        self.global_defs.write(f'{name} = {value}\n')
         return name
 
     def ELIF(self, condition):
@@ -57,7 +67,7 @@ class ProgramBuilder:
         return self.indented()
 
     def fail(self, target, expr, pos):
-        self.set_result(target, mode=False, value=id(expr), pos=pos)
+        self.set_result(target, mode=self.FAILURE, value=id(expr), pos=pos)
 
     def IF(self, condition):
         self(f'if {condition}:')
@@ -76,7 +86,10 @@ class ProgramBuilder:
             self.indent = was
 
     def is_error(self, target):
-        return f'{target.mode} is None'
+        return f'{target.mode} is {self.ERROR}'
+
+    def is_failure(self, target):
+        return f'{target.mode} == {self.FAILURE}'
 
     def is_success(self, target):
         return f'{target.mode}'
@@ -90,8 +103,12 @@ class ProgramBuilder:
                 return result
             count += 1
 
-    def run(self, start, rules):
-        program_text = self.write_program(start, rules)
+    def run(self, statements):
+        # TODO: Evaluate template applications.
+        program_text = self.write_program(statements)
+        return self.compile_program(program_text)
+
+    def compile_program(self, program_text):
         code_object = compile(program_text, '<grammar>', 'exec', optimize=2)
         module = types.ModuleType(start)
         exec(code_object, module.__dict__)
@@ -106,22 +123,36 @@ class ProgramBuilder:
         self.set(target.pos, pos)
 
     def succeed(self, target, value, pos):
-        self.set_result(target, mode=True, value=value, pos=pos)
+        self.set_result(target, mode=self.SUCCESS, value=value, pos=pos)
 
-    def write_program(self, start, rules):
+    def write_program(self, statements):
+        # TODO: Sort out tokens and structs. Maybe render templates.
+        templates = [x for x in statements if isinstance(x, expressions.Template)]
+        rules = [x for x in statements if isinstance(x, expressions.Rule)]
+        start = None
+
+        for x in rules:
+            if x.name.lower() == 'start':
+                start = x.name
+
+        if start is None:
+            names = sorted(x.name for x in rules)
+            raise Exception(f'Expected "start" rule. Received: {names}')
+
         self.buf = io.StringIO()
         self.imports = set()
         self.global_defs = io.StringIO()
         self.indent = 0
         self.names = {'pos', 'text', 'source_code'}
+        self.env = {x.name: x for x in templates}
         self.rule_map = {x.name: self.reserve(f'_parse_{x.name}') for x in rules}
+
         for rule in rules:
             self(f'def {self.rule_map[rule.name]}(text, pos):')
             with self.indented():
                 result = self.compile(rule.expr)
                 self(f'yield ({result.mode}, {result.value}, {result.pos})')
                 self('')
-        self(_main_template.replace('$start', self.rule_map[start]))
 
         result = io.StringIO()
         for imp in self.imports:
@@ -129,11 +160,15 @@ class ProgramBuilder:
             result.write(imp)
             result.write('\n')
         result.write(self.global_defs.getvalue())
+        result.write(_main_template.substitute(
+            start=self.rule_map[start],
+            CONTINUE=self.CONTINUE,
+        ))
         result.write(self.buf.getvalue())
         return self.global_defs.getvalue()
 
 
-_main_template = r'''
+_main_template = Template(r'''
 class ParseError(Exception):
     def __init__(self, mode, expr_code, pos):
         self.is_error = (mode is None)
@@ -143,6 +178,11 @@ class ParseError(Exception):
 
 class Node:
     pass
+
+
+class Token:
+    def __init__(self, value):
+        self.value = value
 
 
 class Infix(Node):
@@ -169,7 +209,7 @@ def run(text, pos=0):
     result = None
 
     start = $start
-    key = (2, start, pos)
+    key = ($CONTINUE, start, pos)
     gtor = start(text, pos)
     stack = [(key, gtor)]
 
@@ -177,7 +217,7 @@ def run(text, pos=0):
         key, gtor = stack[-1]
         result = gtor.send(result)
 
-        if result[0] != 2:
+        if result[0] != $CONTINUE:
             stack.pop()
             memo[key] = result
         elif result in memo:
@@ -191,4 +231,4 @@ def run(text, pos=0):
         return result[1]
     else:
         raise ParseError(*result)
-'''
+''')
