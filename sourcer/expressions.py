@@ -341,8 +341,8 @@ class Regex:
             out.fail(target, self, 'pos')
 
         with out.ELSE():
-            value = out.define('value', 'text[pos].value')
-            match = out.define('match', f'{pattern}.fullmatch({value})')
+            value = out.define('value', 'text[pos]')
+            match = out.define('match', f'{pattern}.fullmatch({value}.value)')
             with out.IF(match):
                 out.succeed(target, value, 'pos + 1')
             with out.ELSE():
