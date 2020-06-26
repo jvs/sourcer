@@ -1,18 +1,18 @@
 from ast import literal_eval
+import types
 
-from .builder import compile_statements
+from .builder import generate_source_code
 from .expressions import *
 
 
 meta = None
-meta_source = None
 
 
 def _setup():
-    global meta, meta_source
+    global meta
     if meta:
         return
-    meta_source, meta = compile_statements([
+    meta = Grammar([
         Token('Space', Regex('[ \\t]+'), is_ignored=True),
         Token('Word', Regex('[_a-zA-Z][_a-zA-Z0-9]*')),
         Token('Symbol', Regex('<<\\!|\\!>>|<<|>>|=>|\\/\\/|[=;,:\\|\\/\\*\\+\\?\\!\\(\\)\\[\\]\\{\\}]')),
@@ -131,17 +131,32 @@ def _conv(node):
     return node
 
 
-def _compile_grammar(description):
-    _setup()
-    stmts = meta.parse(description)
-    stmts = meta.transform(stmts, _conv)
-    return compile_statements(stmts)
-
-
 class Grammar:
     def __init__(self, description):
-        self.description = description
-        self.source_code, self.module = _compile_grammar(description)
+        self._description = description
+
+        if isinstance(description, str):
+            _setup()
+            raw = meta.parse(description)
+            cooked = meta.transform(raw, _conv)
+        else:
+            cooked = description
+
+        self._nodes = _apply_templates(cooked)
+        self._source_code = generate_source_code(self._nodes)
+        self._module = _compile_source_code(self._source_code)
 
     def __getattr__(self, name):
-        return getattr(self.module, name)
+        return getattr(self._module, name)
+
+
+def _apply_templates(nodes):
+    env = {x.name: x for x in nodes if isinstance(x, Template)}
+    return [x._eval(env) for x in nodes]
+
+
+def _compile_source_code(source_code, name='grammar'):
+    code_object = compile(source_code, f'<{name}>', 'exec', optimize=2)
+    module = types.ModuleType(name)
+    exec(code_object, module.__dict__)
+    return module

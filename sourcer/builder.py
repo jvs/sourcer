@@ -2,13 +2,12 @@ from collections import defaultdict, namedtuple
 from string import Template as StringTemplate
 import contextlib
 import io
-import types
 
 from .expressions import *
 
 
-def compile_statements(statements):
-    return ProgramBuilder().run(statements)
+def generate_source_code(nodes):
+    return ProgramBuilder().write_program(nodes)
 
 
 Target = namedtuple('Target', 'mode, value, pos')
@@ -28,10 +27,6 @@ class ProgramBuilder:
 
     def add_import(self, path):
         self.imports.add(path)
-
-    def apply_templates(self, statements):
-        env = {x.name: x for x in statements if isinstance(x, Template)}
-        return [x._eval(env) for x in statements]
 
     def copy_result(self, target, result):
         for field in target._fields:
@@ -101,19 +96,6 @@ class ProgramBuilder:
         self.names[basename] += 1
         return f'{basename}{self.names[basename]}'
 
-    def run(self, statements):
-        statements = self.apply_templates(statements)
-        source_code = self.write_program(statements)
-        module = self.compile_program(source_code)
-        return source_code, module
-
-    def compile_program(self, source_code):
-        code_object = compile(source_code, '<grammar>', 'exec', optimize=2)
-        # TODO: pick a good name for the module.
-        module = types.ModuleType('grammar')
-        exec(code_object, module.__dict__)
-        return module
-
     def set(self, target, value):
         self(f'{target} = {value}')
 
@@ -132,19 +114,19 @@ class ProgramBuilder:
             self(f'yield ({result.mode}, {result.value}, {result.pos})')
             self('')
 
-    def write_program(self, statements):
+    def write_program(self, nodes):
         tokens, rules, start = [], [], None
-        for stmt in statements:
-            if isinstance(stmt, Template):
+        for node in nodes:
+            if isinstance(node, Template):
                 continue
-            elif isinstance(stmt, Token):
-                tokens.append(stmt)
-            elif isinstance(stmt, Class) and stmt.is_token:
-                tokens.append(stmt)
+            elif isinstance(node, Token):
+                tokens.append(node)
+            elif isinstance(node, Class) and node.is_token:
+                tokens.append(node)
             else:
-                rules.append(stmt)
-                if start is None and stmt.name.lower() == 'start':
-                    start = stmt.name
+                rules.append(node)
+                if start is None and node.name.lower() == 'start':
+                    start = node.name
 
         rules.extend(tokens)
 
@@ -158,7 +140,6 @@ class ProgramBuilder:
         self.global_defs.write(_program_setup)
         self.indent = 0
         self.names = defaultdict(int)
-        self.env = {x.name: x for x in statements if isinstance(x, Template)}
         self.rule_map = {x.name: self.reserve(f'_parse_{x.name}') for x in rules}
 
         if tokens:
