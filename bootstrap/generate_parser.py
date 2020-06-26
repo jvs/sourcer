@@ -186,9 +186,11 @@ def convert_node(node):
 
 
 converted = g.transform(result, convert_node)
-# for item in converted:
-#     print('\n')
-#     print(item)
 
 from sourcer.builder import compile_statements
-print(compile_statements(converted))
+module = compile_statements(converted)
+
+# print(module.tokenize('foo bar baz'))
+# print(module.tokenize(g.grammar))
+
+print(module.parse(g.grammar))
