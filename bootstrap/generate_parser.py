@@ -44,7 +44,7 @@ g = Grammar(r'''
     class TemplateDef {
         name: "template" >> Name
         params: wrap("(") >> (wrap(Name) / Comma) << ")"
-        body: wrap("=" | ":" | "=>") >> Expr
+        expr: wrap("=" | ":" | "=>") >> Expr
     }
 
     Def = TokenDef
@@ -68,7 +68,7 @@ g = Grammar(r'''
 
     class KeywordArg {
         name: Name << ("=" | ":")
-        value: Expr
+        expr: Expr
     }
 
     class ArgList {
@@ -84,14 +84,15 @@ g = Grammar(r'''
         LeftAssoc(wrap("|")),
     )
 
-    start = Skip(Newline) >> (Def / Sep) << End
+    # TODO: Implement `End`.
+    start = Skip(Newline) >> (Def / Sep) # << End
 ''')
 
 
 result = g.parse(g.grammar)
 
 
-def convert_tokens(node):
+def convert_node(node):
     if isinstance(node, (g.Symbol, g.Word)):
         return node.value
 
@@ -148,15 +149,38 @@ def convert_tokens(node):
         }
         return classes[node.operator](node.left, node.right)
 
+    if isinstance(node, g.KeywordArg):
+        return sr.KeywordArg(node.name, node.expr)
+
     if isinstance(node, g.RuleDef):
         return sr.Rule(node.name, node.expr)
 
-    # TODO: Construct the remaining sourcer objects.
+    if isinstance(node, g.ClassDef):
+        return sr.Class(node.name, node.fields)
 
-    return node
+    if isinstance(node, g.TokenDef):
+        is_ignored = node.is_ignored is not None
+        node = node.child
+        is_class = isinstance(node, sr.Class)
+        if is_class and not is_ignored:
+            node.is_token = True
+            return node
+        elif is_class and is_ignored:
+            return sr.Token(node.name, node, is_ignored=True)
+        else:
+            return sr.Token(node.name, node.expr, is_ignored=is_ignored)
+
+    if isinstance(node, g.TemplateDef):
+        return sr.Template(node.name, node.params, node.expr)
+
+    # Otherwise, just treat the object as a literal.
+    return sr.Literal(node)
 
 
-converted = g.transform(result, convert_tokens)
-for item in converted:
-    print('\n')
-    print(item)
+converted = g.transform(result, convert_node)
+# for item in converted:
+#     print('\n')
+#     print(item)
+
+from sourcer.builder import compile_statements
+print(compile_statements(converted))

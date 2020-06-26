@@ -112,13 +112,16 @@ class Choice:
 
 
 class Class:
-    def __init__(self, name, fields):
+    def __init__(self, name, fields, is_token=False):
         self.name = name
         self.fields = fields
+        self.is_token = is_token
+        # TODO: Decide how to make this work.
+        self.expr = self
 
     def __repr__(self):
         fields = ', '.join(repr(x) for x in self.fields)
-        return f'Class({self.name!r}, [{fields}])'
+        return f'Class({self.name!r}, [{fields}], is_token={self.is_token})'
 
     def _eval(self, env):
         return Class(self.name, [x._eval(env) for x in self.fields])
@@ -130,11 +133,11 @@ class Class:
         defs.write(f'class {self.name}(Node):\n')
         defs.write(f'    def __init__(self, {params}):\n')
         for field in self.fields:
-            defs.write(f'        self.{name} = {name}\n')
+            defs.write(f'        self.{field.name} = {field.name}\n')
         defs.write('\n\n')
 
-        fields = (x.expr for x in self.fields)
-        delegate = Seq(*fields, constructor=self.name)
+        exprs = (x.expr for x in self.fields)
+        delegate = Seq(*exprs, constructor=self.name)
         return out.compile(delegate, target=target)
 
 
@@ -430,8 +433,8 @@ class Template:
     def __repr__(self):
         return f'Template({self.name!r}, {self.params!r}, {self.expr!r})'
 
-    def __apply__(self, env, *args, **kwargs):
-        sub = dict(env)
+    def __apply__(self, *args, **kwargs):
+        sub = {}
         for param, arg in zip(self.params, args):
             sub[param] = arg
         # TODO: Raise an exception if any kwargs aren't actual parameters.
@@ -452,24 +455,23 @@ class Token:
         return f'Token({self.name!r}, {self.expr!r}, is_ignored={self.is_ignored})'
 
     def _eval(self, env):
-        return self
+        return Token(self.name, self.expr._eval(env), is_ignored=self.is_ignored)
+
+    def _compile_for_text(self, out, target):
+        out.global_defs.write(f'class {self.name}(Token): pass\n')
+        result = out.compile(self.expr)
+        if self.is_ignored:
+            out.set_result(target, mode=out.IGNORE, value=None, pos=result.pos)
+        else:
+            out.succeed(target, f'{self.name}({result.value})', result.pos)
 
     def _compile(self, out, target):
-        out.global_defs.write(f'class {self.name}(Token): pass\n')
-
-        with out.IF('isinstance(text, str)'):
-            result = out.compile(self.expr)
-            if self.is_ignored:
-                out.set_result(mode=out.IGNORE, value=None, pos=result.pos)
-            else:
-                out.succeed(target, f'{self.name}({result.value})', result.pos)
-
-        with out.ELIF('pos < len(text)'):
+        with out.IF('pos < len(text)'):
             value = out.define('value', 'text[pos]')
 
             with out.IF(f'isinstance({value}, {self.name})'):
                 if self.is_ignored:
-                    out.set_result(mode=out.IGNORE, value=None, pos='pos + 1')
+                    out.set_result(target, mode=out.IGNORE, value=None, pos='pos + 1')
                 else:
                     out.succeed(target, value, 'pos + 1')
 
@@ -667,6 +669,7 @@ class Prefix(OperatorPrecedenceRule):
                 out('break')
 
 
+# TODO: Get rid of this function.
 def conv(obj):
     """Converts a Python object to a parsing expression."""
     if hasattr(obj, '_compile'):

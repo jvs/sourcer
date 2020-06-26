@@ -7,9 +7,9 @@ import types
 from . import expressions
 
 
-def compile_rules(start, rules):
+def compile_statements(statements):
     out = ProgramBuilder()
-    return out.run(start, rules)
+    return out.run(statements)
 
 
 Target = namedtuple('Target', 'mode, value, pos')
@@ -30,6 +30,10 @@ class ProgramBuilder:
     def add_import(self, path):
         self.imports.add(path)
 
+    def apply_templates(self, statements):
+        env = {x.name: x for x in statements if isinstance(x, expressions.Template)}
+        return [x._eval(env) for x in statements]
+
     def copy_result(self, target, result):
         for field in target._fields:
             self.set(getattr(target, field), getattr(result, field))
@@ -42,7 +46,7 @@ class ProgramBuilder:
                 value=self.reserve('value'),
                 pos=self.reserve('pos'),
             )
-       try:
+        try:
             expr._compile(self, target)
             return target
         finally:
@@ -104,13 +108,15 @@ class ProgramBuilder:
             count += 1
 
     def run(self, statements):
-        # TODO: Evaluate template applications.
+        statements = self.apply_templates(statements)
         program_text = self.write_program(statements)
-        return self.compile_program(program_text)
+        return program_text
+        # return self.compile_program(program_text)
 
     def compile_program(self, program_text):
         code_object = compile(program_text, '<grammar>', 'exec', optimize=2)
-        module = types.ModuleType(start)
+        # TODO: pick a good name for the module.
+        module = types.ModuleType('grammar')
         exec(code_object, module.__dict__)
         return module
 
@@ -125,10 +131,16 @@ class ProgramBuilder:
     def succeed(self, target, value, pos):
         self.set_result(target, mode=self.SUCCESS, value=value, pos=pos)
 
+    def write_rule_function(self, name, expr):
+        self(f'def {name}(text, pos):')
+        with self.indented():
+            result = self.compile(expr)
+            self(f'yield ({result.mode}, {result.value}, {result.pos})')
+            self('')
+
     def write_program(self, statements):
-        # TODO: Sort out tokens and structs. Maybe render templates.
-        templates = [x for x in statements if isinstance(x, expressions.Template)]
-        rules = [x for x in statements if isinstance(x, expressions.Rule)]
+        tokens = [x for x in statements if isinstance(x, expressions.Token)]
+        rules = [x for x in statements if not isinstance(x, expressions.Template)]
         start = None
 
         for x in rules:
@@ -143,16 +155,20 @@ class ProgramBuilder:
         self.imports = set()
         self.global_defs = io.StringIO()
         self.indent = 0
-        self.names = {'pos', 'text', 'source_code'}
-        self.env = {x.name: x for x in templates}
+        self.names = {'pos', 'start', 'source_code', 'text'}
+        self.env = {x.name: x for x in statements if isinstance(x, expressions.Template)}
         self.rule_map = {x.name: self.reserve(f'_parse_{x.name}') for x in rules}
 
+        if tokens:
+            self.write_tokenizer(tokens)
+            tokenize_step = 'text = _run(text, pos, _tokenize)'
+            reset_pos = 'pos = 0'
+        else:
+            tokenize_step = ''
+            reset_pos = ''
+
         for rule in rules:
-            self(f'def {self.rule_map[rule.name]}(text, pos):')
-            with self.indented():
-                result = self.compile(rule.expr)
-                self(f'yield ({result.mode}, {result.value}, {result.pos})')
-                self('')
+            self.write_rule_function(self.rule_map[rule.name], rule.expr)
 
         result = io.StringIO()
         for imp in self.imports:
@@ -161,11 +177,26 @@ class ProgramBuilder:
             result.write('\n')
         result.write(self.global_defs.getvalue())
         result.write(_main_template.substitute(
-            start=self.rule_map[start],
             CONTINUE=self.CONTINUE,
+            reset_pos=reset_pos,
+            start=self.rule_map[start],
+            tokenize_step=tokenize_step,
         ))
         result.write(self.buf.getvalue())
-        return self.global_defs.getvalue()
+        return result.getvalue()
+
+    def write_tokenizer(self, tokens):
+        # TODO: Either do `Left(delegate, End)` or add a catch-all error token.
+        delegate = expressions.List(expressions.Choice(*(TokenWrapper(x) for x in tokens)))
+        self.write_rule_function('_tokenize', delegate)
+
+
+class TokenWrapper:
+    def __init__(self, token_expr):
+        self.token_expr = token_expr
+
+    def _compile(self, out, target):
+        return self.token_expr._compile_for_text(out, target)
 
 
 _main_template = Template(r'''
@@ -180,7 +211,7 @@ class Node:
     pass
 
 
-class Token:
+class Token(Node):
     def __init__(self, value):
         self.value = value
 
@@ -204,11 +235,16 @@ class Prefix(Node):
         self.right = right
 
 
-def run(text, pos=0):
+def parse(text, pos=0):
+    $tokenize_step
+    $reset_pos
+    return _run(text, pos, $start)
+
+
+def _run(text, pos, start):
     memo = {}
     result = None
 
-    start = $start
     key = ($CONTINUE, start, pos)
     gtor = start(text, pos)
     stack = [(key, gtor)]
