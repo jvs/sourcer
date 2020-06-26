@@ -146,7 +146,7 @@ class Class:
         write('\n')
 
         write(f'    def __repr__(self):\n')
-        inits = ', '.join(f'{x.name}={{self.{x.name}}}' for x in self.fields)
+        inits = ', '.join(f'{x.name}={{self.{x.name}!r}}' for x in self.fields)
         write(f'        return f\'{self.name}({inits})\'\n\n')
 
 
