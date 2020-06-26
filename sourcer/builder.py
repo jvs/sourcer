@@ -1,10 +1,10 @@
-from collections import namedtuple
-from string import Template
+from collections import defaultdict, namedtuple
+from string import Template as StringTemplate
 import contextlib
 import io
 import types
 
-from . import expressions
+from .expressions import *
 
 
 def compile_statements(statements):
@@ -31,7 +31,7 @@ class ProgramBuilder:
         self.imports.add(path)
 
     def apply_templates(self, statements):
-        env = {x.name: x for x in statements if isinstance(x, expressions.Template)}
+        env = {x.name: x for x in statements if isinstance(x, Template)}
         return [x._eval(env) for x in statements]
 
     def copy_result(self, target, result):
@@ -99,19 +99,15 @@ class ProgramBuilder:
         return f'{target.mode}'
 
     def reserve(self, basename):
-        count = 1
-        while True:
-            result = f'{basename}{count}'
-            if result not in self.names:
-                self.names.add(result)
-                return result
-            count += 1
+        self.names[basename] += 1
+        return f'{basename}{self.names[basename]}'
 
     def run(self, statements):
         statements = self.apply_templates(statements)
         program_text = self.write_program(statements)
-        return program_text
-        # return self.compile_program(program_text)
+        module = self.compile_program(program_text)
+        module.source_code = program_text
+        return module
 
     def compile_program(self, program_text):
         code_object = compile(program_text, '<grammar>', 'exec', optimize=2)
@@ -132,20 +128,27 @@ class ProgramBuilder:
         self.set_result(target, mode=self.SUCCESS, value=value, pos=pos)
 
     def write_rule_function(self, name, expr):
-        self(f'def {name}(text, pos):')
+        self(f'\ndef {name}(text, pos):')
         with self.indented():
             result = self.compile(expr)
             self(f'yield ({result.mode}, {result.value}, {result.pos})')
             self('')
 
     def write_program(self, statements):
-        tokens = [x for x in statements if isinstance(x, expressions.Token)]
-        rules = [x for x in statements if not isinstance(x, expressions.Template)]
-        start = None
+        tokens, rules, start = [], [], None
+        for stmt in statements:
+            if isinstance(stmt, Template):
+                continue
+            elif isinstance(stmt, Token):
+                tokens.append(stmt)
+            elif isinstance(stmt, Class) and stmt.is_token:
+                tokens.append(stmt)
+            else:
+                rules.append(stmt)
+                if start is None and stmt.name.lower() == 'start':
+                    start = stmt.name
 
-        for x in rules:
-            if x.name.lower() == 'start':
-                start = x.name
+        rules.extend(tokens)
 
         if start is None:
             names = sorted(x.name for x in rules)
@@ -156,15 +159,17 @@ class ProgramBuilder:
         self.global_defs = io.StringIO()
         self.global_defs.write(_program_setup)
         self.indent = 0
-        self.names = {'pos', 'start', 'source_code', 'text'}
-        self.env = {x.name: x for x in statements if isinstance(x, expressions.Template)}
+        self.names = defaultdict(int)
+        self.env = {x.name: x for x in statements if isinstance(x, Template)}
         self.rule_map = {x.name: self.reserve(f'_parse_{x.name}') for x in rules}
 
         if tokens:
+            self.has_tokens = True
             self.write_tokenizer(tokens)
             tokenize_step = 'text = _run(text, pos, _tokenize)'
             reset_pos = 'pos = 0'
         else:
+            self.has_tokens = False
             tokenize_step = ''
             reset_pos = ''
 
@@ -187,9 +192,14 @@ class ProgramBuilder:
         return result.getvalue()
 
     def write_tokenizer(self, tokens):
+        self.is_tokenize = True
         # TODO: Either do `Left(delegate, End)` or add a catch-all error token.
-        delegate = expressions.List(expressions.Choice(*(TokenWrapper(x) for x in tokens)))
+        delegate = List(Choice(*tokens))
         self.write_rule_function('_tokenize', delegate)
+        self.is_tokenize = False
+        self('\ndef tokenize(text, pos=0):')
+        with self.indented():
+            self('return _run(text, pos, _tokenize)\n')
 
 
 class TokenWrapper:
@@ -208,10 +218,13 @@ class Token(Node):
     def __init__(self, value):
         self.value = value
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.value!r})'
+
 '''
 
 
-_main_template = Template(r'''
+_main_template = StringTemplate(r'''
 class ParseError(Exception):
     def __init__(self, mode, expr_code, pos):
         self.is_error = (mode is None)
@@ -261,7 +274,7 @@ def _run(text, pos, start):
             stack.pop()
             memo[key] = result
         elif result in memo:
-            result = memo[key]
+            result = memo[result]
         else:
             gtor = result[1](text, result[2])
             stack.append((result, gtor))

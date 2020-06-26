@@ -120,6 +120,7 @@ def convert_node(node):
             'OperatorPrecedence': sr.OperatorPrecedence,
             'Postfix': sr.Postfix,
             'Skip': sr.Skip,
+            'Some': sr.Some,
         }
         if isinstance(left, sr.Ref) and left.name in classes:
             return classes[left.name](*node.operator.args)
@@ -177,8 +178,11 @@ def convert_node(node):
     if isinstance(node, g.TemplateDef):
         return sr.Template(node.name, node.params, node.expr)
 
-    # Otherwise, just treat the object as a literal.
-    return sr.Literal(node)
+    if isinstance(node, str):
+        return sr.Literal(node)
+
+    # TODO: Consider making an assertion here.
+    return node
 
 
 converted = g.transform(result, convert_node)

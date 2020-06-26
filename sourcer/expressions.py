@@ -112,23 +112,28 @@ class Choice:
 
 
 class Class:
-    def __init__(self, name, fields, is_token=False):
+    def __init__(self, name, fields, is_token=False, is_ignored=False):
         self.name = name
         self.fields = fields
         self.is_token = is_token
+        self.is_ignored = is_ignored
         # TODO: Decide how to make this work.
         self.expr = self
 
     def __repr__(self):
         fields = ', '.join(repr(x) for x in self.fields)
-        return f'Class({self.name!r}, [{fields}], is_token={self.is_token})'
+        return (f'Class({self.name!r}, [{fields}],'
+            f' is_token={self.is_token}, is_ignored={self.is_ignored})')
 
     def _eval(self, env):
         return Class(self.name, [x._eval(env) for x in self.fields])
 
     def _compile(self, out, target):
-        defs = out.global_defs
+        if self.is_token and not out.is_tokenize:
+            _compile_instance_check(out, target, self, self.name, is_ignored=self.is_ignored)
+            return
 
+        defs = out.global_defs
         params = ', '.join(x.name for x in self.fields)
         defs.write(f'\nclass {self.name}(Node):\n')
         defs.write(f'    def __init__(self, {params}):\n')
@@ -241,10 +246,16 @@ class Literal:
 
     def _compile(self, out, target):
         value = out.define('value', repr(self.value))
-        with out.IF('isinstance(text, str)'):
+        if out.has_tokens and not out.is_tokenize:
+            self._compile_for_tokens(out, target, value)
+        else:
             self._compile_for_text(out, target, value)
+
+    def _compile_for_tokens(self, out, target, value):
+        with out.IF(f'pos < len(text) and text[pos].value == {value}'):
+            out.succeed(target, value, 'pos + 1')
         with out.ELSE():
-            self._compile_for_items(out, target, value)
+            out.fail(target, self, 'pos')
 
     def _compile_for_text(self, out, target, value):
         if not isinstance(self.value, str):
@@ -253,13 +264,6 @@ class Literal:
         end = out.define('end', f'pos + {len(self.value)}')
         with out.IF(f'text[pos:{end}] == {value}'):
             out.succeed(target, value, end)
-        with out.ELSE():
-            out.fail(target, self, 'pos')
-
-    def _compile_for_items(self, out, target, value):
-        # TODO: If the element is a token, compare the token's value to this value.
-        with out.IF(f'pos < len(text) and text[pos] == {value}'):
-            out.succeed(target, value, 'pos + 1')
         with out.ELSE():
             out.fail(target, self, 'pos')
 
@@ -316,28 +320,31 @@ class Regex:
         out.add_import('re')
         pattern = out.define_global('pattern', f're.compile({self.pattern!r})')
 
-        with out.IF('isinstance(text, str)'):
-            match = out.define('match', f'{pattern}.match(text, pos)')
+        if out.has_tokens and not out.is_tokenize:
+            self._compile_for_tokens(out, target, pattern)
+        else:
+            self._compile_for_text(out, target, pattern)
 
-            with out.IF(match):
-                out.succeed(target, f'{match}.group(0)', f'{match}.end()')
-
-            with out.ELSE():
-                out.fail(target, self, 'pos')
-
-        with out.ELIF('pos >= len(text)'):
+    def _compile_for_tokens(self, out, target, pattern):
+        with out.IF('pos >= len(text)'):
             out.fail(target, self, 'pos')
 
         with out.ELSE():
-            item = out.define('item', 'text[pos]')
-            value = out.define('value',
-                f'{item}.value if isinstance(item, Token) else item')
-            match = out.define('match',
-                f'{pattern}.fullmatch({value}) if isinstance({value}, str) else None')
+            value = out.define('value', 'text[pos].value')
+            match = out.define('match', f'{pattern}.fullmatch({value})')
             with out.IF(match):
                 out.succeed(target, value, 'pos + 1')
             with out.ELSE():
                 out.fail(target, self, 'pos')
+
+    def _compile_for_text(self, out, target, pattern):
+        match = out.define('match', f'{pattern}.match(text, pos)')
+
+        with out.IF(match):
+            out.succeed(target, f'{match}.group(0)', f'{match}.end()')
+
+        with out.ELSE():
+            out.fail(target, self, 'pos')
 
 
 def Right(expr1, expr2):
@@ -434,7 +441,7 @@ class Template:
     def __repr__(self):
         return f'Template({self.name!r}, {self.params!r}, {self.expr!r})'
 
-    def __apply__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         sub = {}
         for param, arg in zip(self.params, args):
             sub[param] = arg
@@ -458,29 +465,41 @@ class Token:
     def _eval(self, env):
         return Token(self.name, self.expr._eval(env), is_ignored=self.is_ignored)
 
+    def _compile(self, out, target):
+        if out.is_tokenize:
+            self._compile_for_text(out, target)
+        else:
+            _compile_instance_check(out, target, self, self.name, is_ignored=self.is_ignored)
+
     def _compile_for_text(self, out, target):
         out.global_defs.write(f'class {self.name}(Token): pass\n')
         result = out.compile(self.expr)
-        if self.is_ignored:
-            out.set_result(target, mode=out.IGNORE, value=None, pos=result.pos)
-        else:
-            out.succeed(target, f'{self.name}({result.value})', result.pos)
 
-    def _compile(self, out, target):
-        with out.IF('pos < len(text)'):
-            value = out.define('value', 'text[pos]')
-
-            with out.IF(f'isinstance({value}, {self.name})'):
-                if self.is_ignored:
-                    out.set_result(target, mode=out.IGNORE, value=None, pos='pos + 1')
-                else:
-                    out.succeed(target, value, 'pos + 1')
-
-            with out.ELSE():
-                out.fail(target, self, 'pos')
+        with out.IF(out.is_success(result)):
+            if self.is_ignored:
+                out.set_result(target, mode=out.IGNORE, value=None, pos=result.pos)
+            else:
+                out.succeed(target, f'{self.name}({result.value})', result.pos)
 
         with out.ELSE():
-            out.fail(target, self, 'pos')
+            out.copy_result(target, result)
+
+
+def _compile_instance_check(out, target, expr, class_name, is_ignored=False):
+    with out.IF('pos < len(text)'):
+        value = out.define('value', 'text[pos]')
+
+        with out.IF(f'isinstance({value}, {class_name})'):
+            if is_ignored:
+                out.set_result(target, mode=out.IGNORE, value=None, pos='pos + 1')
+            else:
+                out.succeed(target, value, 'pos + 1')
+
+        with out.ELSE():
+            out.fail(target, expr, 'pos')
+
+    with out.ELSE():
+        out.fail(target, expr, 'pos')
 
 
 # Operator precedence parsing:
@@ -541,8 +560,8 @@ class LeftAssoc(OperatorPrecedenceRule):
             item = out.compile(self.operand)
 
             with out.IF_NOT(out.is_success(item)):
-                with out.IF(out.is_error(operator)):
-                    out.copy_result(target, operator)
+                with out.IF(f'{is_first} or {out.is_error(item)}'):
+                    out.copy_result(target, item)
                 out('break')
 
             out(f'pos = {target.pos} = {item.pos}')
@@ -550,6 +569,7 @@ class LeftAssoc(OperatorPrecedenceRule):
             with out.IF(is_first):
                 out.set(is_first, False)
                 out.set(target.value, item.value)
+                out.set(target.mode, out.SUCCESS)
 
             with out.ELSE():
                 value = f'Infix({target.value}, {operator.value}, {item.value})'
@@ -576,8 +596,8 @@ class RightAssoc(OperatorPrecedenceRule):
                     out.copy_result(target, item)
 
                 with out.ELIF(f'{backup} is None'):
-                    out.set(target.mode, out.SUCCESS)
                     out.set(target.value, f'{prev}.left')
+                    out.set(target.mode, out.SUCCESS)
 
                 with out.ELSE():
                     out.set(f'{backup}.right', f'{prev}.left')
@@ -672,6 +692,7 @@ class Prefix(OperatorPrecedenceRule):
 
 # TODO: Get rid of this function.
 def conv(obj):
+    return obj
     """Converts a Python object to a parsing expression."""
     if hasattr(obj, '_compile'):
         return obj
