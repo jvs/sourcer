@@ -193,4 +193,7 @@ module = compile_statements(converted)
 # print(module.tokenize('foo bar baz'))
 # print(module.tokenize(g.grammar))
 
-print(module.parse(g.grammar))
+
+for stmt in module.parse(g.grammar):
+    print(stmt)
+    print()

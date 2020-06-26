@@ -133,13 +133,24 @@ class Class:
             _compile_instance_check(out, target, self, self.name, is_ignored=self.is_ignored)
             return
 
-        defs = out.global_defs
+        write = out.global_defs.write
+        write(f'\nclass {self.name}(Node):\n')
+
+        names = tuple(x.name for x in self.fields)
+        write(f'    _fields = {names!r}\n\n')
+
         params = ', '.join(x.name for x in self.fields)
-        defs.write(f'\nclass {self.name}(Node):\n')
-        defs.write(f'    def __init__(self, {params}):\n')
+        write(f'    def __init__(self, {params}):\n')
         for field in self.fields:
-            defs.write(f'        self.{field.name} = {field.name}\n')
-        defs.write('\n')
+            write(f'        self.{field.name} = {field.name}\n')
+        write('\n')
+
+        write(f'    def __repr__(self):\n')
+        inits = ', '.join(f'{x.name}={{self.{x.name}}}' for x in self.fields)
+        write(f'        return f\'{self.name}({inits})\'\n\n')
+
+
+        # TODO: _asdict, _replace.
 
         exprs = (x.expr for x in self.fields)
         delegate = Seq(*exprs, constructor=self.name)
