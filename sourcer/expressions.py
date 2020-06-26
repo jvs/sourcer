@@ -3,8 +3,8 @@ import typing
 
 class Alt:
     def __init__(self, expr, separator, allow_trailer=False, allow_empty=True):
-        self.expr = conv(expr)
-        self.separator = conv(separator)
+        self.expr = expr
+        self.separator = separator
         self.allow_trailer = allow_trailer
         self.allow_empty = allow_empty
 
@@ -68,7 +68,7 @@ class Alt:
 class Call:
     def __init__(self, func, args):
         self.func = func
-        self.args = [conv(x) for x in args]
+        self.args = args
 
     def __repr__(self):
         return f'Call({self.func!r}, {self.args!r})'
@@ -86,7 +86,7 @@ class Call:
 
 class Choice:
     def __init__(self, *exprs):
-        self.exprs = [conv(x) for x in exprs]
+        self.exprs = exprs
 
     def __repr__(self):
         values = ', '.join(repr(x) for x in self.exprs)
@@ -159,8 +159,8 @@ class Class:
 
 class Drop:
     def __init__(self, expr1, expr2, drop_left=True):
-        self.expr1 = conv(expr1)
-        self.expr2 = conv(expr2)
+        self.expr1 = expr1
+        self.expr2 = expr2
         self.drop_left = drop_left
 
     def __repr__(self):
@@ -195,7 +195,7 @@ class Drop:
 class KeywordArg:
     def __init__(self, name, expr):
         self.name = name
-        self.expr = conv(expr)
+        self.expr = expr
 
     def __repr__(self):
         return f'KeywordArg({self.name!r}, {self.expr!r})'
@@ -210,7 +210,7 @@ def Left(expr1, expr2):
 
 class List:
     def __init__(self, expr, allow_empty=True):
-        self.expr = conv(expr)
+        self.expr = expr
         self.allow_empty = allow_empty
 
     def __repr__(self):
@@ -281,7 +281,7 @@ class Literal:
 
 class Opt:
     def __init__(self, expr):
-        self.expr = conv(expr)
+        self.expr = expr
 
     def _eval(self, env):
         return Opt(self.expr._eval(env))
@@ -365,7 +365,7 @@ def Right(expr1, expr2):
 class Rule:
     def __init__(self, name, expr):
         self.name = name
-        self.expr = conv(expr)
+        self.expr = expr
 
     def __repr__(self):
         return f'Rule({self.name!r}, {self.expr!r})'
@@ -378,7 +378,7 @@ class Seq:
     def __init__(self, *exprs, constructor=None):
         if isinstance(constructor, type):
             constructor = constructor.__name__
-        self.exprs = [conv(x) for x in exprs]
+        self.exprs = exprs
         self.constructor = constructor
 
     def __repr__(self):
@@ -415,7 +415,7 @@ class Seq:
 
 class Skip:
     def __init__(self, expr):
-        self.expr = conv(expr)
+        self.expr = expr
 
     def __repr__(self):
         return f'Skip({self.expr!r})'
@@ -447,7 +447,7 @@ class Template:
     def __init__(self, name, params, expr):
         self.name = name
         self.params = params
-        self.expr = conv(expr)
+        self.expr = expr
 
     def __repr__(self):
         return f'Template({self.name!r}, {self.params!r}, {self.expr!r})'
@@ -467,7 +467,7 @@ class Template:
 class Token:
     def __init__(self, name, expr, is_ignored=False):
         self.name = name
-        self.expr = conv(expr)
+        self.expr = expr
         self.is_ignored = is_ignored
 
     def __repr__(self):
@@ -517,8 +517,8 @@ def _compile_instance_check(out, target, expr, class_name, is_ignored=False):
 
 class OperatorPrecedence:
     def __init__(self, atom, *rules):
-        self.atom = conv(atom)
-        self.rules = [conv(x) for x in rules]
+        self.atom = atom
+        self.rules = rules
 
     def __repr__(self):
         rules = ', '.join(repr(x) for x in self.rules)
@@ -540,7 +540,7 @@ class OperatorPrecedence:
 
 class OperatorPrecedenceRule:
     def __init__(self, *operators):
-        self.operators = conv(operators[0]) if len(operators) == 1 else Choice(*operators)
+        self.operators = operators[0] if len(operators) == 1 else Choice(*operators)
         self.operand = None
 
     def __repr__(self):
@@ -699,19 +699,3 @@ class Prefix(OperatorPrecedenceRule):
                     out.set(target.mode, out.SUCCESS)
 
                 out('break')
-
-
-# TODO: Get rid of this function.
-def conv(obj):
-    return obj
-    """Converts a Python object to a parsing expression."""
-    if hasattr(obj, '_compile'):
-        return obj
-
-    if isinstance(obj, (list, tuple)):
-        return Seq(*obj)
-
-    if isinstance(obj, typing.Pattern):
-        return Regex(obj)
-    else:
-        return Literal(obj)
