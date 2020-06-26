@@ -1,5 +1,6 @@
 from ast import literal_eval
 import sourcer.expressions as sr
+from .expressions import PostfixOp
 from .metasyntax import Grammar, transform_tokens
 
 
@@ -109,7 +110,10 @@ def convert_node(node):
     if isinstance(node, g.ListLiteral):
         return sr.Seq(*node.elements)
 
-    if isinstance(node, g.PostfixOp) and isinstance(node.operator, g.ArgList):
+    if isinstance(node, g.ArgList):
+        return node
+
+    if isinstance(node, PostfixOp) and isinstance(node.operator, g.ArgList):
         left = node.left
         classes = {
             'LeftAssoc': sr.LeftAssoc,
@@ -122,7 +126,7 @@ def convert_node(node):
         else:
             return sr.Call(left, node.operator.args)
 
-    if isinstance(node, g.PostfixOp):
+    if isinstance(node, PostfixOp):
         classes = {
             '?': sr.Opt,
             '*': sr.List,

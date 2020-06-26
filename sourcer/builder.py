@@ -154,6 +154,7 @@ class ProgramBuilder:
         self.buf = io.StringIO()
         self.imports = set()
         self.global_defs = io.StringIO()
+        self.global_defs.write(_program_setup)
         self.indent = 0
         self.names = {'pos', 'start', 'source_code', 'text'}
         self.env = {x.name: x for x in statements if isinstance(x, expressions.Template)}
@@ -199,6 +200,17 @@ class TokenWrapper:
         return self.token_expr._compile_for_text(out, target)
 
 
+_program_setup = '''
+class Node:
+    pass
+
+class Token(Node):
+    def __init__(self, value):
+        self.value = value
+
+'''
+
+
 _main_template = Template(r'''
 class ParseError(Exception):
     def __init__(self, mode, expr_code, pos):
@@ -206,14 +218,6 @@ class ParseError(Exception):
         self.expr_code = expr_code
         self.pos = pos
 
-
-class Node:
-    pass
-
-
-class Token(Node):
-    def __init__(self, value):
-        self.value = value
 
 
 class Infix(Node):

@@ -130,11 +130,11 @@ class Class:
         defs = out.global_defs
 
         params = ', '.join(x.name for x in self.fields)
-        defs.write(f'class {self.name}(Node):\n')
+        defs.write(f'\nclass {self.name}(Node):\n')
         defs.write(f'    def __init__(self, {params}):\n')
         for field in self.fields:
             defs.write(f'        self.{field.name} = {field.name}\n')
-        defs.write('\n\n')
+        defs.write('\n')
 
         exprs = (x.expr for x in self.fields)
         delegate = Seq(*exprs, constructor=self.name)
@@ -257,6 +257,7 @@ class Literal:
             out.fail(target, self, 'pos')
 
     def _compile_for_items(self, out, target, value):
+        # TODO: If the element is a token, compare the token's value to this value.
         with out.IF(f'pos < len(text) and text[pos] == {value}'):
             out.succeed(target, value, 'pos + 1')
         with out.ELSE():
@@ -516,7 +517,7 @@ class OperatorPrecedenceRule:
         return f'{self.__class__.__name__}({self.operators!r})'
 
     def _eval(self, env):
-        result = self.__class__(*[x._eval(env) for x in self.operators])
+        result = self.__class__(self.operators._eval(env))
         if self.operand is not None:
             result.operand = self.operand._eval(env)
         return result
@@ -615,7 +616,7 @@ class RightAssoc(OperatorPrecedenceRule):
 class Postfix(OperatorPrecedenceRule):
     def _compile(self, out, target):
         item = out.compile(self.operand)
-        out.copy(target, item)
+        out.copy_result(target, item)
 
         with out.IF(out.is_success(item)):
             out.set('pos', item.pos)
