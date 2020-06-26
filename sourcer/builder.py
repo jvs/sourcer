@@ -239,17 +239,26 @@ class Infix(Node):
         self.operator = operator
         self.right = right
 
+    def __repr__(self):
+        return f'Infix({self.left!r}, {self.operator!r}, {self.right!r})'
+
 
 class Postfix(Node):
     def __init__(self, left, operator):
         self.left = left
         self.operator = operator
 
+    def __repr__(self):
+        return f'Postfix({self.left!r}, {self.operator!r})'
+
 
 class Prefix(Node):
     def __init__(self, operator, right):
         self.operator = operator
         self.right = right
+
+    def __repr__(self):
+        return f'Prefix({self.operator!r}, {self.right!r})'
 
 
 def parse(text, pos=0):
