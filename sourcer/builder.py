@@ -212,6 +212,14 @@ _program_setup = r'''
 class Node:
     _fields = ()
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        for field in self._fields:
+            if getattr(self, field) != getattr(other, field):
+                return False
+        return True
+
     def _replace(self, **kw):
         for field in self._fields:
             if field not in kw:
