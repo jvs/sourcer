@@ -8,8 +8,7 @@ from .expressions import *
 
 
 def compile_statements(statements):
-    out = ProgramBuilder()
-    return out.run(statements)
+    return ProgramBuilder().run(statements)
 
 
 Target = namedtuple('Target', 'mode, value, pos')
@@ -104,13 +103,12 @@ class ProgramBuilder:
 
     def run(self, statements):
         statements = self.apply_templates(statements)
-        program_text = self.write_program(statements)
-        module = self.compile_program(program_text)
-        module.source_code = program_text
-        return module
+        source_code = self.write_program(statements)
+        module = self.compile_program(source_code)
+        return source_code, module
 
-    def compile_program(self, program_text):
-        code_object = compile(program_text, '<grammar>', 'exec', optimize=2)
+    def compile_program(self, source_code):
+        code_object = compile(source_code, '<grammar>', 'exec', optimize=2)
         # TODO: pick a good name for the module.
         module = types.ModuleType('grammar')
         exec(code_object, module.__dict__)
@@ -210,11 +208,20 @@ class TokenWrapper:
         return self.token_expr._compile_for_text(out, target)
 
 
-_program_setup = '''
+_program_setup = r'''
 class Node:
-    pass
+    _fields = ()
+
+    def _replace(self, **kw):
+        for field in self._fields:
+            if field not in kw:
+                kw[field] = getattr(self, field)
+        return self.__class__(**kw)
+
 
 class Token(Node):
+    _fields = ('value',)
+
     def __init__(self, value):
         self.value = value
 
@@ -234,6 +241,8 @@ class ParseError(Exception):
 
 
 class Infix(Node):
+    _fields = ('left', 'operator', 'right')
+
     def __init__(self, left, operator, right):
         self.left = left
         self.operator = operator
@@ -244,6 +253,8 @@ class Infix(Node):
 
 
 class Postfix(Node):
+    _fields = ('left', 'operator')
+
     def __init__(self, left, operator):
         self.left = left
         self.operator = operator
@@ -253,6 +264,8 @@ class Postfix(Node):
 
 
 class Prefix(Node):
+    _fields = ('operator', 'right')
+
     def __init__(self, operator, right):
         self.operator = operator
         self.right = right
@@ -293,4 +306,52 @@ def _run(text, pos, start):
         return result[1]
     else:
         raise ParseError(*result)
+
+
+def visit(node):
+    if isinstance(node, list):
+        yield from node
+
+    elif isinstance(node, Node):
+        yield node
+
+        if hasattr(node, '_fields'):
+            for field in node._fields:
+                yield from visit(getattr(node, field))
+
+
+def transform(node, *callbacks):
+    if not callbacks:
+        return node
+
+    if len(callbacks) == 1:
+        callback = callbacks[0]
+    else:
+        def callback(node):
+            for f in callbacks:
+                node = f(node)
+            return node
+
+    return _transform(node, callback)
+
+
+def _transform(node, callback):
+    if isinstance(node, list):
+        return [_transform(x, callback) for x in node]
+
+    if not isinstance(node, Node):
+        return node
+
+    updates = {}
+    for field in node._fields:
+        was = getattr(node, field)
+        now = _transform(was, callback)
+        if was is not now:
+            updates[field] = now
+
+    if updates:
+        node = node._replace(**updates)
+
+    return callback(node)
+
 ''')

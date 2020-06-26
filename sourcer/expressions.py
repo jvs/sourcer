@@ -121,9 +121,12 @@ class Class:
         self.expr = self
 
     def __repr__(self):
-        fields = ', '.join(repr(x) for x in self.fields)
-        return (f'Class({self.name!r}, [{fields}],'
-            f' is_token={self.is_token}, is_ignored={self.is_ignored})')
+        args = [repr(self.name), repr(self.fields)]
+        if self.is_token:
+            args.append('is_token=True')
+        if self.is_ignored:
+            args.append('is_ignored=True')
+        return f'Class({", ".join(args)})'
 
     def _eval(self, env):
         return Class(self.name, [x._eval(env) for x in self.fields])
@@ -164,7 +167,8 @@ class Drop:
         self.drop_left = drop_left
 
     def __repr__(self):
-        return f'Drop({self.expr1!r}, {self.expr2!r}, drop_left={self.drop_left})'
+        func = 'Right' if self.drop_left else 'Left'
+        return f'{func}({self.expr1!r}, {self.expr2!r})'
 
     def _eval(self, env):
         return Drop(
@@ -263,10 +267,14 @@ class Literal:
             self._compile_for_text(out, target, value)
 
     def _compile_for_tokens(self, out, target, value):
-        with out.IF(f'pos < len(text) and text[pos].value == {value}'):
-            out.succeed(target, value, 'pos + 1')
-        with out.ELSE():
+        with out.IF('pos >= len(text)'):
             out.fail(target, self, 'pos')
+        with out.ELSE():
+            value = out.define('value', 'text[pos]')
+            with out.IF(f'{value}.value == {self.value!r}'):
+                out.succeed(target, value, 'pos + 1')
+            with out.ELSE():
+                out.fail(target, self, 'pos')
 
     def _compile_for_text(self, out, target, value):
         if not isinstance(self.value, str):
@@ -471,7 +479,10 @@ class Token:
         self.is_ignored = is_ignored
 
     def __repr__(self):
-        return f'Token({self.name!r}, {self.expr!r}, is_ignored={self.is_ignored})'
+        args = [repr(self.name), repr(self.expr)]
+        if self.is_ignored:
+            args.append('is_ignored=True')
+        return f'Token({", ".join(args)})'
 
     def _eval(self, env):
         return Token(self.name, self.expr._eval(env), is_ignored=self.is_ignored)
