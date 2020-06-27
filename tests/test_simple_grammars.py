@@ -52,3 +52,22 @@ def test_arithmetic_expressions():
             g.Int('55'),
         ),
     )
+
+
+def test_many_nested_parentheses():
+    g = Grammar(r'start = ["(", start?, ")"]')
+
+    depth = 1001
+    text = ('(' * depth) + (')' * depth)
+    result = g.parse(text)
+
+    count = 0
+    while result:
+        assert isinstance(result, list)
+        assert len(result) == 3
+        assert result[0] == '('
+        assert result[2] == ')'
+        result = result[1]
+        count += 1
+
+    assert count == depth
