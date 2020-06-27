@@ -3,13 +3,14 @@ from sourcer import Grammar
 
 grammar = Grammar(r'''
     start = Formula
-    Formula = "="? >> Expr << End
+    Formula = "="? >> Expr # << End
 
-    Offset = `\d+|\[\-?\d+\]`
+    # TODO: Allow "Offset" to be defined outside the token definition.
+    # Offset = `\d+|\[\-?\d+\]`
 
     token class R1C1Ref {
-        row = "R" >> Offset
-        col = "C" >> Offset
+        row = "R" >> `\d+|\[\-?\d+\]`
+        col = "C" >> `\d+|\[\-?\d+\]`
     }
 
     token class A1Ref {
@@ -32,12 +33,12 @@ grammar = Grammar(r'''
     token Error = `\#[a-zA-Z0-9_\/]+(\!|\?)?`
 
     class Array {
-        elements = "{" !>> (ExprList / ";") << "}"
+        elements = "{" >> (ExprList / ";") << "}"
     }
 
     class FunctionCall {
         name = Word
-        arguments = "(" !>> ExprList << ")"
+        arguments = "(" >> ExprList << ")"
     }
 
     class CellRef {
@@ -46,7 +47,7 @@ grammar = Grammar(r'''
         cell = R1C1Ref | A1Ref
     }
 
-    Atom = "(" !>> Expr << ")"
+    Atom = "(" >> Expr << ")"
         | Array
         | FunctionCall
         | CellRef
@@ -59,8 +60,8 @@ grammar = Grammar(r'''
 
     template Operators(union_operator) => OperatorPrecedence(
         Atom,
-        LeftAssoc(':'),
-        LeftAssoc(Pass(None)),
+        LeftAssoc(":"),
+        LeftAssoc(""),
         union_operator,
         Prefix("-" | "+"),
         Postfix("%"),
@@ -72,5 +73,5 @@ grammar = Grammar(r'''
     )
 
     Expr = Operators(LeftAssoc(","))
-    ExprList = Operators(LeftAssoc(Fail(None)))? / ","
-''')
+    ExprList = Operators(LeftAssoc(Fail("Expected list.")))? / ","
+''', include_source=True)

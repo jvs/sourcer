@@ -96,6 +96,7 @@ class Choice:
         return Choice(*[x._eval(env) for x in self.exprs])
 
     def _compile(self, out, target):
+        backtrack = out.define('backtrack', 'pos')
         items = []
         for expr in self.exprs:
             item = out.compile(expr)
@@ -104,6 +105,7 @@ class Choice:
                 out.copy_result(target, item)
             out('else:')
             out.indent += 1
+            out.set('pos', backtrack)
 
         out.fail(target, self, 'pos')
         for item in items:
@@ -117,8 +119,12 @@ class Class:
         self.fields = fields
         self.is_token = is_token
         self.is_ignored = is_ignored
-        # TODO: Decide how to make this work.
-        self.expr = self
+
+    def _replace(self, **kw):
+        for field in ['name', 'fields', 'is_token', 'is_ignored']:
+            if field not in kw:
+                kw[field] = getattr(self, field)
+        return Class(**kw)
 
     def __repr__(self):
         args = [repr(self.name), repr(self.fields)]
@@ -129,7 +135,7 @@ class Class:
         return f'Class({", ".join(args)})'
 
     def _eval(self, env):
-        return Class(self.name, [x._eval(env) for x in self.fields])
+        return self._replace(fields=[x._eval(env) for x in self.fields])
 
     def _compile(self, out, target):
         if self.is_token and not out.is_tokenize:
@@ -140,7 +146,12 @@ class Class:
         write(f'\nclass {self.name}(Node):\n')
 
         names = tuple(x.name for x in self.fields)
-        write(f'    _fields = {names!r}\n\n')
+        write(f'    _fields = {names!r}\n')
+
+        # TODO: Consider grabbing the entire matched substring.
+        if 'value' not in names:
+            write(f'    value = {self.name!r}\n')
+        write('\n')
 
         params = ', '.join(x.name for x in self.fields)
         write(f'    def __init__(self, {params}):\n')
@@ -151,9 +162,6 @@ class Class:
         write(f'    def __repr__(self):\n')
         inits = ', '.join(f'{x.name}={{self.{x.name}!r}}' for x in self.fields)
         write(f'        return f\'{self.name}({inits})\'\n\n')
-
-
-        # TODO: _asdict, _replace.
 
         exprs = (x.expr for x in self.fields)
         delegate = Seq(*exprs, constructor=self.name)
@@ -194,6 +202,20 @@ class Drop:
                     out.succeed(target, item1.value, item2.pos)
                 with out.ELSE():
                     out.copy_result(target, item2)
+
+
+class Fail:
+    def __init__(self, message):
+        self.message = None
+
+    def __repr__(self):
+        return f'Fail({self.message!r})'
+
+    def _eval(self, env):
+        return self
+
+    def _compile(self, out, target):
+        out.fail(target, self, 'pos')
 
 
 class KeywordArg:
@@ -260,6 +282,10 @@ class Literal:
         return self
 
     def _compile(self, out, target):
+        if self.value == '':
+            out.succeed(target, "''", 'pos')
+            return
+
         value = out.define('value', repr(self.value))
         if out.has_tokens and not out.is_tokenize:
             self._compile_for_tokens(out, target, value)
@@ -270,9 +296,9 @@ class Literal:
         with out.IF('pos >= len(text)'):
             out.fail(target, self, 'pos')
         with out.ELSE():
-            value = out.define('value', 'text[pos]')
-            with out.IF(f'{value}.value == {self.value!r}'):
-                out.succeed(target, value, 'pos + 1')
+            token = out.define('token', 'text[pos]')
+            with out.IF(f'{token}.value == {value}'):
+                out.succeed(target, token, 'pos + 1')
             with out.ELSE():
                 out.fail(target, self, 'pos')
 
@@ -291,18 +317,33 @@ class Opt:
     def __init__(self, expr):
         self.expr = expr
 
-    def _eval(self, env):
-        return Opt(self.expr._eval(env))
-
     def __repr__(self):
         return f'Opt({self.expr!r})'
 
+    def _eval(self, env):
+        return Opt(self.expr._eval(env))
+
     def _compile(self, out, target):
+        backtrack = out.define('backtrack', 'pos')
         item = out.compile(self.expr)
         with out.IF(f'{out.is_success(item)} or {out.is_error(item)}'):
             out.copy_result(target, item)
         with out.ELSE():
-            out.succeed(target, 'None', 'pos')
+            out.succeed(target, 'None', backtrack)
+
+
+class Pass:
+    def __init__(self, value):
+        self.value = value
+
+    def __repr__(self):
+        return f'Pass({self.value!r})'
+
+    def _eval(self, env):
+        return self
+
+    def _compile(self, out, target):
+        out.succeed(target, repr(self.value), 'pos')
 
 
 class Ref:
@@ -380,6 +421,9 @@ class Rule:
 
     def _eval(self, env):
         return Rule(self.name, self.expr._eval(env))
+
+    def _compile(self, out, target):
+        return self.expr._compile(out, target)
 
 
 class Seq:

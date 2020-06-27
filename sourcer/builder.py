@@ -58,9 +58,13 @@ def _conv(node):
     if isinstance(node, meta.Postfix) and isinstance(node.operator, meta.ArgList):
         left = node.left
         classes = {
+            'Fail': Fail,
             'LeftAssoc': LeftAssoc,
             'OperatorPrecedence': OperatorPrecedence,
+            'Opt': Opt,
+            'Prefix': Prefix,
             'Postfix': Postfix,
+            'RightAssoc': RightAssoc,
             'Skip': Skip,
             'Some': Some,
         }
@@ -107,15 +111,11 @@ def _conv(node):
 
     if isinstance(node, meta.TokenDef):
         is_ignored = node.is_ignored is not None
-        node = node.child
-        is_class = isinstance(node, Class)
-        if is_class and not is_ignored:
-            node.is_token = True
-            return node
-        elif is_class and is_ignored:
-            return Token(node.name, node, is_ignored=True)
+        child = node.child
+        if isinstance(child, Class):
+            return child._replace(is_token=True, is_ignored=is_ignored)
         else:
-            return Token(node.name, node.expr, is_ignored=is_ignored)
+            return Token(child.name, child.expr, is_ignored=is_ignored)
 
     if isinstance(node, meta.TemplateDef):
         return Template(node.name, node.params, node.expr)
@@ -270,7 +270,7 @@ class ProgramBuilder:
             reset_pos = ''
 
         for rule in rules:
-            self.write_rule_function(self.rule_map[rule.name], rule.expr)
+            self.write_rule_function(self.rule_map[rule.name], rule)
 
         result = io.StringIO()
         for imp in self.imports:
@@ -317,6 +317,9 @@ class Node:
             if getattr(self, field) != getattr(other, field):
                 return False
         return True
+
+    def _asdict(self):
+        return {k: getattr(self, k) for k in self._fields}
 
     def _replace(self, **kw):
         for field in self._fields:
