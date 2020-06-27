@@ -13,7 +13,7 @@ black: image
 	$(RUN) black ./sourcer
 
 clean:
-	-rm -rf **/__pycache__ dist MANIFEST **/*.pyc
+	-rm -rf __pycache__ **/__pycache__ dist MANIFEST **/*.pyc .pytest_cache
 
 test: clean image
 	$(RUN) python -m pytest tests
