@@ -54,6 +54,38 @@ def test_arithmetic_expressions():
     )
 
 
+def test_json_with_tokens():
+    g = Grammar(r'''
+        start = Value
+
+        Value = Object | Array | String | Number | Keyword
+
+        class Object {
+            elements: "{" >> (Member // ",") << "}"
+        }
+
+        class Member {
+            name: String << ":"
+            value: Value
+        }
+
+        class Array {
+            elements: "[" >> (Value // ",") << "]"
+        }
+
+        ignored token Space = `\s+`
+        token Symbol = `[\{\}\[\],:]`
+        token String = `"(?:[^\\"]|\\.)*"`
+        token Number = `-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?`
+        token Keyword = `true|false|null`
+    ''')
+    result = g.parse('{"foo": "bar", "baz": true}')
+    assert result == g.Object([
+        g.Member(g.String('"foo"'), g.String('"bar"')),
+        g.Member(g.String('"baz"'), g.Keyword('true')),
+    ])
+
+
 def test_many_nested_parentheses():
     g = Grammar(r'start = ["(", start?, ")"]')
 
