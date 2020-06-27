@@ -1,1 +1,1 @@
-from .metasyntax import Grammar
+from .builder import Grammar
