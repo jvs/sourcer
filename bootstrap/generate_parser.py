@@ -187,13 +187,27 @@ def convert_node(node):
 
 converted = g.transform(result, convert_node)
 
-from sourcer.builder import compile_statements
-module = compile_statements(converted)
+print('metasyntax = [')
+for stmt in converted:
+    print(f'    {stmt},')
+print(']')
 
-# print(module.tokenize('foo bar baz'))
+# from sourcer.builder import compile_statements
+# module = compile_statements(converted)
+
+# # print(module.tokenize('foo bar baz'))
+
 # print(module.tokenize(g.grammar))
 
+# with open('jvs_grammar.py', 'w') as f:
+#     f.write(module.source_code)
 
-for stmt in module.parse(g.grammar):
-    print(stmt)
-    print()
+# print('\n\n')
+# print('# PARSED:')
+# result = module.parse(g.grammar)
+# for stmt in result:
+#     print(stmt)
+#     print()
+
+
+# print(type(result[0].child.expr))
