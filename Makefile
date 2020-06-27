@@ -1,5 +1,8 @@
 RUN := docker run --rm --name sourcer -v `pwd`:/workspace sourcer
 
+metasyntax:
+	python3 generate_metasyntax.py
+
 image: Dockerfile
 	docker build -t sourcer .
 

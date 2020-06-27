@@ -1,13 +1,130 @@
+from ast import literal_eval
 from collections import defaultdict, namedtuple
 from string import Template as StringTemplate
 import contextlib
 import io
+import types
 
 from .expressions import *
+from . import meta
 
 
-def generate_source_code(nodes):
-    return ProgramBuilder().write_program(nodes)
+def Grammar(description, name='grammar', include_source=False):
+    # Parse the grammar description.
+    raw = meta.parse(description)
+
+    # Transform the nodes into sourcer expression classes.
+    nodes = meta.transform(raw, _conv)
+
+    # Apply templates.
+    env = {x.name: x for x in nodes if isinstance(x, Template)}
+    nodes = [x._eval(env) for x in nodes]
+
+    # Generate the source code.
+    source_code = ProgramBuilder().write_program(nodes)
+
+    # Compile the souce code.
+    code_object = compile(source_code, f'<{name}>', 'exec', optimize=2)
+    module = types.ModuleType(name)
+    exec(code_object, module.__dict__)
+
+    # Optionally include the source code.
+    if include_source and not hasattr(module, '_source_code'):
+        module._source_code = source_code
+
+    return module
+
+
+def _conv(node):
+    if isinstance(node, (meta.Word, meta.Symbol)):
+        return node.value
+
+    if isinstance(node, meta.StringLiteral):
+        return Literal(literal_eval(node.value))
+
+    if isinstance(node, meta.RegexLiteral):
+        # Strip the backticks.
+        return Regex(node.value[1:-1])
+
+    if isinstance(node, meta.Ref):
+        return Ref(node.name)
+
+    if isinstance(node, meta.ListLiteral):
+        return Seq(*node.elements)
+
+    if isinstance(node, meta.ArgList):
+        return node
+
+    if isinstance(node, meta.Postfix) and isinstance(node.operator, meta.ArgList):
+        left = node.left
+        classes = {
+            'LeftAssoc': LeftAssoc,
+            'OperatorPrecedence': OperatorPrecedence,
+            'Postfix': Postfix,
+            'Skip': Skip,
+            'Some': Some,
+        }
+        if isinstance(left, Ref) and left.name in classes:
+            return classes[left.name](*node.operator.args)
+        else:
+            return Call(left, node.operator.args)
+
+    if isinstance(node, meta.Postfix):
+        classes = {
+            '?': Opt,
+            '*': List,
+            '+': Some,
+            # '!': Commit,
+        }
+        if isinstance(node.operator, str) and node.operator in classes:
+            return classes[node.operator](node.left)
+
+    if isinstance(node, meta.Infix) and node.operator == '|':
+        left, right = node.left, node.right
+        left = list(left.exprs) if isinstance(left, Choice) else [left]
+        right = list(right.exprs) if isinstance(right, Choice) else [right]
+        return Choice(*left, *right)
+
+    if isinstance(node, meta.Infix):
+        classes = {
+            '/': lambda a, b: Alt(a, b, allow_trailer=True),
+            '//': lambda a, b: Alt(a, b, allow_trailer=False),
+            '<<': Left,
+            '>>': Right,
+            # '<<!': lambda a, b: Left(a, Commit(b)),
+            # '!>>': lambda a, b: Left(Commit(a), b),
+        }
+        return classes[node.operator](node.left, node.right)
+
+    if isinstance(node, meta.KeywordArg):
+        return KeywordArg(node.name, node.expr)
+
+    if isinstance(node, meta.RuleDef):
+        return Rule(node.name, node.expr)
+
+    if isinstance(node, meta.ClassDef):
+        return Class(node.name, node.fields)
+
+    if isinstance(node, meta.TokenDef):
+        is_ignored = node.is_ignored is not None
+        node = node.child
+        is_class = isinstance(node, Class)
+        if is_class and not is_ignored:
+            node.is_token = True
+            return node
+        elif is_class and is_ignored:
+            return Token(node.name, node, is_ignored=True)
+        else:
+            return Token(node.name, node.expr, is_ignored=is_ignored)
+
+    if isinstance(node, meta.TemplateDef):
+        return Template(node.name, node.params, node.expr)
+
+    if isinstance(node, str):
+        return Literal(node)
+
+    # TODO: Consider making an assertion here.
+    return node
 
 
 Target = namedtuple('Target', 'mode, value, pos')
