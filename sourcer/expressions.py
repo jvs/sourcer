@@ -538,7 +538,7 @@ class Token:
             _compile_instance_check(out, target, self, self.name, is_ignored=self.is_ignored)
 
     def _compile_for_text(self, out, target):
-        out.global_defs.write(f'class {self.name}(Token): pass\n')
+        out.global_defs.write(f'\nclass {self.name}(Token): pass\n')
         result = out.compile(self.expr)
 
         with out.IF(out.is_success(result)):
