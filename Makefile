@@ -18,5 +18,11 @@ clean:
 test: clean image
 	$(RUN) python -m pytest tests
 
+coverage: clean image
+	$(RUN) /bin/bash -c "coverage run -m pytest tests \
+		&& coverage report \
+		&& coverage html"
+	open "htmlcov/index.html"
+
 upload:
 	python setup.py sdist upload -r pypi
