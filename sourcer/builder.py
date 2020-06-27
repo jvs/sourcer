@@ -278,12 +278,14 @@ class ProgramBuilder:
             result.write(imp)
             result.write('\n')
         result.write(self.global_defs.getvalue())
-        result.write(_main_template.substitute(
-            CONTINUE=self.CONTINUE,
-            reset_pos=reset_pos,
-            start=self.rule_map[start],
-            tokenize_step=tokenize_step,
-        ))
+        result.write(
+            _main_template.substitute(
+                CONTINUE=self.CONTINUE,
+                reset_pos=reset_pos,
+                start=self.rule_map[start],
+                tokenize_step=tokenize_step,
+            )
+        )
         result.write(self.buf.getvalue())
         return result.getvalue()
 
@@ -340,7 +342,8 @@ class Token(Node):
 '''
 
 
-_main_template = StringTemplate(r'''
+_main_template = StringTemplate(
+    r'''
 class ParseError(Exception):
     def __init__(self, mode, expr_code, pos):
         self.is_error = (mode is None)
@@ -463,4 +466,5 @@ def _transform(node, callback):
 
     return callback(node)
 
-''')
+'''
+)

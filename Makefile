@@ -24,5 +24,8 @@ coverage: clean image
 		&& coverage html"
 	open "htmlcov/index.html"
 
+black: image
+	$(RUN) black sourcer -S --exclude 'meta.py'
+
 upload:
 	python setup.py sdist upload -r pypi

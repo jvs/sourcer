@@ -78,7 +78,9 @@ class Call:
         if callable(func):
             return func(
                 *[x._eval(env) for x in self.args if not isinstance(x, KeywordArg)],
-                **{x.name: x._eval(env) for x in self.args if isinstance(x, KeywordArg)},
+                **{
+                    x.name: x._eval(env) for x in self.args if isinstance(x, KeywordArg)
+                },
             )
         else:
             raise Exception(f'Not callable: {func!r}')
@@ -139,7 +141,9 @@ class Class:
 
     def _compile(self, out, target):
         if self.is_token and not out.is_tokenize:
-            _compile_instance_check(out, target, self, self.name, is_ignored=self.is_ignored)
+            _compile_instance_check(
+                out, target, self, self.name, is_ignored=self.is_ignored
+            )
             return
 
         write = out.global_defs.write
@@ -358,8 +362,10 @@ class Ref:
 
     def _compile(self, out, target):
         rule = out.rule_map[self.name]
-        out(f'{target.mode}, {target.value}, {target.pos}'
-            f' = yield ({out.CONTINUE}, {rule}, pos)')
+        out(
+            f'{target.mode}, {target.value}, {target.pos}'
+            f' = yield ({out.CONTINUE}, {rule}, pos)'
+        )
 
 
 class Regex:
@@ -441,10 +447,7 @@ class Seq:
             return f'Seq({values}, constructor={self.constructor!r})'
 
     def _eval(self, env):
-        return Seq(
-            *[x._eval(env) for x in self.exprs],
-            constructor=self.constructor,
-        )
+        return Seq(*[x._eval(env) for x in self.exprs], constructor=self.constructor,)
 
     def _compile(self, out, target):
         items = []
@@ -535,7 +538,9 @@ class Token:
         if out.is_tokenize:
             self._compile_for_text(out, target)
         else:
-            _compile_instance_check(out, target, self, self.name, is_ignored=self.is_ignored)
+            _compile_instance_check(
+                out, target, self, self.name, is_ignored=self.is_ignored
+            )
 
     def _compile_for_text(self, out, target):
         out.global_defs.write(f'\nclass {self.name}(Token): pass\n')
@@ -570,6 +575,7 @@ def _compile_instance_check(out, target, expr, class_name, is_ignored=False):
 
 # Operator precedence parsing:
 
+
 class OperatorPrecedence:
     def __init__(self, atom, *rules):
         self.atom = atom
@@ -581,8 +587,7 @@ class OperatorPrecedence:
 
     def _eval(self, env):
         return OperatorPrecedence(
-            self.atom._eval(env),
-            *[x._eval(env) for x in self.rules],
+            self.atom._eval(env), *[x._eval(env) for x in self.rules],
         )
 
     def _compile(self, out, target):
