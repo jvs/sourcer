@@ -6,7 +6,7 @@ grammar = Grammar(r'''
     Formula = "="? >> Expr # << End
 
     # TODO: Allow "Offset" to be a normal rule.
-    template Offset() => `\d+|\[\-?\d+\]`
+    template Offset() => ~/\d+|\[\-?\d+\]/
 
     token class R1C1Ref {
         row = "R" >> Offset()
@@ -15,22 +15,22 @@ grammar = Grammar(r'''
 
     token class A1Ref {
         col_modifier = "$"?
-        col = `I[A-V]|[A-H][A-Z]|[A-Z]`
+        col = ~/I[A-V]|[A-H][A-Z]|[A-Z]/
         row_modifier = "$"?
-        row = `\d+`
+        row = ~/\d+/
     }
 
-    ignored token Space = `[ \t\n\r]+`
+    ignored token Space = ~/[ \t\n\r]+/
 
-    token Word = `[a-zA-Z_\@][a-zA-Z0-9_\.\@]*`
-    token DateTime = `\d{4}-\d\d-\d\d \d\d:\d\d:\d\d`
-    token LongNumber = `[0-9]\.[0-9]+(e|E)(\+|\-)[0-9]+`
-    token ShortNumber = `[0-9]+(\.[0-9]*)?|\.[0-9]+`
-    token LongSymbol = `(\!\=)|(\<\>)|(\<\=)|(\>\=)`
-    token ShortSymbol = `[:\$\!\+\-\*\/<>=\^%&,;\[\]\{\}\(\)]`
-    token String = `"([^"]|"")*"`
-    token Sheet = `'([^']|'')*'`
-    token Error = `\#[a-zA-Z0-9_\/]+(\!|\?)?`
+    token Word = ~/[a-zA-Z_\@][a-zA-Z0-9_\.\@]*/
+    token DateTime = ~/\d{4}-\d\d-\d\d \d\d:\d\d:\d\d/
+    token LongNumber = ~/[0-9]\.[0-9]+(e|E)(\+|\-)[0-9]+/
+    token ShortNumber = ~/[0-9]+(\.[0-9]*)?|\.[0-9]+/
+    token LongSymbol = ~/(\!\=)|(\<\>)|(\<\=)|(\>\=)/
+    token ShortSymbol = ~/[:\$\!\+\-\*\/<>=\^%&,;\[\]\{\}\(\)]/
+    token String = ~/"([^"]|"")*"/
+    token Sheet = ~/'([^']|'')*'/
+    token Error = ~/\#[a-zA-Z0-9_\/]+(\!|\?)?/
 
     class Array {
         elements = "{" >> (ExprList / ";") << "}"

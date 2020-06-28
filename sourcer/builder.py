@@ -44,8 +44,8 @@ def _conv(node):
         return Literal(literal_eval(node.value))
 
     if isinstance(node, meta.RegexLiteral):
-        # Strip the backticks.
-        return Regex(node.value[1:-1])
+        # Strip the delimiters.
+        return Regex(node.value[2:-1])
 
     if isinstance(node, meta.Ref):
         return Ref(node.name)
