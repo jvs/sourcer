@@ -2,20 +2,20 @@ from sourcer import Grammar
 
 
 description = r'''
-    ignored token Space = ~/[ \t]+/
-    token Word = ~/[_a-zA-Z][_a-zA-Z0-9]*/
-    token Symbol = ~/<<\!|\!>>|<<|>>|=>|\/\/|[=;,:\|\/\*\+\?\!\(\)\[\]\{\}]/
+    ignored token Space = @/[ \t]+/
+    token Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+    token Symbol = @/<<\!|\!>>|<<|>>|=>|\/\/|[=;,:\|\/\*\+\?\!\(\)\[\]\{\}]/
 
     token StringLiteral = (
-        ~/("([^"\\]|\\.)*")/
-        | ~/('([^'\\]|\\.)*')/
-        | ~/("""([^\\]|\\.)*?""")/
-        | ~/('\''([^\\]|\\.)*?'\'')/
+        @/("([^"\\]|\\.)*")/
+        | @/('([^'\\]|\\.)*')/
+        | @/("""([^\\]|\\.)*?""")/
+        | @/('\''([^\\]|\\.)*?'\'')/
     )
 
-    token RegexLiteral = ~/\~\/([^\/\\]|\\.)*\//
-    token Newline = ~/[\r\n][\s]*/
-    ignored token Comment = ~/#[^\r\n]*/
+    token RegexLiteral = @/\@\/([^\/\\]|\\.)*\//
+    token Newline = @/[\r\n][\s]*/
+    ignored token Comment = @/#[^\r\n]*/
 
     Sep = Some(Newline | ";")
     Name = Word

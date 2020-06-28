@@ -3,8 +3,8 @@ from sourcer import Grammar
 
 def test_simple_words():
     g = Grammar(r'''
-        ignored token Space = ~/[ \t]+/
-        token Word = ~/[_a-zA-Z][_a-zA-Z0-9]*/
+        ignored token Space = @/[ \t]+/
+        token Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
         start = Word*
     ''')
 
@@ -15,9 +15,9 @@ def test_simple_words():
 def test_arithmetic_expressions():
     g = Grammar(r'''
         # Tokens:
-        ignored token Space = ~/\s+/
-        token Int = ~/\d+/
-        token Symbol = ~/[\+\-\*\/\(\)\^]/
+        ignored token Space = @/\s+/
+        token Int = @/\d+/
+        token Symbol = @/[\+\-\*\/\(\)\^]/
 
         # Expressions:
         Parens = '(' >> Expr << ')'
@@ -73,11 +73,11 @@ def test_json_with_tokens():
             elements: "[" >> (Value // ",") << "]"
         }
 
-        ignored token Space = ~/\s+/
-        token Symbol = ~/[\{\}\[\],:]/
-        token String = ~/"(?:[^\\"]|\\.)*"/
-        token Number = ~/-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/
-        token Keyword = ~/true|false|null/
+        ignored token Space = @/\s+/
+        token Symbol = @/[\{\}\[\],:]/
+        token String = @/"(?:[^\\"]|\\.)*"/
+        token Number = @/-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/
+        token Keyword = @/true|false|null/
     ''')
     result = g.parse('{"foo": "bar", "baz": true}')
     assert result == g.Object([
