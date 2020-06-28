@@ -1,0 +1,9 @@
+# Just ignore everything by default.
+**
+
+# Only use these things.
+!generate_metasyntax.py
+!requirements-dev.txt
+!examples
+!sourcer
+!tests
