@@ -4,11 +4,14 @@ from sourcer import Grammar
 description = r'''
     ignored token Space = @/[ \t]+/
     token Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
-    token Symbol = @/<<\!|\!>>|<<|>>|=>|\/\/|[=;,:\|\/\*\+\?\!\(\)\[\]\{\}]/
+
+    token Symbol = (
+        @/<\||\|>|<<\!|\!>>|<<|>>|=>|\/\/|[=;,:\|\/\*\+\?\!\(\)\[\]\{\}]/
+    )
 
     token StringLiteral = (
-        @/("""([^\\]|\\.)*?""")/
-        | @/('\''([^\\]|\\.)*?'\'')/
+        @/(?s)("""([^\\]|\\.)*?""")/
+        | @/(?s)('\''([^\\]|\\.)*?'\'')/
         | @/("([^"\\]|\\.)*")/
         | @/('([^'\\]|\\.)*')/
     )
@@ -16,7 +19,7 @@ description = r'''
     token RegexLiteral = @/\@\/([^\/\\]|\\.)*\//
     token Newline = @/[\r\n][\s]*/
 
-    token PythonSection = @/```.*?```/
+    token PythonSection = @/(?s)```.*?```/
     token PythonExpression = @/`[^`\n]*`/
 
     ignored token Comment = @/#[^\r\n]*/
@@ -84,8 +87,8 @@ description = r'''
         Atom,
         Postfix(ArgList),
         Postfix("?" | "*" | "+" | "!"),
-        LeftAssoc(wrap("/" | "//" | "*")),
-        LeftAssoc(wrap("<<" | ">>" | "<<!" | "!>>")),
+        LeftAssoc(wrap("/" | "//")),
+        LeftAssoc(wrap("<<" | ">>" | "<<!" | "!>>" | "<|" | "|>")),
         LeftAssoc(wrap("|")),
     )
 

@@ -39,11 +39,11 @@ class Word(Token): pass
 pattern2 = re.compile('[_a-zA-Z][_a-zA-Z0-9]*')
 
 class Symbol(Token): pass
-pattern3 = re.compile('<<\\!|\\!>>|<<|>>|=>|\\/\\/|[=;,:\\|\\/\\*\\+\\?\\!\\(\\)\\[\\]\\{\\}]')
+pattern3 = re.compile('<\\||\\|>|<<\\!|\\!>>|<<|>>|=>|\\/\\/|[=;,:\\|\\/\\*\\+\\?\\!\\(\\)\\[\\]\\{\\}]')
 
 class StringLiteral(Token): pass
-pattern4 = re.compile('("""([^\\\\]|\\\\.)*?""")')
-pattern5 = re.compile("('\\''([^\\\\]|\\\\.)*?'\\'')")
+pattern4 = re.compile('(?s)("""([^\\\\]|\\\\.)*?""")')
+pattern5 = re.compile("(?s)('\\''([^\\\\]|\\\\.)*?'\\'')")
 pattern6 = re.compile('("([^"\\\\]|\\\\.)*")')
 pattern7 = re.compile("('([^'\\\\]|\\\\.)*')")
 
@@ -54,7 +54,7 @@ class Newline(Token): pass
 pattern9 = re.compile('[\\r\\n][\\s]*')
 
 class PythonSection(Token): pass
-pattern10 = re.compile('```.*?```')
+pattern10 = re.compile('(?s)```.*?```')
 
 class PythonExpression(Token): pass
 pattern11 = re.compile('`[^`\\n]*`')
@@ -290,7 +290,7 @@ def _tokenize(text, pos):
             pos4 = match1.end()
         else:
             mode4 = False
-            value4 = 140500470594360
+            value4 = 140464556111912
             pos4 = pos
         if mode4:
             mode3 = 2
@@ -313,7 +313,7 @@ def _tokenize(text, pos):
                 pos6 = match2.end()
             else:
                 mode6 = False
-                value6 = 140500470594472
+                value6 = 140464556112024
                 pos6 = pos
             if mode6:
                 mode5 = 1
@@ -336,7 +336,7 @@ def _tokenize(text, pos):
                     pos8 = match3.end()
                 else:
                     mode8 = False
-                    value8 = 140500470594584
+                    value8 = 140464556112136
                     pos8 = pos
                 if mode8:
                     mode7 = 1
@@ -360,7 +360,7 @@ def _tokenize(text, pos):
                         pos11 = match4.end()
                     else:
                         mode11 = False
-                        value11 = 140500470595032
+                        value11 = 140464556112584
                         pos11 = pos
                     if mode11 or mode11 is None:
                         mode10 = mode11
@@ -375,7 +375,7 @@ def _tokenize(text, pos):
                             pos12 = match5.end()
                         else:
                             mode12 = False
-                            value12 = 140500470595256
+                            value12 = 140464556112808
                             pos12 = pos
                         if mode12 or mode12 is None:
                             mode10 = mode12
@@ -390,7 +390,7 @@ def _tokenize(text, pos):
                                 pos13 = match6.end()
                             else:
                                 mode13 = False
-                                value13 = 140500470595088
+                                value13 = 140464556112640
                                 pos13 = pos
                             if mode13 or mode13 is None:
                                 mode10 = mode13
@@ -405,7 +405,7 @@ def _tokenize(text, pos):
                                     pos14 = match7.end()
                                 else:
                                     mode14 = False
-                                    value14 = 140500470595424
+                                    value14 = 140464556112864
                                     pos14 = pos
                                 if mode14 or mode14 is None:
                                     mode10 = mode14
@@ -414,7 +414,7 @@ def _tokenize(text, pos):
                                 else:
                                     pos = backtrack2
                                     mode10 = False
-                                    value10 = 140500470720384
+                                    value10 = 140464556225928
                                     pos10 = pos
                                     if pos10 < pos11:
                                         mode10 = mode11
@@ -453,7 +453,7 @@ def _tokenize(text, pos):
                             pos16 = match8.end()
                         else:
                             mode16 = False
-                            value16 = 140500470594976
+                            value16 = 140464556112528
                             pos16 = pos
                         if mode16:
                             mode15 = 1
@@ -476,7 +476,7 @@ def _tokenize(text, pos):
                                 pos18 = match9.end()
                             else:
                                 mode18 = False
-                                value18 = 140500470595480
+                                value18 = 140464556113032
                                 pos18 = pos
                             if mode18:
                                 mode17 = 1
@@ -499,7 +499,7 @@ def _tokenize(text, pos):
                                     pos20 = match10.end()
                                 else:
                                     mode20 = False
-                                    value20 = 140500470640824
+                                    value20 = 140464556113256
                                     pos20 = pos
                                 if mode20:
                                     mode19 = 1
@@ -522,7 +522,7 @@ def _tokenize(text, pos):
                                         pos22 = match11.end()
                                     else:
                                         mode22 = False
-                                        value22 = 140500470640992
+                                        value22 = 140464556113368
                                         pos22 = pos
                                     if mode22:
                                         mode21 = 1
@@ -545,7 +545,7 @@ def _tokenize(text, pos):
                                             pos24 = match12.end()
                                         else:
                                             mode24 = False
-                                            value24 = 140500470641328
+                                            value24 = 140464556113480
                                             pos24 = pos
                                         if mode24:
                                             mode23 = 2
@@ -562,7 +562,7 @@ def _tokenize(text, pos):
                                         else:
                                             pos = backtrack1
                                             mode2 = False
-                                            value2 = 140500470594640
+                                            value2 = 140464556112192
                                             pos2 = pos
                                             if pos2 < pos3:
                                                 mode2 = mode3
@@ -633,7 +633,7 @@ def _parse_Sep1(text, pos):
             value29 = ';'
             if pos >= len(text):
                 mode28 = False
-                value28 = 140500470641944
+                value28 = 140464556155344
                 pos28 = pos
             else:
                 token1 = text[pos]
@@ -643,7 +643,7 @@ def _parse_Sep1(text, pos):
                     pos28 = pos + 1
                 else:
                     mode28 = False
-                    value28 = 140500470641944
+                    value28 = 140464556155344
                     pos28 = pos
             if mode28 or mode28 is None:
                 mode26 = mode28
@@ -652,7 +652,7 @@ def _parse_Sep1(text, pos):
             else:
                 pos = backtrack3
                 mode26 = False
-                value26 = 140500470720720
+                value26 = 140464556226488
                 pos26 = pos
                 if pos26 < pos27:
                     mode26 = mode27
@@ -673,7 +673,7 @@ def _parse_Sep1(text, pos):
         pos = pos26
     if not buf2:
         mode25 = False
-        value25 = 140500470720888
+        value25 = 140464556226432
         pos25 = pos
     else:
         mode25 = 1
@@ -710,7 +710,7 @@ def _parse_Comma1(text, pos):
         value35 = ','
         if pos >= len(text):
             mode31 = False
-            value32 = 140500470643064
+            value32 = 140464556156408
             pos31 = pos
         else:
             token2 = text[pos]
@@ -720,7 +720,7 @@ def _parse_Comma1(text, pos):
                 pos31 = pos + 1
             else:
                 mode31 = False
-                value32 = 140500470643064
+                value32 = 140464556156408
                 pos31 = pos
     if not mode31:
         mode30 = mode31
@@ -764,7 +764,7 @@ def _parse_RuleDef1(text, pos):
         value43 = '='
         if pos >= len(text):
             mode40 = False
-            value42 = 140500470643568
+            value42 = 140464556156800
             pos40 = pos
         else:
             token3 = text[pos]
@@ -774,7 +774,7 @@ def _parse_RuleDef1(text, pos):
                 pos40 = pos + 1
             else:
                 mode40 = False
-                value42 = 140500470643568
+                value42 = 140464556156800
                 pos40 = pos
         if mode40 or mode40 is None:
             mode39 = mode40
@@ -785,7 +785,7 @@ def _parse_RuleDef1(text, pos):
             value45 = ':'
             if pos >= len(text):
                 mode41 = False
-                value44 = 140500470643512
+                value44 = 140464556156744
                 pos41 = pos
             else:
                 token4 = text[pos]
@@ -795,7 +795,7 @@ def _parse_RuleDef1(text, pos):
                     pos41 = pos + 1
                 else:
                     mode41 = False
-                    value44 = 140500470643512
+                    value44 = 140464556156744
                     pos41 = pos
             if mode41 or mode41 is None:
                 mode39 = mode41
@@ -804,7 +804,7 @@ def _parse_RuleDef1(text, pos):
             else:
                 pos = backtrack4
                 mode39 = False
-                value41 = 140500472499448
+                value41 = 140464555887528
                 pos39 = pos
                 if pos39 < pos40:
                     mode39 = mode40
@@ -845,7 +845,7 @@ def _parse_ClassDef1(text, pos):
     value50 = 'class'
     if pos >= len(text):
         mode45 = False
-        value49 = 140500470644688
+        value49 = 140464556157640
         pos45 = pos
     else:
         token5 = text[pos]
@@ -855,7 +855,7 @@ def _parse_ClassDef1(text, pos):
             pos45 = pos + 1
         else:
             mode45 = False
-            value49 = 140500470644688
+            value49 = 140464556157640
             pos45 = pos
     if not mode45:
         mode44 = mode45
@@ -892,7 +892,7 @@ def _parse_ClassDef1(text, pos):
             value57 = '{'
             if pos >= len(text):
                 mode49 = False
-                value54 = 140500470658048
+                value54 = 140464556158872
                 pos49 = pos
             else:
                 token6 = text[pos]
@@ -902,7 +902,7 @@ def _parse_ClassDef1(text, pos):
                     pos49 = pos + 1
                 else:
                     mode49 = False
-                    value54 = 140500470658048
+                    value54 = 140464556158872
                     pos49 = pos
         if not mode49:
             mode48 = mode49
@@ -969,7 +969,7 @@ def _parse_ClassDef1(text, pos):
             value63 = '}'
             if pos >= len(text):
                 mode56 = False
-                value62 = 140500470658832
+                value62 = 140464556157976
                 pos56 = pos
             else:
                 token7 = text[pos]
@@ -979,7 +979,7 @@ def _parse_ClassDef1(text, pos):
                     pos56 = pos + 1
                 else:
                     mode56 = False
-                    value62 = 140500470658832
+                    value62 = 140464556157976
                     pos56 = pos
             if mode56:
                 mode46 = 1
@@ -1007,7 +1007,7 @@ def _parse_TokenDef1(text, pos):
     value68 = 'ignore'
     if pos >= len(text):
         mode60 = False
-        value67 = 140500470659448
+        value67 = 140464556164376
         pos60 = pos
     else:
         token8 = text[pos]
@@ -1017,7 +1017,7 @@ def _parse_TokenDef1(text, pos):
             pos60 = pos + 1
         else:
             mode60 = False
-            value67 = 140500470659448
+            value67 = 140464556164376
             pos60 = pos
     if mode60 or mode60 is None:
         mode59 = mode60
@@ -1028,7 +1028,7 @@ def _parse_TokenDef1(text, pos):
         value70 = 'ignored'
         if pos >= len(text):
             mode61 = False
-            value69 = 140500470659672
+            value69 = 140464556164656
             pos61 = pos
         else:
             token9 = text[pos]
@@ -1038,7 +1038,7 @@ def _parse_TokenDef1(text, pos):
                 pos61 = pos + 1
             else:
                 mode61 = False
-                value69 = 140500470659672
+                value69 = 140464556164656
                 pos61 = pos
         if mode61 or mode61 is None:
             mode59 = mode61
@@ -1047,7 +1047,7 @@ def _parse_TokenDef1(text, pos):
         else:
             pos = backtrack6
             mode59 = False
-            value66 = 140500472582328
+            value66 = 140464555888424
             pos59 = pos
             if pos59 < pos60:
                 mode59 = mode60
@@ -1074,7 +1074,7 @@ def _parse_TokenDef1(text, pos):
         value73 = 'token'
         if pos >= len(text):
             mode63 = False
-            value72 = 140500470660344
+            value72 = 140464556165216
             pos63 = pos
         else:
             token10 = text[pos]
@@ -1084,7 +1084,7 @@ def _parse_TokenDef1(text, pos):
                 pos63 = pos + 1
             else:
                 mode63 = False
-                value72 = 140500470660344
+                value72 = 140464556165216
                 pos63 = pos
         if not mode63:
             mode62 = mode63
@@ -1108,7 +1108,7 @@ def _parse_TokenDef1(text, pos):
                 else:
                     pos = backtrack7
                     mode62 = False
-                    value71 = 140500472582496
+                    value71 = 140464555888592
                     pos62 = pos
                     if pos62 < pos64:
                         mode62 = mode64
@@ -1134,7 +1134,7 @@ def _parse_TemplateDef1(text, pos):
     value79 = 'template'
     if pos >= len(text):
         mode68 = False
-        value78 = 140500470665400
+        value78 = 140464556166448
         pos68 = pos
     else:
         token11 = text[pos]
@@ -1144,7 +1144,7 @@ def _parse_TemplateDef1(text, pos):
             pos68 = pos + 1
         else:
             mode68 = False
-            value78 = 140500470665400
+            value78 = 140464556166448
             pos68 = pos
     if not mode68:
         mode67 = mode68
@@ -1181,7 +1181,7 @@ def _parse_TemplateDef1(text, pos):
             value86 = '('
             if pos >= len(text):
                 mode72 = False
-                value83 = 140500470667640
+                value83 = 140464556176104
                 pos72 = pos
             else:
                 token12 = text[pos]
@@ -1191,7 +1191,7 @@ def _parse_TemplateDef1(text, pos):
                     pos72 = pos + 1
                 else:
                     mode72 = False
-                    value83 = 140500470667640
+                    value83 = 140464556176104
                     pos72 = pos
         if not mode72:
             mode71 = mode72
@@ -1304,7 +1304,7 @@ def _parse_TemplateDef1(text, pos):
             value97 = ')'
             if pos >= len(text):
                 mode84 = False
-                value96 = 140500470667752
+                value96 = 140464556166784
                 pos84 = pos
             else:
                 token13 = text[pos]
@@ -1314,7 +1314,7 @@ def _parse_TemplateDef1(text, pos):
                     pos84 = pos + 1
                 else:
                     mode84 = False
-                    value96 = 140500470667752
+                    value96 = 140464556166784
                     pos84 = pos
             if mode84:
                 mode69 = 1
@@ -1353,7 +1353,7 @@ def _parse_TemplateDef1(text, pos):
                 value104 = '='
                 if pos >= len(text):
                     mode90 = False
-                    value103 = 140500470673480
+                    value103 = 140464556177896
                     pos90 = pos
                 else:
                     token14 = text[pos]
@@ -1363,7 +1363,7 @@ def _parse_TemplateDef1(text, pos):
                         pos90 = pos + 1
                     else:
                         mode90 = False
-                        value103 = 140500470673480
+                        value103 = 140464556177896
                         pos90 = pos
                 if mode90 or mode90 is None:
                     mode87 = mode90
@@ -1374,7 +1374,7 @@ def _parse_TemplateDef1(text, pos):
                     value106 = ':'
                     if pos >= len(text):
                         mode91 = False
-                        value105 = 140500470673592
+                        value105 = 140464556178120
                         pos91 = pos
                     else:
                         token15 = text[pos]
@@ -1384,7 +1384,7 @@ def _parse_TemplateDef1(text, pos):
                             pos91 = pos + 1
                         else:
                             mode91 = False
-                            value105 = 140500470673592
+                            value105 = 140464556178120
                             pos91 = pos
                     if mode91 or mode91 is None:
                         mode87 = mode91
@@ -1395,7 +1395,7 @@ def _parse_TemplateDef1(text, pos):
                         value108 = '=>'
                         if pos >= len(text):
                             mode92 = False
-                            value107 = 140500470673760
+                            value107 = 140464556178680
                             pos92 = pos
                         else:
                             token16 = text[pos]
@@ -1405,7 +1405,7 @@ def _parse_TemplateDef1(text, pos):
                                 pos92 = pos + 1
                             else:
                                 mode92 = False
-                                value107 = 140500470673760
+                                value107 = 140464556178680
                                 pos92 = pos
                         if mode92 or mode92 is None:
                             mode87 = mode92
@@ -1414,7 +1414,7 @@ def _parse_TemplateDef1(text, pos):
                         else:
                             pos = backtrack8
                             mode87 = False
-                            value100 = 140500472583560
+                            value100 = 140464555959352
                             pos87 = pos
                             if pos87 < pos90:
                                 mode87 = mode90
@@ -1519,7 +1519,7 @@ def _parse_Stmt1(text, pos):
                         else:
                             pos = backtrack9
                             mode95 = False
-                            value111 = 140500472583896
+                            value111 = 140464555959688
                             pos95 = pos
                             if pos95 < pos96:
                                 mode95 = mode96
@@ -1566,7 +1566,7 @@ def _parse_ListLiteral1(text, pos):
     value124 = '['
     if pos >= len(text):
         mode107 = False
-        value123 = 140500470676224
+        value123 = 140464556184856
         pos107 = pos
     else:
         token17 = text[pos]
@@ -1576,7 +1576,7 @@ def _parse_ListLiteral1(text, pos):
             pos107 = pos + 1
         else:
             mode107 = False
-            value123 = 140500470676224
+            value123 = 140464556184856
             pos107 = pos
     if not mode107:
         mode106 = mode107
@@ -1662,7 +1662,7 @@ def _parse_ListLiteral1(text, pos):
         value133 = ']'
         if pos >= len(text):
             mode115 = False
-            value132 = 140500470677288
+            value132 = 140464556185864
             pos115 = pos
         else:
             token18 = text[pos]
@@ -1672,7 +1672,7 @@ def _parse_ListLiteral1(text, pos):
                 pos115 = pos + 1
             else:
                 mode115 = False
-                value132 = 140500470677288
+                value132 = 140464556185864
                 pos115 = pos
         if mode115:
             mode105 = 1
@@ -1699,7 +1699,7 @@ def _parse_Atom1(text, pos):
     value138 = '('
     if pos >= len(text):
         mode119 = False
-        value137 = 140500470649968
+        value137 = 140464556187488
         pos119 = pos
     else:
         token19 = text[pos]
@@ -1709,7 +1709,7 @@ def _parse_Atom1(text, pos):
             pos119 = pos + 1
         else:
             mode119 = False
-            value137 = 140500470649968
+            value137 = 140464556187488
             pos119 = pos
     if not mode119:
         mode118 = mode119
@@ -1773,7 +1773,7 @@ def _parse_Atom1(text, pos):
         value145 = ')'
         if pos >= len(text):
             mode125 = False
-            value144 = 140500470650024
+            value144 = 140464556187208
             pos125 = pos
         else:
             token20 = text[pos]
@@ -1783,7 +1783,7 @@ def _parse_Atom1(text, pos):
                 pos125 = pos + 1
             else:
                 mode125 = False
-                value144 = 140500470650024
+                value144 = 140464556187208
                 pos125 = pos
         if mode125:
             mode117 = 1
@@ -1835,7 +1835,7 @@ def _parse_Atom1(text, pos):
                         else:
                             pos = backtrack10
                             mode116 = False
-                            value134 = 140500472584624
+                            value134 = 140464555960416
                             pos116 = pos
                             if pos116 < pos117:
                                 mode116 = mode117
@@ -1876,7 +1876,7 @@ def _parse_KeywordArg1(text, pos):
         value156 = '='
         if pos >= len(text):
             mode135 = False
-            value155 = 140500470651144
+            value155 = 140464556201408
             pos135 = pos
         else:
             token21 = text[pos]
@@ -1886,7 +1886,7 @@ def _parse_KeywordArg1(text, pos):
                 pos135 = pos + 1
             else:
                 mode135 = False
-                value155 = 140500470651144
+                value155 = 140464556201408
                 pos135 = pos
         if mode135 or mode135 is None:
             mode134 = mode135
@@ -1897,7 +1897,7 @@ def _parse_KeywordArg1(text, pos):
             value158 = ':'
             if pos >= len(text):
                 mode136 = False
-                value157 = 140500470651312
+                value157 = 140464556201464
                 pos136 = pos
             else:
                 token22 = text[pos]
@@ -1907,7 +1907,7 @@ def _parse_KeywordArg1(text, pos):
                     pos136 = pos + 1
                 else:
                     mode136 = False
-                    value157 = 140500470651312
+                    value157 = 140464556201464
                     pos136 = pos
             if mode136 or mode136 is None:
                 mode134 = mode136
@@ -1916,7 +1916,7 @@ def _parse_KeywordArg1(text, pos):
             else:
                 pos = backtrack11
                 mode134 = False
-                value154 = 140500472585128
+                value154 = 140464555960920
                 pos134 = pos
                 if pos134 < pos135:
                     mode134 = mode135
@@ -1957,7 +1957,7 @@ def _parse_ArgList1(text, pos):
     value164 = '('
     if pos >= len(text):
         mode141 = False
-        value163 = 140500470652656
+        value163 = 140464556202528
         pos141 = pos
     else:
         token23 = text[pos]
@@ -1967,7 +1967,7 @@ def _parse_ArgList1(text, pos):
             pos141 = pos + 1
         else:
             mode141 = False
-            value163 = 140500470652656
+            value163 = 140464556202528
             pos141 = pos
     if not mode141:
         mode140 = mode141
@@ -2013,7 +2013,7 @@ def _parse_ArgList1(text, pos):
                     else:
                         pos = backtrack12
                         mode143 = False
-                        value166 = 140500472585464
+                        value166 = 140464555961256
                         pos143 = pos
                         if pos143 < pos146:
                             mode143 = mode146
@@ -2078,7 +2078,7 @@ def _parse_ArgList1(text, pos):
         value175 = ')'
         if pos >= len(text):
             mode151 = False
-            value174 = 140500470652544
+            value174 = 140464556203424
             pos151 = pos
         else:
             token24 = text[pos]
@@ -2088,7 +2088,7 @@ def _parse_ArgList1(text, pos):
                 pos151 = pos + 1
             else:
                 mode151 = False
-                value174 = 140500470652544
+                value174 = 140464556203424
                 pos151 = pos
         if mode151:
             mode139 = 1
@@ -2136,7 +2136,7 @@ def _parse_Expr1(text, pos):
                 value181 = '|'
                 if pos >= len(text):
                     mode154 = False
-                    value178 = 140500470719880
+                    value178 = 140464556225536
                     pos154 = pos
                 else:
                     token25 = text[pos]
@@ -2146,7 +2146,7 @@ def _parse_Expr1(text, pos):
                         pos154 = pos + 1
                     else:
                         mode154 = False
-                        value178 = 140500470719880
+                        value178 = 140464556225536
                         pos154 = pos
             if not mode154:
                 mode153 = mode154
@@ -2208,7 +2208,7 @@ def _parse_Expr1(text, pos):
                     value190 = '<<'
                     if pos >= len(text):
                         mode164 = False
-                        value189 = 140500470709552
+                        value189 = 140464556218184
                         pos164 = pos
                     else:
                         token26 = text[pos]
@@ -2218,7 +2218,7 @@ def _parse_Expr1(text, pos):
                             pos164 = pos + 1
                         else:
                             mode164 = False
-                            value189 = 140500470709552
+                            value189 = 140464556218184
                             pos164 = pos
                     if mode164 or mode164 is None:
                         mode161 = mode164
@@ -2229,7 +2229,7 @@ def _parse_Expr1(text, pos):
                         value192 = '>>'
                         if pos >= len(text):
                             mode165 = False
-                            value191 = 140500470718648
+                            value191 = 140464556218464
                             pos165 = pos
                         else:
                             token27 = text[pos]
@@ -2239,7 +2239,7 @@ def _parse_Expr1(text, pos):
                                 pos165 = pos + 1
                             else:
                                 mode165 = False
-                                value191 = 140500470718648
+                                value191 = 140464556218464
                                 pos165 = pos
                         if mode165 or mode165 is None:
                             mode161 = mode165
@@ -2250,7 +2250,7 @@ def _parse_Expr1(text, pos):
                             value194 = '<<!'
                             if pos >= len(text):
                                 mode166 = False
-                                value193 = 140500470718760
+                                value193 = 140464556219248
                                 pos166 = pos
                             else:
                                 token28 = text[pos]
@@ -2260,7 +2260,7 @@ def _parse_Expr1(text, pos):
                                     pos166 = pos + 1
                                 else:
                                     mode166 = False
-                                    value193 = 140500470718760
+                                    value193 = 140464556219248
                                     pos166 = pos
                             if mode166 or mode166 is None:
                                 mode161 = mode166
@@ -2271,7 +2271,7 @@ def _parse_Expr1(text, pos):
                                 value196 = '!>>'
                                 if pos >= len(text):
                                     mode167 = False
-                                    value195 = 140500470718704
+                                    value195 = 140464556217792
                                     pos167 = pos
                                 else:
                                     token29 = text[pos]
@@ -2281,7 +2281,7 @@ def _parse_Expr1(text, pos):
                                         pos167 = pos + 1
                                     else:
                                         mode167 = False
-                                        value195 = 140500470718704
+                                        value195 = 140464556217792
                                         pos167 = pos
                                 if mode167 or mode167 is None:
                                     mode161 = mode167
@@ -2289,25 +2289,75 @@ def _parse_Expr1(text, pos):
                                     pos161 = pos167
                                 else:
                                     pos = backtrack13
-                                    mode161 = False
-                                    value186 = 140500472574304
-                                    pos161 = pos
-                                    if pos161 < pos164:
-                                        mode161 = mode164
-                                        value186 = value189
-                                        pos161 = pos164
-                                    if pos161 < pos165:
-                                        mode161 = mode165
-                                        value186 = value191
-                                        pos161 = pos165
-                                    if pos161 < pos166:
-                                        mode161 = mode166
-                                        value186 = value193
-                                        pos161 = pos166
-                                    if pos161 < pos167:
-                                        mode161 = mode167
-                                        value186 = value195
-                                        pos161 = pos167
+                                    value198 = '<|'
+                                    if pos >= len(text):
+                                        mode168 = False
+                                        value197 = 140464556217624
+                                        pos168 = pos
+                                    else:
+                                        token30 = text[pos]
+                                        if token30.value == value198:
+                                            mode168 = 1
+                                            value197 = token30
+                                            pos168 = pos + 1
+                                        else:
+                                            mode168 = False
+                                            value197 = 140464556217624
+                                            pos168 = pos
+                                    if mode168 or mode168 is None:
+                                        mode161 = mode168
+                                        value186 = value197
+                                        pos161 = pos168
+                                    else:
+                                        pos = backtrack13
+                                        value200 = '|>'
+                                        if pos >= len(text):
+                                            mode169 = False
+                                            value199 = 140464556217568
+                                            pos169 = pos
+                                        else:
+                                            token31 = text[pos]
+                                            if token31.value == value200:
+                                                mode169 = 1
+                                                value199 = token31
+                                                pos169 = pos + 1
+                                            else:
+                                                mode169 = False
+                                                value199 = 140464556217568
+                                                pos169 = pos
+                                        if mode169 or mode169 is None:
+                                            mode161 = mode169
+                                            value186 = value199
+                                            pos161 = pos169
+                                        else:
+                                            pos = backtrack13
+                                            mode161 = False
+                                            value186 = 140464555962320
+                                            pos161 = pos
+                                            if pos161 < pos164:
+                                                mode161 = mode164
+                                                value186 = value189
+                                                pos161 = pos164
+                                            if pos161 < pos165:
+                                                mode161 = mode165
+                                                value186 = value191
+                                                pos161 = pos165
+                                            if pos161 < pos166:
+                                                mode161 = mode166
+                                                value186 = value193
+                                                pos161 = pos166
+                                            if pos161 < pos167:
+                                                mode161 = mode167
+                                                value186 = value195
+                                                pos161 = pos167
+                                            if pos161 < pos168:
+                                                mode161 = mode168
+                                                value186 = value197
+                                                pos161 = pos168
+                                            if pos161 < pos169:
+                                                mode161 = mode169
+                                                value186 = value199
+                                                pos161 = pos169
                 if not mode161:
                     mode160 = mode161
                     value185 = value186
@@ -2315,26 +2365,26 @@ def _parse_Expr1(text, pos):
                 else:
                     pos = pos161
                     while True:
-                        mode169, value198, pos169 = yield (3, _parse_Newline1, pos)
-                        if mode169:
-                            pos = pos169
+                        mode171, value202, pos171 = yield (3, _parse_Newline1, pos)
+                        if mode171:
+                            pos = pos171
                         else:
-                            if mode169 is None:
-                                mode168 = mode169
-                                value197 = value198
-                                pos168 = pos169
+                            if mode171 is None:
+                                mode170 = mode171
+                                value201 = value202
+                                pos170 = pos171
                             break
-                    mode168 = 1
-                    value197 = None
-                    pos168 = pos
-                    if mode168:
+                    mode170 = 1
+                    value201 = None
+                    pos170 = pos
+                    if mode170:
                         mode160 = 1
                         value185 = value186
-                        pos160 = pos168
+                        pos160 = pos170
                     else:
-                        mode160 = mode168
-                        value185 = value197
-                        pos160 = pos168
+                        mode160 = mode170
+                        value185 = value201
+                        pos160 = pos170
                 if not mode160:
                     if mode160 is None:
                         mode159 = mode160
@@ -2346,301 +2396,276 @@ def _parse_Expr1(text, pos):
             while True:
                 if not is_first3:
                     while True:
-                        mode174, value203, pos174 = yield (3, _parse_Newline1, pos)
-                        if mode174:
-                            pos = pos174
+                        mode176, value207, pos176 = yield (3, _parse_Newline1, pos)
+                        if mode176:
+                            pos = pos176
                         else:
-                            if mode174 is None:
-                                mode173 = mode174
-                                value202 = value203
-                                pos173 = pos174
+                            if mode176 is None:
+                                mode175 = mode176
+                                value206 = value207
+                                pos175 = pos176
                             break
-                    mode173 = 1
-                    value202 = None
-                    pos173 = pos
-                    if not mode173:
-                        mode172 = mode173
-                        value201 = value202
-                        pos172 = pos173
+                    mode175 = 1
+                    value206 = None
+                    pos175 = pos
+                    if not mode175:
+                        mode174 = mode175
+                        value205 = value206
+                        pos174 = pos175
                     else:
-                        pos = pos173
+                        pos = pos175
                         backtrack14 = pos
-                        value205 = '/'
+                        value209 = '/'
                         if pos >= len(text):
-                            mode175 = False
-                            value204 = 140500470707592
-                            pos175 = pos
+                            mode177 = False
+                            value208 = 140464556216560
+                            pos177 = pos
                         else:
-                            token30 = text[pos]
-                            if token30.value == value205:
-                                mode175 = 1
-                                value204 = token30
-                                pos175 = pos + 1
+                            token32 = text[pos]
+                            if token32.value == value209:
+                                mode177 = 1
+                                value208 = token32
+                                pos177 = pos + 1
                             else:
-                                mode175 = False
-                                value204 = 140500470707592
-                                pos175 = pos
-                        if mode175 or mode175 is None:
-                            mode172 = mode175
-                            value201 = value204
-                            pos172 = pos175
+                                mode177 = False
+                                value208 = 140464556216560
+                                pos177 = pos
+                        if mode177 or mode177 is None:
+                            mode174 = mode177
+                            value205 = value208
+                            pos174 = pos177
                         else:
                             pos = backtrack14
-                            value207 = '//'
+                            value211 = '//'
                             if pos >= len(text):
-                                mode176 = False
-                                value206 = 140500470707928
-                                pos176 = pos
+                                mode178 = False
+                                value210 = 140464556217120
+                                pos178 = pos
                             else:
-                                token31 = text[pos]
-                                if token31.value == value207:
-                                    mode176 = 1
-                                    value206 = token31
-                                    pos176 = pos + 1
+                                token33 = text[pos]
+                                if token33.value == value211:
+                                    mode178 = 1
+                                    value210 = token33
+                                    pos178 = pos + 1
                                 else:
-                                    mode176 = False
-                                    value206 = 140500470707928
-                                    pos176 = pos
-                            if mode176 or mode176 is None:
-                                mode172 = mode176
-                                value201 = value206
-                                pos172 = pos176
+                                    mode178 = False
+                                    value210 = 140464556217120
+                                    pos178 = pos
+                            if mode178 or mode178 is None:
+                                mode174 = mode178
+                                value205 = value210
+                                pos174 = pos178
                             else:
                                 pos = backtrack14
-                                value209 = '*'
-                                if pos >= len(text):
-                                    mode177 = False
-                                    value208 = 140500470707424
-                                    pos177 = pos
-                                else:
-                                    token32 = text[pos]
-                                    if token32.value == value209:
-                                        mode177 = 1
-                                        value208 = token32
-                                        pos177 = pos + 1
-                                    else:
-                                        mode177 = False
-                                        value208 = 140500470707424
-                                        pos177 = pos
-                                if mode177 or mode177 is None:
-                                    mode172 = mode177
-                                    value201 = value208
-                                    pos172 = pos177
-                                else:
-                                    pos = backtrack14
-                                    mode172 = False
-                                    value201 = 140500472586192
-                                    pos172 = pos
-                                    if pos172 < pos175:
-                                        mode172 = mode175
-                                        value201 = value204
-                                        pos172 = pos175
-                                    if pos172 < pos176:
-                                        mode172 = mode176
-                                        value201 = value206
-                                        pos172 = pos176
-                                    if pos172 < pos177:
-                                        mode172 = mode177
-                                        value201 = value208
-                                        pos172 = pos177
-                    if not mode172:
-                        mode171 = mode172
-                        value200 = value201
-                        pos171 = pos172
+                                mode174 = False
+                                value205 = 140464555961984
+                                pos174 = pos
+                                if pos174 < pos177:
+                                    mode174 = mode177
+                                    value205 = value208
+                                    pos174 = pos177
+                                if pos174 < pos178:
+                                    mode174 = mode178
+                                    value205 = value210
+                                    pos174 = pos178
+                    if not mode174:
+                        mode173 = mode174
+                        value204 = value205
+                        pos173 = pos174
                     else:
-                        pos = pos172
+                        pos = pos174
                         while True:
-                            mode179, value211, pos179 = yield (3, _parse_Newline1, pos)
-                            if mode179:
-                                pos = pos179
+                            mode180, value213, pos180 = yield (3, _parse_Newline1, pos)
+                            if mode180:
+                                pos = pos180
                             else:
-                                if mode179 is None:
-                                    mode178 = mode179
-                                    value210 = value211
-                                    pos178 = pos179
+                                if mode180 is None:
+                                    mode179 = mode180
+                                    value212 = value213
+                                    pos179 = pos180
                                 break
-                        mode178 = 1
-                        value210 = None
-                        pos178 = pos
-                        if mode178:
-                            mode171 = 1
-                            value200 = value201
-                            pos171 = pos178
+                        mode179 = 1
+                        value212 = None
+                        pos179 = pos
+                        if mode179:
+                            mode173 = 1
+                            value204 = value205
+                            pos173 = pos179
                         else:
-                            mode171 = mode178
-                            value200 = value210
-                            pos171 = pos178
-                    if not mode171:
-                        if mode171 is None:
-                            mode170 = mode171
-                            value199 = value200
-                            pos170 = pos171
+                            mode173 = mode179
+                            value204 = value212
+                            pos173 = pos179
+                    if not mode173:
+                        if mode173 is None:
+                            mode172 = mode173
+                            value203 = value204
+                            pos172 = pos173
                         break
-                    pos = pos171
-                mode182, value214, pos182 = yield (3, _parse_Atom1, pos)
+                    pos = pos173
+                mode183, value216, pos183 = yield (3, _parse_Atom1, pos)
+                mode182 = mode183
+                value215 = value216
+                pos182 = pos183
+                if mode183:
+                    pos = pos183
+                    while True:
+                        mode184, value217, pos184 = yield (3, _parse_ArgList1, pos)
+                        if not mode184:
+                            if mode184 is None:
+                                mode182 = mode184
+                                value215 = value217
+                                pos182 = pos184
+                            else:
+                                pos182 = pos
+                            break
+                        pos = pos184
+                        value215 = Postfix(value215, value217)
                 mode181 = mode182
-                value213 = value214
+                value214 = value215
                 pos181 = pos182
                 if mode182:
                     pos = pos182
                     while True:
-                        mode183, value215, pos183 = yield (3, _parse_ArgList1, pos)
-                        if not mode183:
-                            if mode183 is None:
-                                mode181 = mode183
-                                value213 = value215
-                                pos181 = pos183
+                        backtrack15 = pos
+                        value220 = '?'
+                        if pos >= len(text):
+                            mode186 = False
+                            value219 = 140464556206512
+                            pos186 = pos
+                        else:
+                            token34 = text[pos]
+                            if token34.value == value220:
+                                mode186 = 1
+                                value219 = token34
+                                pos186 = pos + 1
+                            else:
+                                mode186 = False
+                                value219 = 140464556206512
+                                pos186 = pos
+                        if mode186 or mode186 is None:
+                            mode185 = mode186
+                            value218 = value219
+                            pos185 = pos186
+                        else:
+                            pos = backtrack15
+                            value222 = '*'
+                            if pos >= len(text):
+                                mode187 = False
+                                value221 = 140464556206904
+                                pos187 = pos
+                            else:
+                                token35 = text[pos]
+                                if token35.value == value222:
+                                    mode187 = 1
+                                    value221 = token35
+                                    pos187 = pos + 1
+                                else:
+                                    mode187 = False
+                                    value221 = 140464556206904
+                                    pos187 = pos
+                            if mode187 or mode187 is None:
+                                mode185 = mode187
+                                value218 = value221
+                                pos185 = pos187
+                            else:
+                                pos = backtrack15
+                                value224 = '+'
+                                if pos >= len(text):
+                                    mode188 = False
+                                    value223 = 140464556206456
+                                    pos188 = pos
+                                else:
+                                    token36 = text[pos]
+                                    if token36.value == value224:
+                                        mode188 = 1
+                                        value223 = token36
+                                        pos188 = pos + 1
+                                    else:
+                                        mode188 = False
+                                        value223 = 140464556206456
+                                        pos188 = pos
+                                if mode188 or mode188 is None:
+                                    mode185 = mode188
+                                    value218 = value223
+                                    pos185 = pos188
+                                else:
+                                    pos = backtrack15
+                                    value226 = '!'
+                                    if pos >= len(text):
+                                        mode189 = False
+                                        value225 = 140464556206960
+                                        pos189 = pos
+                                    else:
+                                        token37 = text[pos]
+                                        if token37.value == value226:
+                                            mode189 = 1
+                                            value225 = token37
+                                            pos189 = pos + 1
+                                        else:
+                                            mode189 = False
+                                            value225 = 140464556206960
+                                            pos189 = pos
+                                    if mode189 or mode189 is None:
+                                        mode185 = mode189
+                                        value218 = value225
+                                        pos185 = pos189
+                                    else:
+                                        pos = backtrack15
+                                        mode185 = False
+                                        value218 = 140464555961816
+                                        pos185 = pos
+                                        if pos185 < pos186:
+                                            mode185 = mode186
+                                            value218 = value219
+                                            pos185 = pos186
+                                        if pos185 < pos187:
+                                            mode185 = mode187
+                                            value218 = value221
+                                            pos185 = pos187
+                                        if pos185 < pos188:
+                                            mode185 = mode188
+                                            value218 = value223
+                                            pos185 = pos188
+                                        if pos185 < pos189:
+                                            mode185 = mode189
+                                            value218 = value225
+                                            pos185 = pos189
+                        if not mode185:
+                            if mode185 is None:
+                                mode181 = mode185
+                                value214 = value218
+                                pos181 = pos185
                             else:
                                 pos181 = pos
                             break
-                        pos = pos183
-                        value213 = Postfix(value213, value215)
-                mode180 = mode181
-                value212 = value213
-                pos180 = pos181
-                if mode181:
-                    pos = pos181
-                    while True:
-                        backtrack15 = pos
-                        value218 = '?'
-                        if pos >= len(text):
-                            mode185 = False
-                            value217 = 140500470701528
-                            pos185 = pos
-                        else:
-                            token33 = text[pos]
-                            if token33.value == value218:
-                                mode185 = 1
-                                value217 = token33
-                                pos185 = pos + 1
-                            else:
-                                mode185 = False
-                                value217 = 140500470701528
-                                pos185 = pos
-                        if mode185 or mode185 is None:
-                            mode184 = mode185
-                            value216 = value217
-                            pos184 = pos185
-                        else:
-                            pos = backtrack15
-                            value220 = '*'
-                            if pos >= len(text):
-                                mode186 = False
-                                value219 = 140500470701640
-                                pos186 = pos
-                            else:
-                                token34 = text[pos]
-                                if token34.value == value220:
-                                    mode186 = 1
-                                    value219 = token34
-                                    pos186 = pos + 1
-                                else:
-                                    mode186 = False
-                                    value219 = 140500470701640
-                                    pos186 = pos
-                            if mode186 or mode186 is None:
-                                mode184 = mode186
-                                value216 = value219
-                                pos184 = pos186
-                            else:
-                                pos = backtrack15
-                                value222 = '+'
-                                if pos >= len(text):
-                                    mode187 = False
-                                    value221 = 140500470701416
-                                    pos187 = pos
-                                else:
-                                    token35 = text[pos]
-                                    if token35.value == value222:
-                                        mode187 = 1
-                                        value221 = token35
-                                        pos187 = pos + 1
-                                    else:
-                                        mode187 = False
-                                        value221 = 140500470701416
-                                        pos187 = pos
-                                if mode187 or mode187 is None:
-                                    mode184 = mode187
-                                    value216 = value221
-                                    pos184 = pos187
-                                else:
-                                    pos = backtrack15
-                                    value224 = '!'
-                                    if pos >= len(text):
-                                        mode188 = False
-                                        value223 = 140500470701808
-                                        pos188 = pos
-                                    else:
-                                        token36 = text[pos]
-                                        if token36.value == value224:
-                                            mode188 = 1
-                                            value223 = token36
-                                            pos188 = pos + 1
-                                        else:
-                                            mode188 = False
-                                            value223 = 140500470701808
-                                            pos188 = pos
-                                    if mode188 or mode188 is None:
-                                        mode184 = mode188
-                                        value216 = value223
-                                        pos184 = pos188
-                                    else:
-                                        pos = backtrack15
-                                        mode184 = False
-                                        value216 = 140500472586024
-                                        pos184 = pos
-                                        if pos184 < pos185:
-                                            mode184 = mode185
-                                            value216 = value217
-                                            pos184 = pos185
-                                        if pos184 < pos186:
-                                            mode184 = mode186
-                                            value216 = value219
-                                            pos184 = pos186
-                                        if pos184 < pos187:
-                                            mode184 = mode187
-                                            value216 = value221
-                                            pos184 = pos187
-                                        if pos184 < pos188:
-                                            mode184 = mode188
-                                            value216 = value223
-                                            pos184 = pos188
-                        if not mode184:
-                            if mode184 is None:
-                                mode180 = mode184
-                                value212 = value216
-                                pos180 = pos184
-                            else:
-                                pos180 = pos
-                            break
-                        pos = pos184
-                        value212 = Postfix(value212, value216)
-                if not mode180:
-                    if is_first3 or mode180 is None:
-                        mode170 = mode180
-                        value199 = value212
-                        pos170 = pos180
+                        pos = pos185
+                        value214 = Postfix(value214, value218)
+                if not mode181:
+                    if is_first3 or mode181 is None:
+                        mode172 = mode181
+                        value203 = value214
+                        pos172 = pos181
                     break
-                pos = pos170 = pos180
+                pos = pos172 = pos181
                 if is_first3:
                     is_first3 = False
-                    value199 = value212
-                    mode170 = 1
+                    value203 = value214
+                    mode172 = 1
                 else:
-                    value199 = Infix(value199, value200, value212)
-            if not mode170:
-                if is_first2 or mode170 is None:
-                    mode159 = mode170
-                    value184 = value199
-                    pos159 = pos170
+                    value203 = Infix(value203, value204, value214)
+            if not mode172:
+                if is_first2 or mode172 is None:
+                    mode159 = mode172
+                    value184 = value203
+                    pos159 = pos172
                 break
-            pos = pos159 = pos170
+            pos = pos159 = pos172
             if is_first2:
                 is_first2 = False
-                value184 = value199
+                value184 = value203
                 mode159 = 1
             else:
-                value184 = Infix(value184, value185, value199)
+                value184 = Infix(value184, value185, value203)
         if not mode159:
             if is_first1 or mode159 is None:
                 mode152 = mode159
@@ -2659,208 +2684,208 @@ def _parse_Expr1(text, pos):
 
 def _parse_start1(text, pos):
     while True:
-        mode191, value227, pos191 = yield (3, _parse_Newline1, pos)
-        if mode191:
-            pos = pos191
-        else:
-            if mode191 is None:
-                mode190 = mode191
-                value226 = value227
-                pos190 = pos191
-            break
-    mode190 = 1
-    value226 = None
-    pos190 = pos
-    if not mode190:
-        mode189 = mode190
-        value225 = value226
-        pos189 = pos190
-    else:
-        pos = pos190
-        buf7 = []
-        pos189 = pos
-        while True:
-            mode192, value228, pos192 = yield (3, _parse_Stmt1, pos)
-            if not mode192:
-                if mode192 is None:
-                    mode189 = mode192
-                    value225 = value228
-                    pos189 = pos192
-                break
-            buf7.append(value228)
+        mode192, value229, pos192 = yield (3, _parse_Newline1, pos)
+        if mode192:
             pos = pos192
-            mode193, value229, pos193 = yield (3, _parse_Sep1, pos)
+        else:
+            if mode192 is None:
+                mode191 = mode192
+                value228 = value229
+                pos191 = pos192
+            break
+    mode191 = 1
+    value228 = None
+    pos191 = pos
+    if not mode191:
+        mode190 = mode191
+        value227 = value228
+        pos190 = pos191
+    else:
+        pos = pos191
+        buf7 = []
+        pos190 = pos
+        while True:
+            mode193, value230, pos193 = yield (3, _parse_Stmt1, pos)
             if not mode193:
                 if mode193 is None:
-                    mode189 = mode193
-                    value225 = value229
-                    pos189 = pos193
+                    mode190 = mode193
+                    value227 = value230
+                    pos190 = pos193
                 break
+            buf7.append(value230)
             pos = pos193
-        mode189 = 1
-        value225 = buf7
-        pos189 = pos
-    yield (mode189, value225, pos189)
+            mode194, value231, pos194 = yield (3, _parse_Sep1, pos)
+            if not mode194:
+                if mode194 is None:
+                    mode190 = mode194
+                    value227 = value231
+                    pos190 = pos194
+                break
+            pos = pos194
+        mode190 = 1
+        value227 = buf7
+        pos190 = pos
+    yield (mode190, value227, pos190)
     
 
 def _parse_Space1(text, pos):
     if pos < len(text):
-        value231 = text[pos]
-        if isinstance(value231, Space):
-            mode194 = 2
-            value230 = None
-            pos194 = pos + 1
-        else:
-            mode194 = False
-            value230 = 140500475605064
-            pos194 = pos
-    else:
-        mode194 = False
-        value230 = 140500475605064
-        pos194 = pos
-    yield (mode194, value230, pos194)
-    
-
-def _parse_Word1(text, pos):
-    if pos < len(text):
         value233 = text[pos]
-        if isinstance(value233, Word):
-            mode195 = 1
-            value232 = value233
+        if isinstance(value233, Space):
+            mode195 = 2
+            value232 = None
             pos195 = pos + 1
         else:
             mode195 = False
-            value232 = 140500470720048
+            value232 = 140464559226952
             pos195 = pos
     else:
         mode195 = False
-        value232 = 140500470720048
+        value232 = 140464559226952
         pos195 = pos
     yield (mode195, value232, pos195)
     
 
-def _parse_Symbol1(text, pos):
+def _parse_Word1(text, pos):
     if pos < len(text):
         value235 = text[pos]
-        if isinstance(value235, Symbol):
+        if isinstance(value235, Word):
             mode196 = 1
             value234 = value235
             pos196 = pos + 1
         else:
             mode196 = False
-            value234 = 140500470720216
+            value234 = 140464556225648
             pos196 = pos
     else:
         mode196 = False
-        value234 = 140500470720216
+        value234 = 140464556225648
         pos196 = pos
     yield (mode196, value234, pos196)
     
 
-def _parse_StringLiteral1(text, pos):
+def _parse_Symbol1(text, pos):
     if pos < len(text):
         value237 = text[pos]
-        if isinstance(value237, StringLiteral):
+        if isinstance(value237, Symbol):
             mode197 = 1
             value236 = value237
             pos197 = pos + 1
         else:
             mode197 = False
-            value236 = 140500470720440
+            value236 = 140464556225760
             pos197 = pos
     else:
         mode197 = False
-        value236 = 140500470720440
+        value236 = 140464556225760
         pos197 = pos
     yield (mode197, value236, pos197)
     
 
-def _parse_RegexLiteral1(text, pos):
+def _parse_StringLiteral1(text, pos):
     if pos < len(text):
         value239 = text[pos]
-        if isinstance(value239, RegexLiteral):
+        if isinstance(value239, StringLiteral):
             mode198 = 1
             value238 = value239
             pos198 = pos + 1
         else:
             mode198 = False
-            value238 = 140500470720496
+            value238 = 140464556226096
             pos198 = pos
     else:
         mode198 = False
-        value238 = 140500470720496
+        value238 = 140464556226096
         pos198 = pos
     yield (mode198, value238, pos198)
     
 
-def _parse_Newline1(text, pos):
+def _parse_RegexLiteral1(text, pos):
     if pos < len(text):
         value241 = text[pos]
-        if isinstance(value241, Newline):
+        if isinstance(value241, RegexLiteral):
             mode199 = 1
             value240 = value241
             pos199 = pos + 1
         else:
             mode199 = False
-            value240 = 140500470720608
+            value240 = 140464556226152
             pos199 = pos
     else:
         mode199 = False
-        value240 = 140500470720608
+        value240 = 140464556226152
         pos199 = pos
     yield (mode199, value240, pos199)
     
 
-def _parse_PythonSection1(text, pos):
+def _parse_Newline1(text, pos):
     if pos < len(text):
         value243 = text[pos]
-        if isinstance(value243, PythonSection):
+        if isinstance(value243, Newline):
             mode200 = 1
             value242 = value243
             pos200 = pos + 1
         else:
             mode200 = False
-            value242 = 140500470720552
+            value242 = 140464556226208
             pos200 = pos
     else:
         mode200 = False
-        value242 = 140500470720552
+        value242 = 140464556226208
         pos200 = pos
     yield (mode200, value242, pos200)
     
 
-def _parse_PythonExpression1(text, pos):
+def _parse_PythonSection1(text, pos):
     if pos < len(text):
         value245 = text[pos]
-        if isinstance(value245, PythonExpression):
+        if isinstance(value245, PythonSection):
             mode201 = 1
             value244 = value245
             pos201 = pos + 1
         else:
             mode201 = False
-            value244 = 140500470720664
+            value244 = 140464556226320
             pos201 = pos
     else:
         mode201 = False
-        value244 = 140500470720664
+        value244 = 140464556226320
         pos201 = pos
     yield (mode201, value244, pos201)
     
 
-def _parse_Comment1(text, pos):
+def _parse_PythonExpression1(text, pos):
     if pos < len(text):
         value247 = text[pos]
-        if isinstance(value247, Comment):
-            mode202 = 2
-            value246 = None
+        if isinstance(value247, PythonExpression):
+            mode202 = 1
+            value246 = value247
             pos202 = pos + 1
         else:
             mode202 = False
-            value246 = 140500470720776
+            value246 = 140464556226264
             pos202 = pos
     else:
         mode202 = False
-        value246 = 140500470720776
+        value246 = 140464556226264
         pos202 = pos
     yield (mode202, value246, pos202)
+    
+
+def _parse_Comment1(text, pos):
+    if pos < len(text):
+        value249 = text[pos]
+        if isinstance(value249, Comment):
+            mode203 = 2
+            value248 = None
+            pos203 = pos + 1
+        else:
+            mode203 = False
+            value248 = 140464556226376
+            pos203 = pos
+    else:
+        mode203 = False
+        value248 = 140464556226376
+        pos203 = pos
+    yield (mode203, value248, pos203)
     

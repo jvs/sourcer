@@ -66,31 +66,37 @@ class Alt:
 
 
 class Apply:
-    def __init__(self, arg_expr, func_expr):
-        self.arg_expr = arg_expr
-        self.func_expr = func_expr
+    def __init__(self, expr1, expr2, apply_left=False):
+        self.expr1 = expr1
+        self.expr2 = expr2
+        self.apply_left = apply_left
 
     def __repr__(self):
-        return f'Apply({self.arg_expr!r}, {self.func_expr!r})'
+        return f'Apply({self.expr1!r}, {self.expr2!r}, apply_left={self.apply_left!r})'
 
     def _eval(self, env):
-        return Apply(self.arg_expr._eval(env), self.func_expr._eval(env))
+        return Apply(
+            expr1=self.expr1._eval(env),
+            expr2=self.expr2._eval(env),
+            apply_left=self.apply_left,
+        )
 
     def _compile(self, out, target):
-        arg = out.compile(self.arg_expr)
+        item1 = out.compile(self.expr1)
 
-        with out.IF_NOT(out.is_success(arg)):
-            out.copy_result(target, arg)
+        with out.IF_NOT(out.is_success(item1)):
+            out.copy_result(target, item1)
 
         with out.ELSE():
-            out.set('pos', arg.pos)
-            func = out.compile(self.func_expr)
+            out.set('pos', item1.pos)
+            item2 = out.compile(self.expr2)
+            func, arg = (item1, item2) if self.apply_left else (item2, item1)
 
             with out.IF(out.is_success(func)):
-                out.succeed(target, f'{func.value}({arg.value})', func.pos)
+                out.succeed(target, f'{func.value}({arg.value})', item2.pos)
 
             with out.ELSE():
-                out.copy_result(target, func)
+                out.copy_result(target, item2)
 
 
 class Call:
@@ -797,7 +803,7 @@ class PythonExpression:
         return self
 
     def _compile(self, out, target):
-        out.success(target, self.source_code, 'pos')
+        out.succeed(target, self.source_code, 'pos')
 
 
 class PythonSection:

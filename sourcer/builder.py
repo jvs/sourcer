@@ -3,6 +3,7 @@ from collections import defaultdict, namedtuple
 from string import Template as StringTemplate
 import contextlib
 import io
+import textwrap
 import types
 
 from .expressions import *
@@ -47,6 +48,14 @@ def _conv(node):
         # Strip the delimiters.
         return Regex(node.value[2:-1])
 
+    if isinstance(node, meta.PythonExpression):
+        # Strip the backticks.
+        return PythonExpression(node.value[1:-1])
+
+    if isinstance(node, meta.PythonSection):
+        # Strip the backticks and dedent.
+        return PythonSection(textwrap.dedent(node.value[3:-3]))
+
     if isinstance(node, meta.Ref):
         return Ref(node.name)
 
@@ -81,7 +90,8 @@ def _conv(node):
 
     if isinstance(node, meta.Infix):
         classes = {
-            '*': Apply,
+            '|>': lambda a, b: Apply(a, b, apply_left=False),
+            '<|': lambda a, b: Apply(a, b, apply_left=True),
             '/': lambda a, b: Alt(a, b, allow_trailer=True),
             '//': lambda a, b: Alt(a, b, allow_trailer=False),
             '<<': Left,

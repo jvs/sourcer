@@ -103,3 +103,24 @@ def test_many_nested_parentheses():
         count += 1
 
     assert count == depth
+
+
+def test_python_expressions():
+    g = Grammar(r'''
+        ```
+        import ast
+        ```
+
+        Expr = (
+            @/\d+/ |> `int`
+            | @/true/ >> `True`
+            | @/false/ >> `False`
+            | @/null/ >> `None`
+            | @/"([^"\\]|\\.)*"/ |> `ast.literal_eval`
+        )
+        Space = @/\s+/
+
+        Start = Expr / Space
+    ''')
+    result = g.parse(r'12 null 34 false 56 "hello:\n\tworld" 78 true')
+    assert result == [12, None, 34, False, 56, 'hello:\n\tworld', 78, True]
