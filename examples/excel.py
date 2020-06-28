@@ -5,12 +5,12 @@ grammar = Grammar(r'''
     start = Formula
     Formula = "="? >> Expr # << End
 
-    # TODO: Allow "Offset" to be defined outside the token definition.
-    # Offset = `\d+|\[\-?\d+\]`
+    # TODO: Allow "Offset" to be a normal rule.
+    template Offset() => `\d+|\[\-?\d+\]`
 
     token class R1C1Ref {
-        row = "R" >> `\d+|\[\-?\d+\]`
-        col = "C" >> `\d+|\[\-?\d+\]`
+        row = "R" >> Offset()
+        col = "C" >> Offset()
     }
 
     token class A1Ref {
