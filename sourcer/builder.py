@@ -6,6 +6,7 @@ import io
 import types
 
 from .expressions import *
+from . import expressions
 from . import meta
 
 
@@ -57,19 +58,8 @@ def _conv(node):
 
     if isinstance(node, meta.Postfix) and isinstance(node.operator, meta.ArgList):
         left = node.left
-        classes = {
-            'Fail': Fail,
-            'LeftAssoc': LeftAssoc,
-            'OperatorPrecedence': OperatorPrecedence,
-            'Opt': Opt,
-            'Prefix': Prefix,
-            'Postfix': Postfix,
-            'RightAssoc': RightAssoc,
-            'Skip': Skip,
-            'Some': Some,
-        }
-        if isinstance(left, Ref) and left.name in classes:
-            return classes[left.name](*node.operator.args)
+        if isinstance(left, Ref) and hasattr(expressions, left.name):
+            return getattr(expressions, left.name)(*node.operator.args)
         else:
             return Call(left, node.operator.args)
 
