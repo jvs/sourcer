@@ -290,14 +290,6 @@ class ProgramBuilder:
             self('return _run(text, pos, _tokenize)\n')
 
 
-class TokenWrapper:
-    def __init__(self, token_expr):
-        self.token_expr = token_expr
-
-    def _compile(self, out, target):
-        return self.token_expr._compile_for_text(out, target)
-
-
 _program_setup = r'''
 class Node:
     _fields = ()

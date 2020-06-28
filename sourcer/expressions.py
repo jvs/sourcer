@@ -197,11 +197,11 @@ class Drop:
 
         with out.ELSE():
             out.set('pos', item1.pos)
-            item2 = out.compile(self.expr2)
 
             if self.drop_left:
-                out.copy_result(target, item2)
+                out.compile(self.expr2, target)
             else:
+                item2 = out.compile(self.expr2)
                 with out.IF(out.is_success(item2)):
                     out.succeed(target, item1.value, item2.pos)
                 with out.ELSE():
