@@ -65,6 +65,34 @@ class Alt:
             out.set(target.pos, 'pos')
 
 
+class Apply:
+    def __init__(self, arg_expr, func_expr):
+        self.arg_expr = arg_expr
+        self.func_expr = func_expr
+
+    def __repr__(self):
+        return f'Apply({self.arg_expr!r}, {self.func_expr!r})'
+
+    def _eval(self, env):
+        return Apply(self.arg_expr._eval(env), self.func_expr._eval(env))
+
+    def _compile(self, out, target):
+        arg = out.compile(self.arg_expr)
+
+        with out.IF_NOT(out.is_success(arg)):
+            out.copy_result(target, arg)
+
+        with out.ELSE():
+            out.set('pos', arg.pos)
+            func = out.compile(self.func_expr)
+
+            with out.IF(out.is_success(func)):
+                out.succeed(target, f'{func.value}({arg.value})', func.pos)
+
+            with out.ELSE():
+                out.copy_result(target, func)
+
+
 class Call:
     def __init__(self, func, args):
         self.func = func
@@ -573,9 +601,6 @@ def _compile_instance_check(out, target, expr, class_name, is_ignored=False):
         out.fail(target, expr, 'pos')
 
 
-# Operator precedence parsing:
-
-
 class OperatorPrecedence:
     def __init__(self, atom, *rules):
         self.atom = atom
@@ -759,3 +784,28 @@ class Prefix(OperatorPrecedenceRule):
                     out.set(target.mode, out.SUCCESS)
 
                 out('break')
+
+
+class PythonExpression:
+    def __init__(self, source_code):
+        self.source_code = source_code
+
+    def __repr__(self):
+        return f'PythonExpression({self.source_code!r})'
+
+    def _eval(self, env):
+        return self
+
+    def _compile(self, out, target):
+        out.success(target, self.source_code, 'pos')
+
+
+class PythonSection:
+    def __init__(self, source_code):
+        self.source_code = source_code
+
+    def __repr__(self):
+        return f'PythonSection({self.source_code!r})'
+
+    def _eval(self, env):
+        return self

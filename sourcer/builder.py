@@ -81,6 +81,7 @@ def _conv(node):
 
     if isinstance(node, meta.Infix):
         classes = {
+            '*': Apply,
             '/': lambda a, b: Alt(a, b, allow_trailer=True),
             '//': lambda a, b: Alt(a, b, allow_trailer=False),
             '<<': Left,
@@ -222,10 +223,12 @@ class ProgramBuilder:
             self('')
 
     def write_program(self, nodes):
-        tokens, rules, start = [], [], None
+        sections, tokens, rules, start = [], [], [], None
         for node in nodes:
             if isinstance(node, Template):
                 continue
+            elif isinstance(node, (PythonExpression, PythonSection)):
+                sections.append(node.source_code)
             elif isinstance(node, Token):
                 tokens.append(node)
             elif isinstance(node, Class) and node.is_token:
@@ -263,10 +266,16 @@ class ProgramBuilder:
             self.write_rule_function(self.rule_map[rule.name], rule)
 
         result = io.StringIO()
+
         for imp in self.imports:
             result.write('import ')
             result.write(imp)
             result.write('\n')
+
+        for section in sections:
+            result.write(section)
+            result.write('\n')
+
         result.write(self.global_defs.getvalue())
         result.write(
             _main_template.substitute(

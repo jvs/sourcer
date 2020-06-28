@@ -15,6 +15,10 @@ description = r'''
 
     token RegexLiteral = @/\@\/([^\/\\]|\\.)*\//
     token Newline = @/[\r\n][\s]*/
+
+    token PythonSection = @/```.*?```/
+    token PythonExpression = @/`[^`\n]*`/
+
     ignored token Comment = @/#[^\r\n]*/
 
     Sep = Some(Newline | ";")
@@ -45,10 +49,12 @@ description = r'''
         expr: wrap("=" | ":" | "=>") >> Expr
     }
 
-    Def = TokenDef
+    Stmt = TokenDef
         | ClassDef
         | TemplateDef
         | RuleDef
+        | PythonSection
+        | PythonExpression
 
     class Ref {
         name: Word
@@ -63,6 +69,7 @@ description = r'''
         | StringLiteral
         | RegexLiteral
         | ListLiteral
+        | PythonExpression
 
     class KeywordArg {
         name: Name << ("=" | ":")
@@ -77,14 +84,13 @@ description = r'''
         Atom,
         Postfix(ArgList),
         Postfix("?" | "*" | "+" | "!"),
-        LeftAssoc(wrap("/" | "//")),
+        LeftAssoc(wrap("/" | "//" | "*")),
         LeftAssoc(wrap("<<" | ">>" | "<<!" | "!>>")),
         LeftAssoc(wrap("|")),
     )
 
     # TODO: Implement `End`.
-    start = Skip(Newline) >> (Def / Sep) # << End
-
+    start = Skip(Newline) >> (Stmt / Sep) # << End
 '''
 
 grammar = Grammar(description, include_source=True)
