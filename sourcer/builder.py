@@ -106,9 +106,6 @@ def _conv(node):
     if isinstance(node, meta.TemplateDef):
         return Template(node.name, node.params, node.expr)
 
-    if isinstance(node, str):
-        return Literal(node)
-
     # TODO: Consider making an assertion here.
     return node
 
