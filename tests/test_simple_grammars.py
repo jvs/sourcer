@@ -38,9 +38,11 @@ def test_arithmetic_expressions():
     result = g.parse('11 * (22 + 33) - 44 / 55')
     assert result == I(I(11, '*', I(22, '+', 33)), '-', I(44, '/', 55))
 
-    # TODO: Fix right-associative operators:
-    # result = g.parse('12 * 34 ^ 56 ^ 78 - 90')
-    # assert result == I(I(12, '*', I(34, '^', I(56, '^', 78))), '-', 90)
+    result = g.parse('123 ^ 456')
+    assert result == I(123, '^', 456)
+
+    result = g.parse('12 * 34 ^ 56 ^ 78 - 90')
+    assert result == I(I(12, '*', I(34, '^', I(56, '^', 78))), '-', 90)
 
 
 def test_simple_json_grammar():
