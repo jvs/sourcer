@@ -3,7 +3,6 @@ from collections import defaultdict, namedtuple
 from string import Template as StringTemplate
 import contextlib
 import io
-import textwrap
 import types
 
 from .expressions import *
@@ -46,12 +45,10 @@ def _conv(node):
         return Regex(node.value[2:-1])
 
     if isinstance(node, meta.PythonExpression):
-        # Strip the backticks.
-        return PythonExpression(node.value[1:-1])
+        return PythonExpression(node.value)
 
     if isinstance(node, meta.PythonSection):
-        # Strip the backticks and dedent.
-        return PythonSection(textwrap.dedent(node.value[3:-3]))
+        return PythonSection(node.value)
 
     if isinstance(node, meta.Ref):
         return Ref(node.name)

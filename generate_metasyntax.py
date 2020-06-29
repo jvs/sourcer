@@ -5,6 +5,8 @@ import sourcer
 
 
 description = r'''
+    `import textwrap`
+
     ignored Space = @/[ \t]+/
     ignored Comment = @/#[^\r\n]*/
 
@@ -24,11 +26,11 @@ description = r'''
     }
 
     class PythonSection {
-        value: @/(?s)```.*?```/
+        value: @/(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
     }
 
     class PythonExpression {
-        value: @/`[^`\n]*`/
+        value: "`" >> @/[^`]*/ << "`"
     }
 
     Sep = Some(Newline | ";")
