@@ -1,4 +1,3 @@
-from ast import literal_eval
 from collections import defaultdict, namedtuple
 from string import Template as StringTemplate
 import contextlib
@@ -38,7 +37,7 @@ def Grammar(description, name='grammar', include_source=False):
 
 def _conv(node):
     if isinstance(node, meta.StringLiteral):
-        return Literal(literal_eval(node.value))
+        return Literal(node.value)
 
     if isinstance(node, meta.RegexLiteral):
         return Regex(node.value)

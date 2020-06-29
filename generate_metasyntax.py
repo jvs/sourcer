@@ -5,7 +5,10 @@ import sourcer
 
 
 description = r'''
-    `import textwrap`
+    ```
+    import ast
+    import textwrap
+    ```
 
     ignored Space = @/[ \t]+/
     ignored Comment = @/#[^\r\n]*/
@@ -26,7 +29,7 @@ description = r'''
             | @/(?s)('\''([^\\]|\\.)*?'\'')/
             | @/("([^"\\]|\\.)*")/
             | @/('([^'\\]|\\.)*')/
-        )
+        ) |> `ast.literal_eval`
     }
 
     class RegexLiteral {
