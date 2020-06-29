@@ -40,7 +40,7 @@ def _conv(node):
         return StringLiteral(node.value)
 
     if isinstance(node, meta.RegexLiteral):
-        return Regex(node.value)
+        return RegexLiteral(node.value)
 
     if isinstance(node, meta.PythonExpression):
         return PythonExpression(node.value)

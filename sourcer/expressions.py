@@ -346,7 +346,7 @@ class Ref:
         )
 
 
-class Regex:
+class RegexLiteral:
     def __init__(self, pattern):
         if isinstance(pattern, typing.Pattern):
             pattern = pattern.pattern
@@ -355,7 +355,7 @@ class Regex:
         self.pattern = pattern
 
     def __repr__(self):
-        return f'Regex({self.pattern!r})'
+        return f'RegexLiteral({self.pattern!r})'
 
     def _eval(self, env):
         return self
