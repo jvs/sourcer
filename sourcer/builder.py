@@ -270,9 +270,9 @@ class ProgramBuilder:
         if not ignored:
             self.ignored_expr = None
         elif len(ignored) == 1:
-            self.ignored_expr = ignored[0]
+            self.ignored_expr = Skip(ignored[0])
         else:
-            self.ignored_expr = Choice(*ignored)
+            self.ignored_expr = Skip(Choice(*ignored))
 
         self.is_ignoring = False
 
@@ -283,6 +283,13 @@ class ProgramBuilder:
         self.indent = 0
         self.names = defaultdict(int)
         self.rule_map = {x.name: self.reserve(f'_parse_{x.name}') for x in rules}
+
+        if self.ignored_expr is not None:
+            real_name = '_skip_then_start'
+            real_start = Rule(real_name, Right(self.ignored_expr, Ref(start)))
+            self.rule_map[real_name] = real_name
+            rules.append(real_start)
+            start = real_name
 
         if tokens:
             self.has_tokens = True
