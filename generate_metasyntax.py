@@ -5,27 +5,46 @@ import sourcer
 
 
 description = r'''
-    ignored token Space = @/[ \t]+/
-    token Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+    ignored Space = @/[ \t]+/
+    ignored Comment = @/#[^\r\n]*/
 
-    token Symbol = (
-        @/<\||\|>|<<\!|\!>>|<<|>>|=>|\/\/|[=;,:\|\/\*\+\?\!\(\)\[\]\{\}]/
-    )
+    class Word {
+        value: @/[_a-zA-Z][_a-zA-Z0-9]*/
+    }
 
-    token StringLiteral = (
-        @/(?s)("""([^\\]|\\.)*?""")/
-        | @/(?s)('\''([^\\]|\\.)*?'\'')/
-        | @/("([^"\\]|\\.)*")/
-        | @/('([^'\\]|\\.)*')/
-    )
+    class TokenDef {
+        value: Fail("This will be removed soon.")
+    }
 
-    token RegexLiteral = @/\@\/([^\/\\]|\\.)*\//
-    token Newline = @/[\r\n][\s]*/
+    class Symbol {
+        value: Fail("This will be removed soon.")
+    }
 
-    token PythonSection = @/(?s)```.*?```/
-    token PythonExpression = @/`[^`\n]*`/
+    class StringLiteral {
+        value: (
+            @/(?s)("""([^\\]|\\.)*?""")/
+            | @/(?s)('\''([^\\]|\\.)*?'\'')/
+            | @/("([^"\\]|\\.)*")/
+            | @/('([^'\\]|\\.)*')/
+        )
+    }
 
-    ignored token Comment = @/#[^\r\n]*/
+    class RegexLiteral {
+        value: @/\@\/([^\/\\]|\\.)*\//
+    }
+
+    class Newline {
+        value: @/[\r\n][\s]*/
+    }
+
+    class PythonSection {
+        value: @/(?s)```.*?```/
+    }
+
+    class PythonExpression {
+        value: @/`[^`\n]*`/
+    }
+
 
     Sep = Some(Newline | ";")
     Name = Word
@@ -35,7 +54,7 @@ description = r'''
     Comma = wrap(",")
 
     class RuleDef {
-        is_ignored: ("ignore" | "ignored")?
+        is_ignored: ("ignored" | "ignore")?
         name: Name << ("=" | ":")
         expr: Expr
     }
@@ -45,19 +64,13 @@ description = r'''
         fields: wrap("{") >> (RuleDef / Sep) << "}"
     }
 
-    class TokenDef {
-        is_ignored: ("ignore" | "ignored")?
-        child: "token" >> (ClassDef | RuleDef)
-    }
-
     class TemplateDef {
         name: "template" >> Name
         params: wrap("(") >> (wrap(Name) / Comma) << ")"
-        expr: wrap("=" | ":" | "=>") >> Expr
+        expr: wrap("=>" | "=" | ":") >> Expr
     }
 
-    Stmt = TokenDef
-        | ClassDef
+    Stmt = ClassDef
         | TemplateDef
         | RuleDef
         | PythonSection
@@ -91,8 +104,8 @@ description = r'''
         Atom,
         Postfix(ArgList),
         Postfix("?" | "*" | "+" | "!"),
-        LeftAssoc(wrap("/" | "//")),
-        LeftAssoc(wrap("<<" | ">>" | "<<!" | "!>>")),
+        LeftAssoc(wrap("//" | "/")),
+        LeftAssoc(wrap("<<" | ">>")),
         LeftAssoc(wrap("<|" | "|>")),
         LeftAssoc(wrap("|")),
     )
