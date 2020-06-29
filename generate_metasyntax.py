@@ -30,7 +30,7 @@ description = r'''
     }
 
     class PythonExpression {
-        value: "`" >> @/[^`]*/ << "`"
+        value: @/`.*?`/ |> `lambda x: x[1:-1]`
     }
 
     Sep = Some(Newline | ";")
