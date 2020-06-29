@@ -106,8 +106,8 @@ def _conv(node):
     if isinstance(node, meta.TemplateDef):
         return Template(node.name, node.params, node.expr)
 
-    # TODO: Consider making an assertion here.
-    return node
+    # Otherwise, fail if we don't know what to do with this node.
+    raise Exception(f'Unexpected expression: {node!r}')
 
 
 Target = namedtuple('Target', 'mode, value, pos')
