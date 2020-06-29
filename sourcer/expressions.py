@@ -300,31 +300,6 @@ class List:
         out.succeed(target, buf, 'pos')
 
 
-class StringLiteral:
-    def __init__(self, value):
-        if not isinstance(value, str):
-            raise TypeError(f'Expected str. Received: {type(value)}.')
-        self.value = value
-
-    def __repr__(self):
-        return f'Literal({self.value!r})'
-
-    def _eval(self, env):
-        return self
-
-    def _compile(self, out, target):
-        if self.value == '':
-            out.succeed(target, "''", 'pos')
-            return
-
-        value = out.define('value', repr(self.value))
-        end = out.define('end', f'pos + {len(self.value)}')
-        with out.IF(f'text[pos:{end}] == {value}'):
-            out.succeed(target, value, end, skip_ignored=True)
-        with out.ELSE():
-            out.fail(target, self, 'pos')
-
-
 class Opt:
     def __init__(self, expr):
         self.expr = expr
@@ -487,6 +462,31 @@ class Skip:
 
 def Some(expr):
     return List(expr, allow_empty=False)
+
+
+class StringLiteral:
+    def __init__(self, value):
+        if not isinstance(value, str):
+            raise TypeError(f'Expected str. Received: {type(value)}.')
+        self.value = value
+
+    def __repr__(self):
+        return f'Literal({self.value!r})'
+
+    def _eval(self, env):
+        return self
+
+    def _compile(self, out, target):
+        if self.value == '':
+            out.succeed(target, "''", 'pos')
+            return
+
+        value = out.define('value', repr(self.value))
+        end = out.define('end', f'pos + {len(self.value)}')
+        with out.IF(f'text[pos:{end}] == {value}'):
+            out.succeed(target, value, end, skip_ignored=True)
+        with out.ELSE():
+            out.fail(target, self, 'pos')
 
 
 class Template:
