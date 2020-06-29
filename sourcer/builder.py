@@ -232,25 +232,19 @@ class ProgramBuilder:
             self('')
 
     def write_program(self, nodes):
-        sections, tokens, rules, ignored = [], [], [], []
+        sections, rules, ignored = [], [], []
         start = None
         for node in nodes:
             if isinstance(node, Template):
                 continue
             elif isinstance(node, (PythonExpression, PythonSection)):
                 sections.append(node.source_code)
-            elif isinstance(node, Token):
-                tokens.append(node)
-            elif isinstance(node, Class) and node.is_token:
-                tokens.append(node)
             else:
                 rules.append(node)
                 if start is None and node.name.lower() == 'start':
                     start = node.name
                 if node.is_ignored:
                     ignored.append(node)
-
-        rules.extend(tokens)
 
         if start is None:
             names = sorted(x.name for x in rules)
@@ -281,16 +275,6 @@ class ProgramBuilder:
             rules.append(real_start)
             start = real_name
 
-        if tokens:
-            self.has_tokens = True
-            self.write_tokenizer(tokens)
-            tokenize_step = 'text = _run(text, pos, _tokenize)'
-            reset_pos = 'pos = 0'
-        else:
-            self.has_tokens = False
-            tokenize_step = ''
-            reset_pos = ''
-
         for rule in rules:
             self.write_rule_function(self.rule_map[rule.name], rule)
 
@@ -309,23 +293,11 @@ class ProgramBuilder:
         result.write(
             _main_template.substitute(
                 CONTINUE=self.CONTINUE,
-                reset_pos=reset_pos,
                 start=self.rule_map[start],
-                tokenize_step=tokenize_step,
             )
         )
         result.write(self.buf.getvalue())
         return result.getvalue()
-
-    def write_tokenizer(self, tokens):
-        self.is_tokenize = True
-        # TODO: Either do `Left(delegate, End)` or add a catch-all error token.
-        delegate = List(Choice(*tokens))
-        self.write_rule_function('_tokenize', delegate)
-        self.is_tokenize = False
-        self('\ndef tokenize(text, pos=0):')
-        with self.indented():
-            self('return _run(text, pos, _tokenize)\n')
 
 
 _program_setup = r'''
@@ -348,16 +320,6 @@ class Node:
             if field not in kw:
                 kw[field] = getattr(self, field)
         return self.__class__(**kw)
-
-
-class Token(Node):
-    _fields = ('value',)
-
-    def __init__(self, value):
-        self.value = value
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}({self.value!r})'
 
 '''
 
@@ -407,8 +369,6 @@ class Prefix(Node):
 
 
 def parse(text, pos=0):
-    $tokenize_step
-    $reset_pos
     return _run(text, pos, $start)
 
 

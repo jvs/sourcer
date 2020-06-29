@@ -150,22 +150,19 @@ class Choice:
 
 
 class Class:
-    def __init__(self, name, fields, is_token=False, is_ignored=False):
+    def __init__(self, name, fields, is_ignored=False):
         self.name = name
         self.fields = fields
-        self.is_token = is_token
         self.is_ignored = is_ignored
 
     def _replace(self, **kw):
-        for field in ['name', 'fields', 'is_token', 'is_ignored']:
+        for field in ['name', 'fields', 'is_ignored']:
             if field not in kw:
                 kw[field] = getattr(self, field)
         return Class(**kw)
 
     def __repr__(self):
         args = [repr(self.name), repr(self.fields)]
-        if self.is_token:
-            args.append('is_token=True')
         if self.is_ignored:
             args.append('is_ignored=True')
         return f'Class({", ".join(args)})'
@@ -174,12 +171,6 @@ class Class:
         return self._replace(fields=[x._eval(env) for x in self.fields])
 
     def _compile(self, out, target):
-        if self.is_token and not out.is_tokenize:
-            _compile_instance_check(
-                out, target, self, self.name, is_ignored=self.is_ignored
-            )
-            return
-
         write = out.global_defs.write
         write(f'\nclass {self.name}(Node):\n')
 
@@ -311,6 +302,8 @@ class List:
 
 class Literal:
     def __init__(self, value):
+        if not isinstance(value, str):
+            raise TypeError(f'Expected str. Received: {type(value)}.')
         self.value = value
 
     def __repr__(self):
@@ -325,25 +318,6 @@ class Literal:
             return
 
         value = out.define('value', repr(self.value))
-        if out.has_tokens and not out.is_tokenize:
-            self._compile_for_tokens(out, target, value)
-        else:
-            self._compile_for_text(out, target, value)
-
-    def _compile_for_tokens(self, out, target, value):
-        with out.IF('pos >= len(text)'):
-            out.fail(target, self, 'pos')
-        with out.ELSE():
-            token = out.define('token', 'text[pos]')
-            with out.IF(f'{token}.value == {value}'):
-                out.succeed(target, token, 'pos + 1', skip_ignored=True)
-            with out.ELSE():
-                out.fail(target, self, 'pos')
-
-    def _compile_for_text(self, out, target, value):
-        if not isinstance(self.value, str):
-            out.fail(target, self, 'pos')
-            return
         end = out.define('end', f'pos + {len(self.value)}')
         with out.IF(f'text[pos:{end}] == {value}'):
             out.succeed(target, value, end, skip_ignored=True)
@@ -419,25 +393,6 @@ class Regex:
     def _compile(self, out, target):
         out.add_import('re')
         pattern = out.define_constant('pattern', f're.compile({self.pattern!r})')
-
-        if out.has_tokens and not out.is_tokenize:
-            self._compile_for_tokens(out, target, pattern)
-        else:
-            self._compile_for_text(out, target, pattern)
-
-    def _compile_for_tokens(self, out, target, pattern):
-        with out.IF('pos >= len(text)'):
-            out.fail(target, self, 'pos')
-
-        with out.ELSE():
-            value = out.define('value', 'text[pos]')
-            match = out.define('match', f'{pattern}.fullmatch({value}.value)')
-            with out.IF(match):
-                out.succeed(target, value, 'pos + 1', skip_ignored=True)
-            with out.ELSE():
-                out.fail(target, self, 'pos')
-
-    def _compile_for_text(self, out, target, pattern):
         match = out.define('match', f'{pattern}.match(text, pos)')
 
         with out.IF(match):
@@ -553,60 +508,6 @@ class Template:
 
     def _eval(self, env):
         return Template(self.name, self.params, self.expr._eval(env))
-
-
-class Token:
-    def __init__(self, name, expr, is_ignored=False):
-        self.name = name
-        self.expr = expr
-        self.is_ignored = is_ignored
-
-    def __repr__(self):
-        args = [repr(self.name), repr(self.expr)]
-        if self.is_ignored:
-            args.append('is_ignored=True')
-        return f'Token({", ".join(args)})'
-
-    def _eval(self, env):
-        return Token(self.name, self.expr._eval(env), is_ignored=self.is_ignored)
-
-    def _compile(self, out, target):
-        if out.is_tokenize:
-            self._compile_for_text(out, target)
-        else:
-            _compile_instance_check(
-                out, target, self, self.name, is_ignored=self.is_ignored
-            )
-
-    def _compile_for_text(self, out, target):
-        out.global_defs.write(f'\nclass {self.name}(Token): pass\n')
-        result = out.compile(self.expr)
-
-        with out.IF(out.is_success(result)):
-            if self.is_ignored:
-                out.set_result(target, mode=out.IGNORE, value=None, pos=result.pos)
-            else:
-                out.succeed(target, f'{self.name}({result.value})', result.pos)
-
-        with out.ELSE():
-            out.copy_result(target, result)
-
-
-def _compile_instance_check(out, target, expr, class_name, is_ignored=False):
-    with out.IF('pos < len(text)'):
-        value = out.define('value', 'text[pos]')
-
-        with out.IF(f'isinstance({value}, {class_name})'):
-            if is_ignored:
-                out.set_result(target, mode=out.IGNORE, value=None, pos='pos + 1')
-            else:
-                out.succeed(target, value, 'pos + 1')
-
-        with out.ELSE():
-            out.fail(target, expr, 'pos')
-
-    with out.ELSE():
-        out.fail(target, expr, 'pos')
 
 
 class OperatorPrecedence:
