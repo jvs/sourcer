@@ -11,6 +11,14 @@ description = r'''
     ignored Comment = @/#[^\r\n]*/
 
     Newline = @/[\r\n][\s]*/
+    Sep = Some(Newline | ";")
+    Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+    Comma = wrap(",")
+
+    template wrap(x) => Skip(Newline) >> x << Skip(Newline)
+
+    # TODO: Make sure we don't match the first part of a longer word.
+    template kw(x) => x
 
     class StringLiteral {
         value: (
@@ -22,25 +30,19 @@ description = r'''
     }
 
     class RegexLiteral {
+        # Remove the leading "@/" and the trailing "/".
         value: @/\@\/([^\/\\]|\\.)*\// |> `lambda x: x[2:-1]`
     }
 
     class PythonSection {
+        # Strip the backticks and remove any common indentation.
         value: @/(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
     }
 
     class PythonExpression {
+        # Strip the backticks.
         value: @/`.*?`/ |> `lambda x: x[1:-1]`
     }
-
-    Sep = Some(Newline | ";")
-    Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
-    Comma = wrap(",")
-
-    template wrap(x) => Skip(Newline) >> x << Skip(Newline)
-
-    # TODO: Make sure we don't match the first part of a longer word.
-    template kw(x) => x
 
     class RuleDef {
         is_ignored: kw("ignored" | "ignore")?
