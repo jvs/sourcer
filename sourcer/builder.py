@@ -105,7 +105,8 @@ def _conv(node):
         return KeywordArg(node.name, node.expr)
 
     if isinstance(node, meta.RuleDef):
-        return Rule(node.name, node.expr)
+        is_ignored = node.is_ignored is not None
+        return Rule(node.name, node.expr, is_ignored=is_ignored)
 
     if isinstance(node, meta.ClassDef):
         return Class(node.name, node.fields)
@@ -222,7 +223,16 @@ class ProgramBuilder:
         self.set(target.value, value)
         self.set(target.pos, pos)
 
-    def succeed(self, target, value, pos):
+    def skip_ignored(self, pos):
+        self.set('pos', pos)
+        self.is_ignoring = True
+        result = self.compile(self.ignored_expr)
+        self.is_ignoring = False
+        return result.pos
+
+    def succeed(self, target, value, pos, skip_ignored=False):
+        if skip_ignored and self.ignored_expr and not self.is_ignoring:
+            pos = self.skip_ignored(pos)
         self.set_result(target, mode=self.SUCCESS, value=value, pos=pos)
 
     def write_rule_function(self, name, expr):
@@ -233,7 +243,8 @@ class ProgramBuilder:
             self('')
 
     def write_program(self, nodes):
-        sections, tokens, rules, start = [], [], [], None
+        sections, tokens, rules, ignored = [], [], [], []
+        start = None
         for node in nodes:
             if isinstance(node, Template):
                 continue
@@ -247,12 +258,23 @@ class ProgramBuilder:
                 rules.append(node)
                 if start is None and node.name.lower() == 'start':
                     start = node.name
+                if node.is_ignored:
+                    ignored.append(node)
 
         rules.extend(tokens)
 
         if start is None:
             names = sorted(x.name for x in rules)
             raise Exception(f'Expected "start" rule. Received: {names}')
+
+        if not ignored:
+            self.ignored_expr = None
+        elif len(ignored) == 1:
+            self.ignored_expr = ignored[0]
+        else:
+            self.ignored_expr = Choice(*ignored)
+
+        self.is_ignoring = False
 
         self.buf = io.StringIO()
         self.imports = set()

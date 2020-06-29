@@ -138,7 +138,7 @@ def test_cell_reference_with_sheet():
     result = g.parse('=sheet1!Z$9')
     assert result == g.CellRef(
         book=None,
-        sheet=g.Word('sheet1'),
+        sheet='sheet1',
         cell=g.A1Ref(
             col_modifier=None,
             col='Z',
@@ -151,8 +151,8 @@ def test_cell_reference_with_sheet():
 def test_full_cell_reference_1():
     result = g.parse('=[data.xls]sheet1!$AA$11')
     assert result == g.CellRef(
-        book=g.Word('data.xls'),
-        sheet=g.Word('sheet1'),
+        book='data.xls',
+        sheet='sheet1',
         cell=g.A1Ref(
             col_modifier='$',
             col='AA',
@@ -165,7 +165,7 @@ def test_full_cell_reference_1():
 def test_full_cell_reference_2():
     result = g.parse('=["foo ""bar"" [baz].xls"]D2!E9')
     assert result == g.CellRef(
-        book=g.String('"foo ""bar"" [baz].xls"'),
+        book='foo "bar" [baz].xls',
         sheet=g.A1Ref(col_modifier=None, col='D', row_modifier=None, row='2'),
         cell=g.A1Ref(col_modifier=None, col='E', row_modifier=None, row='9'),
     )
@@ -174,7 +174,7 @@ def test_full_cell_reference_2():
 def test_func_call_with_simple_range():
     result = g.parse('=SUM(B5:B15)')
     assert result == g.FunctionCall(
-        name=g.Word('SUM'),
+        name='SUM',
         arguments=[
             g.Infix(
                 left=g.CellRef(
@@ -185,7 +185,7 @@ def test_func_call_with_simple_range():
                         row_modifier=None, row='5',
                     ),
                 ),
-                operator=g.ShortSymbol(':'),
+                operator=':',
                 right=g.CellRef(
                     book=None,
                     sheet=None,

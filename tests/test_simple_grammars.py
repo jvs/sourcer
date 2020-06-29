@@ -3,24 +3,22 @@ from sourcer import Grammar
 
 def test_simple_words():
     g = Grammar(r'''
-        ignored token Space = @/[ \t]+/
-        token Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+        ignore Space = @/[ \t]+/
+        Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
         start = Word*
     ''')
 
     result = g.parse('foo bar baz')
-    assert result == [g.Word('foo'), g.Word('bar'), g.Word('baz')]
+    assert result == ['foo', 'bar', 'baz']
 
 
 def test_arithmetic_expressions():
     g = Grammar(r'''
-        # Tokens:
-        ignored token Space = @/\s+/
-        token Int = @/\d+/
-        token Symbol = @/[\+\-\*\/\(\)\^]/
+        ignored Space = @/\s+/
 
-        # Expressions:
+        Int = @/\d+/ |> `int`
         Parens = '(' >> Expr << ')'
+
         Expr = OperatorPrecedence(
             Int | Parens,
             Prefix('+' | '-'),
@@ -31,59 +29,48 @@ def test_arithmetic_expressions():
         start = Expr
     ''')
 
+    # Define a short name for the g.Infix constructor.
+    I = g.Infix
+
     result = g.parse('1 + 2')
-    assert result == g.Infix(g.Int('1'), g.Symbol('+'), g.Int('2'))
+    assert result == I(1, '+', 2)
 
     result = g.parse('11 * (22 + 33) - 44 / 55')
-    assert result == g.Infix(
-        g.Infix(
-            g.Int('11'),
-            g.Symbol('*'),
-            g.Infix(
-                g.Int('22'),
-                g.Symbol('+'),
-                g.Int('33'),
-            ),
-        ),
-        g.Symbol('-'),
-        g.Infix(
-            g.Int('44'),
-            g.Symbol('/'),
-            g.Int('55'),
-        ),
-    )
+    assert result == I(I(11, '*', I(22, '+', 33)), '-', I(44, '/', 55))
+
+    # TODO: Fix right-associative operators:
+    # result = g.parse('12 * 34 ^ 56 ^ 78 - 90')
+    # assert result == I(I(12, '*', I(34, '^', I(56, '^', 78))), '-', 90)
 
 
-def test_json_with_tokens():
+def test_simple_json_grammar():
     g = Grammar(r'''
+        `from ast import literal_eval`
+
         start = Value
 
         Value = Object | Array | String | Number | Keyword
 
-        class Object {
-            elements: "{" >> (Member // ",") << "}"
-        }
+        Object = "{" >> (Member // ",") << "}" |> `dict`
 
-        class Member {
-            name: String << ":"
-            value: Value
-        }
+        Member = [String << ":", Value]
 
-        class Array {
-            elements: "[" >> (Value // ",") << "]"
-        }
+        Array = "[" >> (Value // ",") << "]"
 
-        ignored token Space = @/\s+/
-        token Symbol = @/[\{\}\[\],:]/
-        token String = @/"(?:[^\\"]|\\.)*"/
-        token Number = @/-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/
-        token Keyword = @/true|false|null/
+        String = @/"(?:[^\\"]|\\.)*"/ |> `literal_eval`
+
+        Number = @/-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/ |> `float`
+
+        Keyword = "true" >> `True` | "false" >> `False` | "null" >> `None`
+
+        ignored Space = @/\s+/
     ''')
+
     result = g.parse('{"foo": "bar", "baz": true}')
-    assert result == g.Object([
-        g.Member(g.String('"foo"'), g.String('"bar"')),
-        g.Member(g.String('"baz"'), g.Keyword('true')),
-    ])
+    assert result == {'foo': 'bar', 'baz': True}
+
+    result = g.parse('[12, -34, {"56": 78, "foo": null}]')
+    assert result == [12, -34, {'56': 78, 'foo': None}]
 
 
 def test_many_nested_parentheses():

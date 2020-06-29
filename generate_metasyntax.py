@@ -32,6 +32,7 @@ description = r'''
     Comma = wrap(",")
 
     class RuleDef {
+        is_ignored: ("ignore" | "ignored")?
         name: Name << ("=" | ":")
         expr: Expr
     }
@@ -88,7 +89,8 @@ description = r'''
         Postfix(ArgList),
         Postfix("?" | "*" | "+" | "!"),
         LeftAssoc(wrap("/" | "//")),
-        LeftAssoc(wrap("<<" | ">>" | "<<!" | "!>>" | "<|" | "|>")),
+        LeftAssoc(wrap("<<" | ">>" | "<<!" | "!>>")),
+        LeftAssoc(wrap("<|" | "|>")),
         LeftAssoc(wrap("|")),
     )
 

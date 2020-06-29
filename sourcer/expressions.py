@@ -336,7 +336,7 @@ class Literal:
         with out.ELSE():
             token = out.define('token', 'text[pos]')
             with out.IF(f'{token}.value == {value}'):
-                out.succeed(target, token, 'pos + 1')
+                out.succeed(target, token, 'pos + 1', skip_ignored=True)
             with out.ELSE():
                 out.fail(target, self, 'pos')
 
@@ -346,7 +346,7 @@ class Literal:
             return
         end = out.define('end', f'pos + {len(self.value)}')
         with out.IF(f'text[pos:{end}] == {value}'):
-            out.succeed(target, value, end)
+            out.succeed(target, value, end, skip_ignored=True)
         with out.ELSE():
             out.fail(target, self, 'pos')
 
@@ -433,7 +433,7 @@ class Regex:
             value = out.define('value', 'text[pos]')
             match = out.define('match', f'{pattern}.fullmatch({value}.value)')
             with out.IF(match):
-                out.succeed(target, value, 'pos + 1')
+                out.succeed(target, value, 'pos + 1', skip_ignored=True)
             with out.ELSE():
                 out.fail(target, self, 'pos')
 
@@ -441,7 +441,7 @@ class Regex:
         match = out.define('match', f'{pattern}.match(text, pos)')
 
         with out.IF(match):
-            out.succeed(target, f'{match}.group(0)', f'{match}.end()')
+            out.succeed(target, f'{match}.group(0)', f'{match}.end()', skip_ignored=True)
 
         with out.ELSE():
             out.fail(target, self, 'pos')
@@ -452,15 +452,17 @@ def Right(expr1, expr2):
 
 
 class Rule:
-    def __init__(self, name, expr):
+    def __init__(self, name, expr, is_ignored=False):
         self.name = name
         self.expr = expr
+        self.is_ignored = is_ignored
 
     def __repr__(self):
-        return f'Rule({self.name!r}, {self.expr!r})'
+        extra = ', is_ignored=True' if self.is_ignored else ''
+        return f'Rule({self.name!r}, {self.expr!r}{extra})'
 
     def _eval(self, env):
-        return Rule(self.name, self.expr._eval(env))
+        return Rule(self.name, self.expr._eval(env), is_ignored=self.is_ignored)
 
     def _compile(self, out, target):
         return self.expr._compile(out, target)

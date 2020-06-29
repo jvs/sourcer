@@ -2,39 +2,42 @@ from sourcer import Grammar
 
 
 grammar = Grammar(r'''
+    `from ast import literal_eval`
+
     start = Formula
     Formula = "="? >> Expr # << End
 
-    # TODO: Allow "Offset" to be a normal rule.
-    template Offset() => @/\d+|\[\-?\d+\]/
+    ignored Space = @/[ \t\n\r]+/
 
-    token class R1C1Ref {
-        row = "R" >> Offset()
-        col = "C" >> Offset()
+    Offset = @/\d+|\[\-?\d+\]/
+
+    class R1C1Ref {
+        row = "R" >> Offset
+        col = "C" >> Offset
     }
 
-    token class A1Ref {
+    class A1Ref {
         col_modifier = "$"?
         col = @/I[A-V]|[A-H][A-Z]|[A-Z]/
         row_modifier = "$"?
         row = @/\d+/
     }
 
-    ignored token Space = @/[ \t\n\r]+/
-
-    token Word = @/[a-zA-Z_\@][a-zA-Z0-9_\.\@]*/
-    token DateTime = @/\d{4}-\d\d-\d\d \d\d:\d\d:\d\d/
-    token LongNumber = @/[0-9]\.[0-9]+(e|E)(\+|\-)[0-9]+/
-    token ShortNumber = @/[0-9]+(\.[0-9]*)?|\.[0-9]+/
-    token LongSymbol = @/(\!\=)|(\<\>)|(\<\=)|(\>\=)/
-    token ShortSymbol = @/[:\$\!\+\-\*\/<>=\^%&,;\[\]\{\}\(\)]/
-    token String = @/"([^"]|"")*"/
-    token Sheet = @/'([^']|'')*'/
-    token Error = @/\#[a-zA-Z0-9_\/]+(\!|\?)?/
-
-    class Array {
-        elements = "{" >> (ExprList / ";") << "}"
+    class DateTime {
+        string = @/\d{4}-\d\d-\d\d \d\d:\d\d:\d\d/
     }
+
+    Word = @/[a-zA-Z_\@][a-zA-Z0-9_\.\@]*/
+
+    LongNumber = @/[0-9]\.[0-9]+(e|E)(\+|\-)[0-9]+/ |> `literal_eval`
+    ShortNumber = @/[0-9]+(\.[0-9]*)?|\.[0-9]+/ |> `literal_eval`
+
+    String = @/"([^"]|"")*"/ |> `lambda x: x[1:-1].replace('""', '"')`
+    Sheet = @/'([^']|'')*'/ |> `lambda x: x[1:-1].repalce("''", "'")`
+
+    Error = @/\#[a-zA-Z0-9_\/]+(\!|\?)?/ |> `lambda x: {'error': x}`
+
+    Array = "{" >> (ExprList / ";") << "}"
 
     class FunctionCall {
         name = Word
@@ -69,9 +72,9 @@ grammar = Grammar(r'''
         LeftAssoc("*" | "/"),
         LeftAssoc("+" | "-"),
         LeftAssoc("&"),
-        LeftAssoc("=" | "!=" | "<>" | "<" | ">" | ">="),
+        LeftAssoc("=" | "!=" | "<>" | "<=" | ">=" | "<" | ">"),
     )
 
     Expr = Operators(LeftAssoc(","))
     ExprList = Operators(LeftAssoc(Fail("Expected list.")))? / ","
-''', include_source=True)
+''')
