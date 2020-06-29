@@ -175,12 +175,7 @@ class Class:
         write(f'\nclass {self.name}(Node):\n')
 
         names = tuple(x.name for x in self.fields)
-        write(f'    _fields = {names!r}\n')
-
-        # TODO: Consider grabbing the entire matched substring.
-        if 'value' not in names:
-            write(f'    value = {self.name!r}\n')
-        write('\n')
+        write(f'    _fields = {names!r}\n\n')
 
         params = ', '.join(x.name for x in self.fields)
         write(f'    def __init__(self, {params}):\n')

@@ -49,7 +49,7 @@ def _conv(node):
         return PythonSection(node.value)
 
     if isinstance(node, meta.Ref):
-        return Ref(node.name)
+        return Ref(node.value)
 
     if isinstance(node, meta.ListLiteral):
         return Seq(*node.elements)

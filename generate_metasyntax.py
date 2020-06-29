@@ -71,7 +71,7 @@ description = r'''
         | PythonExpression
 
     class Ref {
-        name: Name
+        value: Name
     }
 
     class ListLiteral {
