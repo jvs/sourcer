@@ -36,6 +36,10 @@ coverage: clean image
 black: image
 	$(RUN) black sourcer -S --exclude 'meta.py'
 
+# You can use a file called "wip.py" to run experiments.
+wip:
+	$(RUN) python wip.py
+
 # Upload the library to pypi.
 upload:
 	python setup.py sdist upload -r pypi
