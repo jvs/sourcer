@@ -37,7 +37,7 @@ def Grammar(description, name='grammar', include_source=False):
 
 def _conv(node):
     if isinstance(node, meta.StringLiteral):
-        return Literal(node.value)
+        return StringLiteral(node.value)
 
     if isinstance(node, meta.RegexLiteral):
         return Regex(node.value)

@@ -300,7 +300,7 @@ class List:
         out.succeed(target, buf, 'pos')
 
 
-class Literal:
+class StringLiteral:
     def __init__(self, value):
         if not isinstance(value, str):
             raise TypeError(f'Expected str. Received: {type(value)}.')
