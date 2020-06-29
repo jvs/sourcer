@@ -35,24 +35,26 @@ description = r'''
 
     Sep = Some(Newline | ";")
     Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+    Comma = wrap(",")
 
     template wrap(x) => Skip(Newline) >> x << Skip(Newline)
 
-    Comma = wrap(",")
+    # TODO: Make sure we don't match the first part of a longer word.
+    template kw(x) => x
 
     class RuleDef {
-        is_ignored: ("ignored" | "ignore")?
+        is_ignored: kw("ignored" | "ignore")?
         name: Name << ("=" | ":")
         expr: Expr
     }
 
     class ClassDef {
-        name: "class" >> Name
+        name: kw("class") >> Name
         fields: wrap("{") >> (RuleDef / Sep) << "}"
     }
 
     class TemplateDef {
-        name: "template" >> Name
+        name: kw("template") >> Name
         params: wrap("(") >> (wrap(Name) / Comma) << ")"
         expr: wrap("=>" | "=" | ":") >> Expr
     }
