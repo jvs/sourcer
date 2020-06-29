@@ -418,7 +418,7 @@ class Regex:
 
     def _compile(self, out, target):
         out.add_import('re')
-        pattern = out.define_global('pattern', f're.compile({self.pattern!r})')
+        pattern = out.define_constant('pattern', f're.compile({self.pattern!r})')
 
         if out.has_tokens and not out.is_tokenize:
             self._compile_for_tokens(out, target, pattern)

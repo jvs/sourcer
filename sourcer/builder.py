@@ -170,10 +170,14 @@ class ProgramBuilder:
         self(f'{name} = {value}')
         return name
 
-    def define_global(self, basename, value):
-        name = self.reserve(basename)
-        self.global_defs.write(f'{name} = {value}\n')
-        return name
+    def define_constant(self, basename, value):
+        if value in self.constants:
+            return self.constants[value]
+        else:
+            name = self.reserve(basename)
+            self.global_defs.write(f'{name} = {value}\n')
+            self.constants[value] = name
+            return name
 
     def ELIF(self, condition):
         self(f'elif {condition}:')
@@ -280,6 +284,7 @@ class ProgramBuilder:
         self.imports = set()
         self.global_defs = io.StringIO()
         self.global_defs.write(_program_setup)
+        self.constants = {}
         self.indent = 0
         self.names = defaultdict(int)
         self.rule_map = {x.name: self.reserve(f'_parse_{x.name}') for x in rules}
