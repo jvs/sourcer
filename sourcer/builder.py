@@ -41,8 +41,7 @@ def _conv(node):
         return Literal(literal_eval(node.value))
 
     if isinstance(node, meta.RegexLiteral):
-        # Strip the delimiters.
-        return Regex(node.value[2:-1])
+        return Regex(node.value)
 
     if isinstance(node, meta.PythonExpression):
         return PythonExpression(node.value)

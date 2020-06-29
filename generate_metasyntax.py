@@ -22,7 +22,7 @@ description = r'''
     }
 
     class RegexLiteral {
-        value: @/\@\/([^\/\\]|\\.)*\//
+        value: @/\@\/([^\/\\]|\\.)*\// |> `lambda x: x[2:-1]`
     }
 
     class PythonSection {
