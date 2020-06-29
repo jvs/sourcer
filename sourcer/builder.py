@@ -38,9 +38,6 @@ def Grammar(description, name='grammar', include_source=False):
 
 
 def _conv(node):
-    if isinstance(node, meta.Word):
-        return node.value
-
     if isinstance(node, meta.StringLiteral):
         return Literal(literal_eval(node.value))
 

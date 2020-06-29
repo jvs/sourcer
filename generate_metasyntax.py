@@ -10,10 +10,6 @@ description = r'''
 
     Newline = @/[\r\n][\s]*/
 
-    class Word {
-        value: Fail("This will be removed soon")
-    }
-
     class StringLiteral {
         value: (
             @/(?s)("""([^\\]|\\.)*?""")/
