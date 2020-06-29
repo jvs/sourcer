@@ -8,8 +8,10 @@ description = r'''
     ignored Space = @/[ \t]+/
     ignored Comment = @/#[^\r\n]*/
 
+    Newline = @/[\r\n][\s]*/
+
     class Word {
-        value: @/[_a-zA-Z][_a-zA-Z0-9]*/
+        value: Fail("This will be removed soon")
     }
 
     class StringLiteral {
@@ -25,10 +27,6 @@ description = r'''
         value: @/\@\/([^\/\\]|\\.)*\//
     }
 
-    class Newline {
-        value: @/[\r\n][\s]*/
-    }
-
     class PythonSection {
         value: @/(?s)```.*?```/
     }
@@ -37,9 +35,8 @@ description = r'''
         value: @/`[^`\n]*`/
     }
 
-
     Sep = Some(Newline | ";")
-    Name = Word
+    Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
 
     template wrap(x) => Skip(Newline) >> x << Skip(Newline)
 
@@ -69,7 +66,7 @@ description = r'''
         | PythonExpression
 
     class Ref {
-        name: Word
+        name: Name
     }
 
     class ListLiteral {
