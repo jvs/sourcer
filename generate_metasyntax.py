@@ -12,14 +12,6 @@ description = r'''
         value: @/[_a-zA-Z][_a-zA-Z0-9]*/
     }
 
-    class TokenDef {
-        value: Fail("This will be removed soon.")
-    }
-
-    class Symbol {
-        value: Fail("This will be removed soon.")
-    }
-
     class StringLiteral {
         value: (
             @/(?s)("""([^\\]|\\.)*?""")/

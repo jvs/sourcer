@@ -38,7 +38,7 @@ def Grammar(description, name='grammar', include_source=False):
 
 
 def _conv(node):
-    if isinstance(node, (meta.Word, meta.Symbol)):
+    if isinstance(node, meta.Word):
         return node.value
 
     if isinstance(node, meta.StringLiteral):
@@ -110,14 +110,6 @@ def _conv(node):
 
     if isinstance(node, meta.ClassDef):
         return Class(node.name, node.fields)
-
-    if isinstance(node, meta.TokenDef):
-        is_ignored = node.is_ignored is not None
-        child = node.child
-        if isinstance(child, Class):
-            return child._replace(is_token=True, is_ignored=is_ignored)
-        else:
-            return Token(child.name, child.expr, is_ignored=is_ignored)
 
     if isinstance(node, meta.TemplateDef):
         return Template(node.name, node.params, node.expr)
