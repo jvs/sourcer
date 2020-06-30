@@ -97,8 +97,7 @@ def _conv(node):
         return KeywordArg(node.name, node.expr)
 
     if isinstance(node, meta.RuleDef):
-        is_ignored = node.is_ignored is not None
-        return Rule(node.name, node.expr, is_ignored=is_ignored)
+        return Rule(node.name, node.expr, is_ignored=node.is_ignored)
 
     if isinstance(node, meta.ClassDef):
         return Class(node.name, node.fields)

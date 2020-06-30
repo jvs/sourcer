@@ -48,7 +48,7 @@ description = r'''
     }
 
     class RuleDef {
-        is_ignored: kw("ignored" | "ignore")?
+        is_ignored: kw("ignored" | "ignore")? |> `bool`
         name: Name << ("=" | ":")
         expr: Expr
     }
