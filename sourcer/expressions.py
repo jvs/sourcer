@@ -650,21 +650,27 @@ class Postfix(OperatorPrecedenceRule):
         item = out.compile(self.operand)
         out.copy_result(target, item)
 
-        with out.IF(out.is_success(item)):
-            out.set('pos', item.pos)
-            out('while True:')
-            with out.indented():
-                op = out.compile(self.operators)
+        loop = out.reserve('loop_postfix')
+        end = out.reserve('end_postfix')
 
-                with out.IF_NOT(out.is_success(op)):
-                    with out.IF(out.is_error(op)):
-                        out.copy_result(target, op)
-                    with out.ELSE():
-                        out.set(target.pos, 'pos')
-                    out('break')
+        with out.IF_NOT(out.is_success(item)):
+            out.goto(end)
 
-                out.set('pos', op.pos)
-                out.set(target.value, f'Postfix({target.value}, {op.value})')
+        out.label(loop)
+        op = out.compile(self.operators)
+
+        with out.IF(out.is_success(op)):
+            out.set('pos', op.pos)
+            out.set(target.value, f'Postfix({target.value}, {op.value})')
+            out.goto(loop)
+
+        with out.ELIF(out.is_error(op)):
+            out.copy_result(target, op)
+
+        with out.ELSE():
+            out.set(target.pos, 'pos')
+
+        out.label(end)
 
 
 class Prefix(OperatorPrecedenceRule):
