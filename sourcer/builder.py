@@ -230,8 +230,10 @@ class ProgramBuilder:
         # TODO: Ask the expr if it needs to use goto.
         if not isinstance(expr, (RegexLiteral, StringLiteral)):
             self('\n@with_goto')
+        else:
+            self('\n')
 
-        self(f'\ndef {name}(text, pos):')
+        self(f'def {name}(text, pos):')
         with self.indented():
             result = self.compile(expr)
             self(f'yield ({result.mode}, {result.value}, {result.pos})')
