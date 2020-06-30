@@ -5,7 +5,7 @@
 !*.py
 
 # Don't ignore our dev requirements.
-!requirements-dev.txt
+!requirements*.txt
 
 # And finally, don't ignore our main folders.
 !examples
