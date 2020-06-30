@@ -669,37 +669,40 @@ class Postfix(OperatorPrecedenceRule):
 
 class Prefix(OperatorPrecedenceRule):
     def _compile(self, out, target):
+        loop = out.reserve('loop_prefix')
+        end = out.reserve('end_prefix')
         prev = out.define('prev', None)
-        out('while True:')
-        with out.indented():
-            op = out.compile(self.operators)
 
-            with out.IF(out.is_success(op)):
-                out.set('pos', op.pos)
+        out.label(loop)
+        op = out.compile(self.operators)
 
-                with out.IF(f'{prev} is None'):
-                    out(f'{target.value} = {prev} = Prefix({op.value}, None)')
+        with out.IF(out.is_success(op)):
+            out.set('pos', op.pos)
 
-                with out.ELSE():
-                    value = out.define('value', f'Prefix({op.value}, None)')
-                    out.set(f'{prev}.right', value)
-                    out.set(prev, value)
+            with out.IF(f'{prev} is None'):
+                out(f'{target.value} = {prev} = Prefix({op.value}, None)')
 
             with out.ELSE():
-                with out.IF(out.is_error(op)):
-                    out.copy_result(target, op)
-                    out('break')
+                value = out.define('value', f'Prefix({op.value}, None)')
+                out.set(f'{prev}.right', value)
+                out.set(prev, value)
 
-                item = out.compile(self.operand)
-                with out.IF(f'{prev} is None or not {out.is_success(item)}'):
-                    out.copy_result(target, item)
+            out.goto(loop)
 
-                with out.ELSE():
-                    out.set(f'{prev}.right', item.value)
-                    out.set(target.pos, item.pos)
-                    out.set(target.mode, out.SUCCESS)
+        with out.IF(out.is_error(op)):
+            out.copy_result(target, op)
+            out.goto(end)
 
-                out('break')
+        item = out.compile(self.operand)
+        with out.IF(f'{prev} is None or not {out.is_success(item)}'):
+            out.copy_result(target, item)
+
+        with out.ELSE():
+            out.set(f'{prev}.right', item.value)
+            out.set(target.pos, item.pos)
+            out.set(target.mode, out.SUCCESS)
+
+        out.label(end)
 
 
 class PythonExpression:
