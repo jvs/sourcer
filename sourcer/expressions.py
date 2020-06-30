@@ -420,14 +420,14 @@ class Seq:
         return Seq(*[x._eval(env) for x in self.exprs], constructor=self.constructor,)
 
     def _compile(self, out, target):
+        end = out.reserve('end_sequence')
         items = []
         for expr in self.exprs:
             item = out.compile(expr)
             items.append(item)
             with out.IF_NOT(out.is_success(item)):
                 out.copy_result(target, item)
-            out('else:')
-            out.indent += 1
+                out.goto(end)
             out(f'pos = {item.pos}')
 
         values = ', '.join(x.value for x in items)
@@ -436,6 +436,7 @@ class Seq:
         else:
             value = f'{self.constructor}({values})'
         out.succeed(target, value, 'pos')
+        out.label(end)
 
 
 class Skip:
