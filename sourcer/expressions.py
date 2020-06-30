@@ -450,19 +450,21 @@ class Skip:
         return Skip(self.expr._eval(env))
 
     def _compile(self, out, target):
-        out('while True:')
-        with out.indented():
-            item = out.compile(self.expr)
+        loop = out.reserve('loop_skip')
+        end = out.reserve('end_skip')
 
-            with out.IF(out.is_success(item)):
-                out.set('pos', item.pos)
+        out.label(loop)
+        item = out.compile(self.expr)
 
-            with out.ELSE():
-                with out.IF(out.is_error(item)):
-                    out.copy_result(target, item)
-                out('break')
+        with out.IF(out.is_success(item)):
+            out.set('pos', item.pos)
+            out.goto(loop)
 
-        out.succeed(target, None, 'pos')
+        with out.ELIF(out.is_error(item)):
+            out.copy_result(target, item)
+
+        with out.ELSE():
+            out.succeed(target, None, 'pos')
 
 
 def Some(expr):
