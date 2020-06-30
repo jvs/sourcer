@@ -277,27 +277,31 @@ class List:
 
     def _compile(self, out, target):
         buf = out.define('buf', '[]')
-        out('while True:')
-        with out.indented():
-            item = out.compile(self.expr)
+        loop = out.reserve('loop_list')
+        end = out.reserve('end_list')
 
-            with out.IF_NOT(out.is_success(item)):
-                with out.IF(out.is_error(item)):
-                    out.copy_result(target, item)
-                out('break')
+        out.label(loop)
+        item = out.compile(self.expr)
 
-            with out.IF(f'{item.mode} != {out.IGNORE}'):
-                out(f'{buf}.append({item.value})')
+        with out.IF_NOT(out.is_success(item)):
+            out.goto(end)
 
-            out(f'pos = {item.pos}')
+        with out.IF(f'{item.mode} != {out.IGNORE}'):
+            out(f'{buf}.append({item.value})')
+
+        out(f'pos = {item.pos}')
+        out.goto(loop)
+
+        out.label(end)
+        with out.IF(out.is_error(item)):
+            out.copy_result(target, item)
 
         if not self.allow_empty:
-            with out.IF(f'not {buf}'):
+            with out.ELIF(f'not {buf}'):
                 out.fail(target, self, 'pos')
-            out('else:')
-            out.indent += 1
 
-        out.succeed(target, buf, 'pos')
+        with out.ELSE():
+            out.succeed(target, buf, 'pos')
 
 
 class Opt:
