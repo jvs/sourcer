@@ -28,29 +28,34 @@ class Alt:
         buf = out.define('buf', '[]')
         out(f'{target.pos} = pos')
 
-        out('while True:')
-        with out.indented():
-            item = out.compile(self.expr)
+        loop = out.reserve('loop_alt')
+        end = out.reserve('end_alt')
 
-            with out.IF_NOT(out.is_success(item)):
-                with out.IF(out.is_error(item)):
-                    out.copy_result(target, item)
-                out('break')
+        out.label(loop)
+        item = out.compile(self.expr)
 
-            out(f'{buf}.append({item.value})')
-            if self.allow_trailer:
-                out.set('pos', item.pos)
-            else:
-                out(f'pos = {target.pos} = {item.pos}')
+        with out.IF_NOT(out.is_success(item)):
+            with out.IF(out.is_error(item)):
+                out.copy_result(target, item)
+            out.goto(end)
 
-            sep = out.compile(self.separator)
+        out(f'{buf}.append({item.value})')
+        if self.allow_trailer:
+            out.set('pos', item.pos)
+        else:
+            out(f'pos = {target.pos} = {item.pos}')
 
-            with out.IF_NOT(out.is_success(sep)):
-                with out.IF(out.is_error(sep)):
-                    out.copy_result(target, sep)
-                out('break')
+        sep = out.compile(self.separator)
 
-            out.set('pos', sep.pos)
+        with out.IF_NOT(out.is_success(sep)):
+            with out.IF(out.is_error(sep)):
+                out.copy_result(target, sep)
+            out.goto(end)
+
+        out.set('pos', sep.pos)
+        out.goto(loop)
+
+        out.label(end)
 
         if not self.allow_empty:
             with out.IF(f'not {buf}'):
