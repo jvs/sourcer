@@ -294,7 +294,7 @@ class List:
         with out.IF(f'{item.mode} != {out.IGNORE}'):
             out(f'{buf}.append({item.value})')
 
-        out(f'pos = {item.pos}')
+        out.set('pos', item.pos)
         out.goto(loop)
 
         out.label(end)
