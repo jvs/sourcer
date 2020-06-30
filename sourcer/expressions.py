@@ -113,12 +113,9 @@ class Call:
     def _eval(self, env):
         func = self.func._eval(env)
         if callable(func):
-            return func(
-                *[x._eval(env) for x in self.args if not isinstance(x, KeywordArg)],
-                **{
-                    x.name: x._eval(env) for x in self.args if isinstance(x, KeywordArg)
-                },
-            )
+            a = [x._eval(env) for x in self.args if not isinstance(x, KeywordArg)]
+            k = {x.name: x._eval(env) for x in self.args if isinstance(x, KeywordArg)}
+            return func(*a, **k)
         else:
             raise Exception(f'Not callable: {func!r}')
 
