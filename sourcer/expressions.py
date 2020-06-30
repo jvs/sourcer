@@ -83,20 +83,23 @@ class Apply:
 
     def _compile(self, out, target):
         item1 = out.compile(self.expr1)
+        end = out.reserve('end_apply')
 
         with out.IF_NOT(out.is_success(item1)):
             out.copy_result(target, item1)
+            out.goto(end)
+
+        out.set('pos', item1.pos)
+        item2 = out.compile(self.expr2)
+        func, arg = (item1, item2) if self.apply_left else (item2, item1)
+
+        with out.IF(out.is_success(func)):
+            out.succeed(target, f'{func.value}({arg.value})', item2.pos)
 
         with out.ELSE():
-            out.set('pos', item1.pos)
-            item2 = out.compile(self.expr2)
-            func, arg = (item1, item2) if self.apply_left else (item2, item1)
+            out.copy_result(target, item2)
 
-            with out.IF(out.is_success(func)):
-                out.succeed(target, f'{func.value}({arg.value})', item2.pos)
-
-            with out.ELSE():
-                out.copy_result(target, item2)
+        out.label(end)
 
 
 class Call:
@@ -133,20 +136,22 @@ class Choice:
 
     def _compile(self, out, target):
         backtrack = out.define('backtrack', 'pos')
+        end = out.reserve('end_choice')
         items = []
         for expr in self.exprs:
             item = out.compile(expr)
             items.append(item)
             with out.IF(f'{out.is_success(item)} or {out.is_error(item)}'):
                 out.copy_result(target, item)
-            out('else:')
-            out.indent += 1
+                out.goto(end)
             out.set('pos', backtrack)
 
         out.fail(target, self, 'pos')
         for item in items:
             with out.IF(f'{target.pos} < {item.pos}'):
                 out.copy_result(target, item)
+
+        out.label(end)
 
 
 class Class:

@@ -128,6 +128,12 @@ class ProgramBuilder:
     def add_import(self, path):
         self.imports.add(path)
 
+    def label(self, name):
+        self(f'label .{name}')
+
+    def goto(self, label):
+        self(f'goto .{label}')
+
     def copy_result(self, target, result):
         for field in target._fields:
             self.set(getattr(target, field), getattr(result, field))
@@ -221,6 +227,10 @@ class ProgramBuilder:
         self.set_result(target, mode=self.SUCCESS, value=value, pos=pos)
 
     def write_rule_function(self, name, expr):
+        # TODO: Ask the expr if it needs to use goto.
+        if not isinstance(expr, (RegexLiteral, StringLiteral)):
+            self('\n@with_goto')
+
         self(f'\ndef {name}(text, pos):')
         with self.indented():
             result = self.compile(expr)
@@ -275,6 +285,7 @@ class ProgramBuilder:
             self.write_rule_function(self.rule_map[rule.name], rule)
 
         result = io.StringIO()
+        result.write('from goto import with_goto\n')
 
         for imp in self.imports:
             result.write('import ')
