@@ -124,8 +124,25 @@ def test_python_expressions():
 def test_postfix_operators():
     g = Grammar(r'''
         ignore Space = @/[ \t]+/
-        Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
-        start = OperatorPrecedence(Word, RightAssoc("implies"))
+        Atom = @/[a-zA-Z]+/
+
+        class ArgList {
+            args: "(" >> (Expr / ",") << ")"
+        }
+
+        Expr = OperatorPrecedence(
+            Atom,
+            Postfix(ArgList),
+            Postfix("?" | "*" | "+" | "!"),
+            LeftAssoc("|"),
+        )
+
+        start = Expr
     ''')
-    result = g.parse('A implies B implies C')
-    assert result == g.Infix('A', 'implies', g.Infix('B', 'implies', 'C'))
+
+    result = g.parse('foo(bar+, baz! | fiz)?')
+    print('result:', repr(result)) # TMP
+    assert result == g.Postfix(g.Postfix('foo', g.ArgList([
+        g.Postfix('bar', '+'),
+        g.Infix(g.Postfix('baz', '!'), '|', 'fiz'),
+    ])), '?')

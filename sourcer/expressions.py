@@ -663,6 +663,7 @@ class Postfix(OperatorPrecedenceRule):
         with out.IF_NOT(out.is_success(item)):
             out.goto(end)
 
+        out.set('pos', item.pos)
         out.label(loop)
         op = out.compile(self.operators)
 
