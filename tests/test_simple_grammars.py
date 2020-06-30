@@ -29,8 +29,8 @@ def test_arithmetic_expressions():
         start = Expr
     ''')
 
-    # Define a short name for the g.Infix constructor.
-    I = g.Infix
+    # Define short names for the constructors.
+    I, P = g.Infix, g.Prefix
 
     result = g.parse('1 + 2')
     assert result == I(1, '+', 2)
@@ -43,6 +43,12 @@ def test_arithmetic_expressions():
 
     result = g.parse('12 * 34 ^ 56 ^ 78 - 90')
     assert result == I(I(12, '*', I(34, '^', I(56, '^', 78))), '-', 90)
+
+    result = g.parse('---123')
+    assert result == P('-', P('-', P('-', 123)))
+
+    result = g.parse('+-12--34++56')
+    assert result == I(I(P('+', P('-', 12)), '-', P('-', 34)), '+', P('+', 56))
 
 
 def test_simple_json_grammar():
