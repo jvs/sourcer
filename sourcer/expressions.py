@@ -556,39 +556,46 @@ class OperatorPrecedenceRule:
 
 class LeftAssoc(OperatorPrecedenceRule):
     def _compile(self, out, target):
+        operand_part = out.reserve('left_assoc_operand')
+        loop = out.reserve('loop_left_assoc')
+        end = out.reserve('end_left_assoc')
+
         is_first = out.define('is_first', True)
-        out('while True:')
-        with out.indented():
-            with out.IF(f'not {is_first}'):
-                operator = out.compile(self.operators)
+        out.goto(operand_part)
+        out.label(loop)
+        operator = out.compile(self.operators)
 
-                with out.IF_NOT(out.is_success(operator)):
-                    with out.IF(out.is_error(operator)):
-                        out.copy_result(target, operator)
-                    out('break')
+        with out.IF_NOT(out.is_success(operator)):
+            with out.IF(out.is_error(operator)):
+                out.copy_result(target, operator)
+            out.goto(end)
 
-                out.set('pos', operator.pos)
+        out.set('pos', operator.pos)
 
-            item = out.compile(self.operand)
+        out.label(operand_part)
+        item = out.compile(self.operand)
 
-            with out.IF_NOT(out.is_success(item)):
-                with out.IF(f'{is_first} or {out.is_error(item)}'):
-                    out.copy_result(target, item)
-                out('break')
+        with out.IF_NOT(out.is_success(item)):
+            with out.IF(f'{is_first} or {out.is_error(item)}'):
+                out.copy_result(target, item)
+            out.goto(end)
 
-            out(f'pos = {target.pos} = {item.pos}')
+        out(f'pos = {target.pos} = {item.pos}')
 
-            with out.IF(is_first):
-                out.set(is_first, False)
-                out.set(target.value, item.value)
-                out.set(target.mode, out.SUCCESS)
+        with out.IF(is_first):
+            out.set(is_first, False)
+            out.set(target.value, item.value)
+            out.set(target.mode, out.SUCCESS)
 
-            with out.ELSE():
-                value = f'Infix({target.value}, {operator.value}, {item.value})'
-                out.set(target.value, value)
+        with out.ELSE():
+            value = f'Infix({target.value}, {operator.value}, {item.value})'
+            out.set(target.value, value)
 
-                if isinstance(self, NonAssoc):
-                    out('break')
+            if isinstance(self, NonAssoc):
+                out.goto(end)
+
+        out.goto(loop)
+        out.label(end)
 
 
 class NonAssoc(LeftAssoc):
