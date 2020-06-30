@@ -606,50 +606,54 @@ class RightAssoc(OperatorPrecedenceRule):
     def _compile(self, out, target):
         backup = out.define('backup', None)
         prev = out.define('prev', None)
-        out('while True:')
-        with out.indented():
-            item = out.compile(self.operand)
 
-            with out.IF_NOT(out.is_success(item)):
-                with out.IF(f'{out.is_error(item)} or {prev} is None'):
-                    out.copy_result(target, item)
+        loop = out.reserve('loop_right_assoc')
+        end = out.reserve('end_right_assoc')
 
-                with out.ELIF(f'{backup} is None'):
-                    out.set(target.value, f'{prev}.left')
-                    out.set(target.mode, out.SUCCESS)
+        out.label(loop)
+        item = out.compile(self.operand)
 
-                with out.ELSE():
-                    out.set(f'{backup}.right', f'{prev}.left')
+        with out.IF_NOT(out.is_success(item)):
+            with out.IF(f'{out.is_error(item)} or {prev} is None'):
+                out.copy_result(target, item)
 
-                out('break')
-
-            out(f'pos = {target.pos} = {item.pos}')
-            operator = out.compile(self.operators)
-
-            with out.IF(out.is_success(operator)):
-                value = f'Infix({item.value}, {operator.value}, None)'
-
-                with out.IF(f'{prev} is None'):
-                    out.set(prev, value)
-                    out.set(target.value, prev)
-
-                with out.ELSE():
-                    out.set(backup, prev)
-                    out(f'{backup}.right = {prev} = {value}')
+            with out.ELIF(f'{backup} is None'):
+                out.set(target.value, f'{prev}.left')
+                out.set(target.mode, out.SUCCESS)
 
             with out.ELSE():
-                with out.IF(out.is_error(operator)):
-                    out.copy_result(target, operator)
+                out.set(f'{backup}.right', f'{prev}.left')
 
-                with out.ELIF(f'{prev} is None'):
-                    out.set(target.mode, out.SUCCESS)
-                    out.set(target.value, item.value)
+            out.goto(end)
 
-                with out.ELSE():
-                    out.set(target.mode, out.SUCCESS)
-                    out.set(f'{prev}.right', item.value)
+        out(f'pos = {target.pos} = {item.pos}')
+        operator = out.compile(self.operators)
 
-                out('break')
+        with out.IF(out.is_success(operator)):
+            value = f'Infix({item.value}, {operator.value}, None)'
+
+            with out.IF(f'{prev} is None'):
+                out.set(prev, value)
+                out.set(target.value, prev)
+
+            with out.ELSE():
+                out.set(backup, prev)
+                out(f'{backup}.right = {prev} = {value}')
+
+            out.goto(loop)
+
+        with out.IF(out.is_error(operator)):
+            out.copy_result(target, operator)
+
+        with out.ELIF(f'{prev} is None'):
+            out.set(target.mode, out.SUCCESS)
+            out.set(target.value, item.value)
+
+        with out.ELSE():
+            out.set(target.mode, out.SUCCESS)
+            out.set(f'{prev}.right', item.value)
+
+        out.label(end)
 
 
 class Postfix(OperatorPrecedenceRule):
