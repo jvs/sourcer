@@ -213,21 +213,24 @@ class Discard:
 
     def _compile(self, out, target):
         item1 = out.compile(self.expr1)
+        end = out.reserve('end_discard')
 
         with out.IF_NOT(out.is_success(item1)):
             out.copy_result(target, item1)
+            out.goto(end)
 
-        with out.ELSE():
-            out.set('pos', item1.pos)
+        out.set('pos', item1.pos)
 
-            if self.discard_left:
-                out.compile(self.expr2, target)
-            else:
-                item2 = out.compile(self.expr2)
-                with out.IF(out.is_success(item2)):
-                    out.succeed(target, item1.value, item2.pos)
-                with out.ELSE():
-                    out.copy_result(target, item2)
+        if self.discard_left:
+            out.compile(self.expr2, target)
+        else:
+            item2 = out.compile(self.expr2)
+            with out.IF(out.is_success(item2)):
+                out.succeed(target, item1.value, item2.pos)
+            with out.ELSE():
+                out.copy_result(target, item2)
+
+        out.label(end)
 
 
 class Fail:
