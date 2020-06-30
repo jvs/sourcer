@@ -115,7 +115,6 @@ Target = namedtuple('Target', 'mode, value, pos')
 
 class ProgramBuilder:
     SUCCESS = 1
-    IGNORE = 2
     CONTINUE = 3
     FAILURE = False
     ERROR = None

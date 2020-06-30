@@ -291,9 +291,7 @@ class List:
         with out.IF_NOT(out.is_success(item)):
             out.goto(end)
 
-        with out.IF(f'{item.mode} != {out.IGNORE}'):
-            out(f'{buf}.append({item.value})')
-
+        out(f'{buf}.append({item.value})')
         out.set('pos', item.pos)
         out.goto(loop)
 
