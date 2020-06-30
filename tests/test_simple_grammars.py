@@ -119,3 +119,13 @@ def test_python_expressions():
     ''')
     result = g.parse(r'12 null 34 false 56 "hello:\n\tworld" 78 true')
     assert result == [12, None, 34, False, 56, 'hello:\n\tworld', 78, True]
+
+
+def test_postfix_operators():
+    g = Grammar(r'''
+        ignore Space = @/[ \t]+/
+        Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+        start = OperatorPrecedence(Word, RightAssoc("implies"))
+    ''')
+    result = g.parse('A implies B implies C')
+    assert result == g.Infix('A', 'implies', g.Infix('B', 'implies', 'C'))
