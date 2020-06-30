@@ -194,21 +194,21 @@ class Class:
         return out.compile(delegate, target=target)
 
 
-class Drop:
-    def __init__(self, expr1, expr2, drop_left=True):
+class Discard:
+    def __init__(self, expr1, expr2, discard_left=True):
         self.expr1 = expr1
         self.expr2 = expr2
-        self.drop_left = drop_left
+        self.discard_left = discard_left
 
     def __repr__(self):
-        func = 'Right' if self.drop_left else 'Left'
+        func = 'Right' if self.discard_left else 'Left'
         return f'{func}({self.expr1!r}, {self.expr2!r})'
 
     def _eval(self, env):
-        return Drop(
+        return Discard(
             expr1=self.expr1._eval(env),
             expr2=self.expr2._eval(env),
-            drop_left=self.drop_left,
+            discard_left=self.discard_left,
         )
 
     def _compile(self, out, target):
@@ -220,7 +220,7 @@ class Drop:
         with out.ELSE():
             out.set('pos', item1.pos)
 
-            if self.drop_left:
+            if self.discard_left:
                 out.compile(self.expr2, target)
             else:
                 item2 = out.compile(self.expr2)
@@ -257,7 +257,7 @@ class KeywordArg:
 
 
 def Left(expr1, expr2):
-    return Drop(expr1, expr2, drop_left=False)
+    return Discard(expr1, expr2, discard_left=False)
 
 
 class List:
@@ -375,7 +375,7 @@ class RegexLiteral:
 
 
 def Right(expr1, expr2):
-    return Drop(expr1, expr2, drop_left=True)
+    return Discard(expr1, expr2, discard_left=True)
 
 
 class Rule:
