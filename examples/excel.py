@@ -1,7 +1,7 @@
 from sourcer import Grammar
 
 
-grammar = Grammar(r'''
+description = r'''
     `from ast import literal_eval`
 
     start = Formula
@@ -77,4 +77,6 @@ grammar = Grammar(r'''
 
     Expr = Operators(LeftAssoc(","))
     ExprList = Operators(LeftAssoc(Fail("Expected list.")))? / ","
-''')
+'''
+
+grammar = Grammar(description, include_source=True)
