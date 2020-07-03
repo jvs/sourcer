@@ -238,6 +238,43 @@ class Discard:
         out.label(end)
 
 
+class Expect:
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __repr__(self):
+        return f'Expect({self.expr!r})'
+
+    def _eval(self, env):
+        return Expect(self.expr._eval(env))
+
+    def _compile(self, out, target):
+        backtrack = out.define('backtrack', 'pos')
+        item = out.compile(self.expr)
+        out.set(target.mode, item.mode)
+        out.set(target.value, None)
+        out.set(target.pos, backtrack)
+
+
+class ExpectNot:
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __repr__(self):
+        return f'ExpectNot({self.expr!r})'
+
+    def _eval(self):
+        return ExpectNot(self.expr._eval(env))
+
+    def _compile(self, out, target):
+        backtrack = out.define('backtrack', 'pos')
+        item = out.compile(self.expr)
+        with out.IF(out.is_success(item)):
+            out.fail(target, self, backtrack)
+        with out.ELSE():
+            out.succeed(target, None, backtrack)
+
+
 class Fail:
     def __init__(self, message):
         self.message = None
