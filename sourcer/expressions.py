@@ -8,14 +8,6 @@ class Alt:
         self.allow_trailer = allow_trailer
         self.allow_empty = allow_empty
 
-    def __repr__(self):
-        result = f'Alt({self.expr!r}, {self.separator!r}'
-        if self.allow_trailer:
-            result += ', allow_trailer=True'
-        if not self.allow_empty:
-            result += ', allow_empty=False'
-        return result + ')'
-
     def _eval(self, env):
         return Alt(
             expr=self.expr._eval(env),
@@ -72,9 +64,6 @@ class Apply:
         self.expr2 = expr2
         self.apply_left = apply_left
 
-    def __repr__(self):
-        return f'Apply({self.expr1!r}, {self.expr2!r}, apply_left={self.apply_left!r})'
-
     def _eval(self, env):
         return Apply(
             expr1=self.expr1._eval(env),
@@ -108,9 +97,6 @@ class Call:
         self.func = func
         self.args = args
 
-    def __repr__(self):
-        return f'Call({self.func!r}, {self.args!r})'
-
     def _eval(self, env):
         func = self.func._eval(env)
         if callable(func):
@@ -124,10 +110,6 @@ class Call:
 class Choice:
     def __init__(self, *exprs):
         self.exprs = exprs
-
-    def __repr__(self):
-        values = ', '.join(repr(x) for x in self.exprs)
-        return f'Choice({values})'
 
     def _eval(self, env):
         return Choice(*[x._eval(env) for x in self.exprs])
@@ -164,12 +146,6 @@ class Class:
                 kw[field] = getattr(self, field)
         return Class(**kw)
 
-    def __repr__(self):
-        args = [repr(self.name), repr(self.fields)]
-        if self.is_ignored:
-            args.append('is_ignored=True')
-        return f'Class({", ".join(args)})'
-
     def _eval(self, env):
         return self._replace(fields=[x._eval(env) for x in self.fields])
 
@@ -200,10 +176,6 @@ class Discard:
         self.expr1 = expr1
         self.expr2 = expr2
         self.discard_left = discard_left
-
-    def __repr__(self):
-        func = 'Right' if self.discard_left else 'Left'
-        return f'{func}({self.expr1!r}, {self.expr2!r})'
 
     def _eval(self, env):
         return Discard(
@@ -238,9 +210,6 @@ class Expect:
     def __init__(self, expr):
         self.expr = expr
 
-    def __repr__(self):
-        return f'Expect({self.expr!r})'
-
     def _eval(self, env):
         return Expect(self.expr._eval(env))
 
@@ -255,9 +224,6 @@ class Expect:
 class ExpectNot:
     def __init__(self, expr):
         self.expr = expr
-
-    def __repr__(self):
-        return f'ExpectNot({self.expr!r})'
 
     def _eval(self):
         return ExpectNot(self.expr._eval(env))
@@ -275,9 +241,6 @@ class Fail:
     def __init__(self, message):
         self.message = None
 
-    def __repr__(self):
-        return f'Fail({self.message!r})'
-
     def _eval(self, env):
         return self
 
@@ -289,9 +252,6 @@ class KeywordArg:
     def __init__(self, name, expr):
         self.name = name
         self.expr = expr
-
-    def __repr__(self):
-        return f'KeywordArg({self.name!r}, {self.expr!r})'
 
     def _eval(self, env):
         return KeywordArg(self.name, self.expr._eval(env))
@@ -305,10 +265,6 @@ class List:
     def __init__(self, expr, allow_empty=True):
         self.expr = expr
         self.allow_empty = allow_empty
-
-    def __repr__(self):
-        cls = 'List' if self.allow_empty else 'Some'
-        return f'{cls}({self.expr!r})'
 
     def _eval(self, env):
         return List(expr=self.expr._eval(env), allow_empty=self.allow_empty)
@@ -343,9 +299,6 @@ class Opt:
     def __init__(self, expr):
         self.expr = expr
 
-    def __repr__(self):
-        return f'Opt({self.expr!r})'
-
     def _eval(self, env):
         return Opt(self.expr._eval(env))
 
@@ -362,9 +315,6 @@ class Pass:
     def __init__(self, value):
         self.value = value
 
-    def __repr__(self):
-        return f'Pass({self.value!r})'
-
     def _eval(self, env):
         return self
 
@@ -375,9 +325,6 @@ class Pass:
 class Ref:
     def __init__(self, name):
         self.name = name
-
-    def __repr__(self):
-        return f'Ref({self.name!r})'
 
     def _eval(self, env):
         return env.get(self.name, self)
@@ -397,9 +344,6 @@ class RegexLiteral:
         if not isinstance(pattern, str):
             raise TypeError('Expected str')
         self.pattern = pattern
-
-    def __repr__(self):
-        return f'RegexLiteral({self.pattern!r})'
 
     def _eval(self, env):
         return self
@@ -426,10 +370,6 @@ class Rule:
         self.expr = expr
         self.is_ignored = is_ignored
 
-    def __repr__(self):
-        extra = ', is_ignored=True' if self.is_ignored else ''
-        return f'Rule({self.name!r}, {self.expr!r}{extra})'
-
     def _eval(self, env):
         return Rule(self.name, self.expr._eval(env), is_ignored=self.is_ignored)
 
@@ -443,13 +383,6 @@ class Seq:
             constructor = constructor.__name__
         self.exprs = exprs
         self.constructor = constructor
-
-    def __repr__(self):
-        values = ', '.join(repr(x) for x in self.exprs)
-        if self.constructor is None:
-            return f'Seq({values})'
-        else:
-            return f'Seq({values}, constructor={self.constructor!r})'
 
     def _eval(self, env):
         return Seq(*[x._eval(env) for x in self.exprs], constructor=self.constructor,)
@@ -477,9 +410,6 @@ class Seq:
 class Skip:
     def __init__(self, expr):
         self.expr = expr
-
-    def __repr__(self):
-        return f'Skip({self.expr!r})'
 
     def _eval(self, env):
         return Skip(self.expr._eval(env))
@@ -509,9 +439,6 @@ class StringLiteral:
             raise TypeError(f'Expected str. Received: {type(value)}.')
         self.value = value
 
-    def __repr__(self):
-        return f'Literal({self.value!r})'
-
     def _eval(self, env):
         return self
 
@@ -534,9 +461,6 @@ class Template:
         self.params = params
         self.expr = expr
 
-    def __repr__(self):
-        return f'Template({self.name!r}, {self.params!r}, {self.expr!r})'
-
     def __call__(self, *args, **kwargs):
         sub = {}
         for param, arg in zip(self.params, args):
@@ -553,10 +477,6 @@ class OperatorPrecedence:
     def __init__(self, atom, *rules):
         self.atom = atom
         self.rules = rules
-
-    def __repr__(self):
-        rules = ', '.join(repr(x) for x in self.rules)
-        return f'OperatorPrecedence({self.atom!r}, {rules})'
 
     def _eval(self, env):
         return OperatorPrecedence(
@@ -575,9 +495,6 @@ class OperatorPrecedenceRule:
     def __init__(self, *operators):
         self.operators = operators[0] if len(operators) == 1 else Choice(*operators)
         self.operand = None
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}({self.operators!r})'
 
     def _eval(self, env):
         result = self.__class__(self.operators._eval(env))
@@ -747,9 +664,6 @@ class PythonExpression:
     def __init__(self, source_code):
         self.source_code = source_code
 
-    def __repr__(self):
-        return f'PythonExpression({self.source_code!r})'
-
     def _eval(self, env):
         return self
 
@@ -760,9 +674,6 @@ class PythonExpression:
 class PythonSection:
     def __init__(self, source_code):
         self.source_code = source_code
-
-    def __repr__(self):
-        return f'PythonSection({self.source_code!r})'
 
     def _eval(self, env):
         return self
