@@ -69,7 +69,6 @@ def _conv(node):
             '?': Opt,
             '*': List,
             '+': Some,
-            # '!': Commit,
         }
         if isinstance(node.operator, str) and node.operator in classes:
             return classes[node.operator](node.left)
@@ -88,8 +87,6 @@ def _conv(node):
             '//': lambda a, b: Alt(a, b, allow_trailer=False),
             '<<': Left,
             '>>': Right,
-            # '<<!': lambda a, b: Left(a, Commit(b)),
-            # '!>>': lambda a, b: Left(Commit(a), b),
         }
         return classes[node.operator](node.left, node.right)
 
@@ -116,7 +113,6 @@ class ProgramBuilder:
     SUCCESS = 1
     CONTINUE = 3
     FAILURE = False
-    ERROR = None
 
     def __call__(self, text):
         self.buf.write('    ' * self.indent)
@@ -190,9 +186,6 @@ class ProgramBuilder:
             yield
         finally:
             self.indent = was
-
-    def is_error(self, target):
-        return f'{target.mode} is {self.ERROR}'
 
     def is_failure(self, target):
         return f'{target.mode} == {self.FAILURE}'
@@ -334,8 +327,7 @@ class Node:
 _main_template = StringTemplate(
     r'''
 class ParseError(Exception):
-    def __init__(self, mode, expr_code, pos):
-        self.is_error = (mode is None)
+    def __init__(self, expr_code, pos):
         self.expr_code = expr_code
         self.pos = pos
 
@@ -404,7 +396,7 @@ def _run(text, pos, start):
     if result[0]:
         return result[1]
     else:
-        raise ParseError(*result)
+        raise ParseError(result[1], result[2])
 
 
 def visit(node):

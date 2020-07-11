@@ -90,7 +90,7 @@ class ArgList {
 Expr = OperatorPrecedence(
     Atom,
     Postfix(ArgList),
-    Postfix("?" | "*" | "+" | "!"),
+    Postfix("?" | "*" | "+"),
     LeftAssoc(wrap("//" | "/")),
     LeftAssoc(wrap("<<" | ">>")),
     LeftAssoc(wrap("<|" | "|>")),

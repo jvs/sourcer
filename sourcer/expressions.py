@@ -35,8 +35,6 @@ class Alt:
         item = out.compile(self.expr)
 
         with out.IF_NOT(out.is_success(item)):
-            with out.IF(out.is_error(item)):
-                out.copy_result(target, item)
             out.goto(end)
 
         out(f'{buf}.append({item.value})')
@@ -48,8 +46,6 @@ class Alt:
         sep = out.compile(self.separator)
 
         with out.IF_NOT(out.is_success(sep)):
-            with out.IF(out.is_error(sep)):
-                out.copy_result(target, sep)
             out.goto(end)
 
         out.set('pos', sep.pos)
@@ -143,7 +139,7 @@ class Choice:
         for expr in self.exprs:
             item = out.compile(expr)
             items.append(item)
-            with out.IF(f'{out.is_success(item)} or {out.is_error(item)}'):
+            with out.IF(out.is_success(item)):
                 out.copy_result(target, item)
                 out.goto(end)
             out.set('pos', backtrack)
@@ -331,17 +327,16 @@ class List:
         out(f'{buf}.append({item.value})')
         out.set('pos', item.pos)
         out.goto(loop)
-
         out.label(end)
-        with out.IF(out.is_error(item)):
-            out.copy_result(target, item)
 
-        if not self.allow_empty:
-            with out.ELIF(f'not {buf}'):
+        if self.allow_empty:
+            out.succeed(target, buf, 'pos')
+        else:
+            with out.IF(f'not {buf}'):
                 out.fail(target, self, 'pos')
 
-        with out.ELSE():
-            out.succeed(target, buf, 'pos')
+            with out.ELSE():
+                out.succeed(target, buf, 'pos')
 
 
 class Opt:
@@ -357,7 +352,7 @@ class Opt:
     def _compile(self, out, target):
         backtrack = out.define('backtrack', 'pos')
         item = out.compile(self.expr)
-        with out.IF(f'{out.is_success(item)} or {out.is_error(item)}'):
+        with out.IF(out.is_success(item)):
             out.copy_result(target, item)
         with out.ELSE():
             out.succeed(target, 'None', backtrack)
@@ -500,9 +495,6 @@ class Skip:
             out.set('pos', item.pos)
             out.goto(loop)
 
-        with out.ELIF(out.is_error(item)):
-            out.copy_result(target, item)
-
         with out.ELSE():
             out.succeed(target, None, 'pos')
 
@@ -606,8 +598,6 @@ class LeftAssoc(OperatorPrecedenceRule):
         operator = out.compile(self.operators)
 
         with out.IF_NOT(out.is_success(operator)):
-            with out.IF(out.is_error(operator)):
-                out.copy_result(target, operator)
             out.goto(end)
 
         out.set('pos', operator.pos)
@@ -616,7 +606,7 @@ class LeftAssoc(OperatorPrecedenceRule):
         item = out.compile(self.operand)
 
         with out.IF_NOT(out.is_success(item)):
-            with out.IF(f'{is_first} or {out.is_error(item)}'):
+            with out.IF(is_first):
                 out.copy_result(target, item)
             out.goto(end)
 
@@ -654,7 +644,7 @@ class RightAssoc(OperatorPrecedenceRule):
         item = out.compile(self.operand)
 
         with out.IF_NOT(out.is_success(item)):
-            with out.IF(f'{out.is_error(item)} or {prev} is None'):
+            with out.IF(f'{prev} is None'):
                 out.copy_result(target, item)
 
             with out.ELIF(f'{backup} is None'):
@@ -682,10 +672,7 @@ class RightAssoc(OperatorPrecedenceRule):
 
             out.goto(loop)
 
-        with out.IF(out.is_error(operator)):
-            out.copy_result(target, operator)
-
-        with out.ELIF(f'{prev} is None'):
+        with out.IF(f'{prev} is None'):
             out.set(target.mode, out.SUCCESS)
             out.set(target.value, item.value)
 
@@ -716,9 +703,6 @@ class Postfix(OperatorPrecedenceRule):
             out.set(target.value, f'Postfix({target.value}, {op.value})')
             out.goto(loop)
 
-        with out.ELIF(out.is_error(op)):
-            out.copy_result(target, op)
-
         with out.ELSE():
             out.set(target.pos, 'pos')
 
@@ -746,10 +730,6 @@ class Prefix(OperatorPrecedenceRule):
                 out.set(prev, value)
 
             out.goto(loop)
-
-        with out.IF(out.is_error(op)):
-            out.copy_result(target, op)
-            out.goto(end)
 
         item = out.compile(self.operand)
         with out.IF(f'{prev} is None or not {out.is_success(item)}'):
