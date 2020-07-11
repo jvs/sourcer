@@ -93,7 +93,7 @@ Expr = OperatorPrecedence(
     Postfix("?" | "*" | "+"),
     LeftAssoc(wrap("//" | "/")),
     LeftAssoc(wrap("<<" | ">>")),
-    LeftAssoc(wrap("<|" | "|>")),
+    LeftAssoc(wrap("<|" | "|>" | "where")),
     LeftAssoc(wrap("|")),
 )
 

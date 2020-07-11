@@ -87,6 +87,7 @@ def _conv(node):
             '//': lambda a, b: Alt(a, b, allow_trailer=False),
             '<<': Left,
             '>>': Right,
+            'where': Where,
         }
         return classes[node.operator](node.left, node.right)
 

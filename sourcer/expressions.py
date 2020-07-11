@@ -677,3 +677,37 @@ class PythonSection:
 
     def _eval(self, env):
         return self
+
+
+class Where:
+    def __init__(self, expr, predicate):
+        self.expr = expr
+        self.predicate = predicate
+
+    def _eval(self, env):
+        return Where(
+            expr=self.expr._eval(env),
+            predicate=self.predicate._eval(env),
+        )
+
+    def _compile(self, out, target):
+        arg = out.compile(self.expr)
+        end = out.reserve('end_where')
+
+        with out.IF_NOT(out.is_success(arg)):
+            out.copy_result(target, arg)
+            out.goto(end)
+
+        out.set('pos', arg.pos)
+        func = out.compile(self.predicate)
+
+        with out.IF(out.is_success(func)):
+            with out.IF(f'{func.value}({arg.value})'):
+                out.succeed(target, arg.value, func.pos)
+            with out.ELSE():
+                out.fail(target, self, func.pos)
+
+        with out.ELSE():
+            out.copy_result(target, func)
+
+        out.label(end)

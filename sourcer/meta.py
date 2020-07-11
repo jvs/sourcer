@@ -155,8 +155,7 @@ class ArgList(Node):
 
 
 class ParseError(Exception):
-    def __init__(self, mode, expr_code, pos):
-        self.is_error = (mode is None)
+    def __init__(self, expr_code, pos):
         self.expr_code = expr_code
         self.pos = pos
 
@@ -225,7 +224,7 @@ def _run(text, pos, start):
     if result[0]:
         return result[1]
     else:
-        raise ParseError(*result)
+        raise ParseError(result[1], result[2])
 
 
 def visit(node):
@@ -289,9 +288,9 @@ def _parse_Space1(text, pos):
             pos4 = match2.end()
         else:
             mode4 = False
-            value4 = 140115314136232
+            value4 = 139748909259464
             pos4 = pos
-        if mode4 or mode4 is None:
+        if mode4:
             mode3 = mode4
             value3 = value4
             pos3 = pos4
@@ -304,16 +303,16 @@ def _parse_Space1(text, pos):
             pos5 = match3.end()
         else:
             mode5 = False
-            value5 = 140115314093304
+            value5 = 139748909258232
             pos5 = pos
-        if mode5 or mode5 is None:
+        if mode5:
             mode3 = mode5
             value3 = value5
             pos3 = pos5
             goto .end_choice1
         pos = backtrack1
         mode3 = False
-        value3 = 140115314093024
+        value3 = 139748909221872
         pos3 = pos
         if pos3 < pos4:
             mode3 = mode4
@@ -327,10 +326,6 @@ def _parse_Space1(text, pos):
         if mode3:
             pos = pos3
             goto .loop_skip1
-        elif mode3 is None:
-            mode2 = mode3
-            value2 = value3
-            pos2 = pos3
         else:
             mode2 = 1
             value2 = None
@@ -340,7 +335,7 @@ def _parse_Space1(text, pos):
         pos1 = pos2
     else:
         mode1 = False
-        value1 = 140115314136232
+        value1 = 139748909259464
         pos1 = pos
     yield (mode1, value1, pos1)
     
@@ -359,9 +354,9 @@ def _parse_Comment1(text, pos):
             pos9 = match5.end()
         else:
             mode9 = False
-            value9 = 140115314136232
+            value9 = 139748909259464
             pos9 = pos
-        if mode9 or mode9 is None:
+        if mode9:
             mode8 = mode9
             value8 = value9
             pos8 = pos9
@@ -374,16 +369,16 @@ def _parse_Comment1(text, pos):
             pos10 = match6.end()
         else:
             mode10 = False
-            value10 = 140115314093304
+            value10 = 139748909258232
             pos10 = pos
-        if mode10 or mode10 is None:
+        if mode10:
             mode8 = mode10
             value8 = value10
             pos8 = pos10
             goto .end_choice2
         pos = backtrack2
         mode8 = False
-        value8 = 140115314093024
+        value8 = 139748909221872
         pos8 = pos
         if pos8 < pos9:
             mode8 = mode9
@@ -397,10 +392,6 @@ def _parse_Comment1(text, pos):
         if mode8:
             pos = pos8
             goto .loop_skip2
-        elif mode8 is None:
-            mode7 = mode8
-            value7 = value8
-            pos7 = pos8
         else:
             mode7 = 1
             value7 = None
@@ -410,7 +401,7 @@ def _parse_Comment1(text, pos):
         pos6 = pos7
     else:
         mode6 = False
-        value6 = 140115314093304
+        value6 = 139748909258232
         pos6 = pos
     yield (mode6, value6, pos6)
     
@@ -429,9 +420,9 @@ def _parse_Newline1(text, pos):
             pos14 = match8.end()
         else:
             mode14 = False
-            value14 = 140115314136232
+            value14 = 139748909259464
             pos14 = pos
-        if mode14 or mode14 is None:
+        if mode14:
             mode13 = mode14
             value13 = value14
             pos13 = pos14
@@ -444,16 +435,16 @@ def _parse_Newline1(text, pos):
             pos15 = match9.end()
         else:
             mode15 = False
-            value15 = 140115314093304
+            value15 = 139748909258232
             pos15 = pos
-        if mode15 or mode15 is None:
+        if mode15:
             mode13 = mode15
             value13 = value15
             pos13 = pos15
             goto .end_choice3
         pos = backtrack3
         mode13 = False
-        value13 = 140115314093024
+        value13 = 139748909221872
         pos13 = pos
         if pos13 < pos14:
             mode13 = mode14
@@ -467,10 +458,6 @@ def _parse_Newline1(text, pos):
         if mode13:
             pos = pos13
             goto .loop_skip3
-        elif mode13 is None:
-            mode12 = mode13
-            value12 = value13
-            pos12 = pos13
         else:
             mode12 = 1
             value12 = None
@@ -480,7 +467,7 @@ def _parse_Newline1(text, pos):
         pos11 = pos12
     else:
         mode11 = False
-        value11 = 140115314092856
+        value11 = 139748909257560
         pos11 = pos
     yield (mode11, value11, pos11)
     
@@ -491,7 +478,7 @@ def _parse_Sep1(text, pos):
     label .loop_list1
     backtrack4 = pos
     mode18, value18, pos18 = yield (3, _parse_Newline1, pos)
-    if mode18 or mode18 is None:
+    if mode18:
         mode17 = mode18
         value17 = value18
         pos17 = pos18
@@ -510,9 +497,9 @@ def _parse_Sep1(text, pos):
             pos22 = match10.end()
         else:
             mode22 = False
-            value23 = 140115314136232
+            value23 = 139748909259464
             pos22 = pos
-        if mode22 or mode22 is None:
+        if mode22:
             mode21 = mode22
             value22 = value23
             pos21 = pos22
@@ -525,16 +512,16 @@ def _parse_Sep1(text, pos):
             pos23 = match11.end()
         else:
             mode23 = False
-            value24 = 140115314093304
+            value24 = 139748909258232
             pos23 = pos
-        if mode23 or mode23 is None:
+        if mode23:
             mode21 = mode23
             value22 = value24
             pos21 = pos23
             goto .end_choice5
         pos = backtrack5
         mode21 = False
-        value22 = 140115314093024
+        value22 = 139748909221872
         pos21 = pos
         if pos21 < pos22:
             mode21 = mode22
@@ -548,10 +535,6 @@ def _parse_Sep1(text, pos):
         if mode21:
             pos = pos21
             goto .loop_skip4
-        elif mode21 is None:
-            mode20 = mode21
-            value21 = value22
-            pos20 = pos21
         else:
             mode20 = 1
             value21 = None
@@ -561,16 +544,16 @@ def _parse_Sep1(text, pos):
         pos19 = pos20
     else:
         mode19 = False
-        value19 = 140115314090336
+        value19 = 139748909222712
         pos19 = pos
-    if mode19 or mode19 is None:
+    if mode19:
         mode17 = mode19
         value17 = value19
         pos17 = pos19
         goto .end_choice4
     pos = backtrack4
     mode17 = False
-    value17 = 140115313708280
+    value17 = 139748910166704
     pos17 = pos
     if pos17 < pos18:
         mode17 = mode18
@@ -587,13 +570,9 @@ def _parse_Sep1(text, pos):
     pos = pos17
     goto .loop_list1
     label .end_list1
-    if mode17 is None:
-        mode16 = mode17
-        value16 = value17
-        pos16 = pos17
-    elif not buf1:
+    if not buf1:
         mode16 = False
-        value16 = 140115313708336
+        value16 = 139748910166760
         pos16 = pos
     else:
         mode16 = 1
@@ -616,9 +595,9 @@ def _parse_Name1(text, pos):
             pos27 = match13.end()
         else:
             mode27 = False
-            value28 = 140115314136232
+            value28 = 139748909259464
             pos27 = pos
-        if mode27 or mode27 is None:
+        if mode27:
             mode26 = mode27
             value27 = value28
             pos26 = pos27
@@ -631,16 +610,16 @@ def _parse_Name1(text, pos):
             pos28 = match14.end()
         else:
             mode28 = False
-            value29 = 140115314093304
+            value29 = 139748909258232
             pos28 = pos
-        if mode28 or mode28 is None:
+        if mode28:
             mode26 = mode28
             value27 = value29
             pos26 = pos28
             goto .end_choice6
         pos = backtrack6
         mode26 = False
-        value27 = 140115314093024
+        value27 = 139748909221872
         pos26 = pos
         if pos26 < pos27:
             mode26 = mode27
@@ -654,10 +633,6 @@ def _parse_Name1(text, pos):
         if mode26:
             pos = pos26
             goto .loop_skip5
-        elif mode26 is None:
-            mode25 = mode26
-            value26 = value27
-            pos25 = pos26
         else:
             mode25 = 1
             value26 = None
@@ -667,7 +642,7 @@ def _parse_Name1(text, pos):
         pos24 = pos25
     else:
         mode24 = False
-        value25 = 140115314092352
+        value25 = 139748909256944
         pos24 = pos
     yield (mode24, value25, pos24)
     
@@ -679,10 +654,6 @@ def _parse_Comma1(text, pos):
     if mode32:
         pos = pos32
         goto .loop_skip6
-    elif mode32 is None:
-        mode31 = mode32
-        value32 = value33
-        pos31 = pos32
     else:
         mode31 = 1
         value32 = None
@@ -706,9 +677,9 @@ def _parse_Comma1(text, pos):
             pos35 = match15.end()
         else:
             mode35 = False
-            value37 = 140115314136232
+            value37 = 139748909259464
             pos35 = pos
-        if mode35 or mode35 is None:
+        if mode35:
             mode34 = mode35
             value36 = value37
             pos34 = pos35
@@ -721,16 +692,16 @@ def _parse_Comma1(text, pos):
             pos36 = match16.end()
         else:
             mode36 = False
-            value38 = 140115314093304
+            value38 = 139748909258232
             pos36 = pos
-        if mode36 or mode36 is None:
+        if mode36:
             mode34 = mode36
             value36 = value38
             pos34 = pos36
             goto .end_choice7
         pos = backtrack7
         mode34 = False
-        value36 = 140115314093024
+        value36 = 139748909221872
         pos34 = pos
         if pos34 < pos35:
             mode34 = mode35
@@ -744,10 +715,6 @@ def _parse_Comma1(text, pos):
         if mode34:
             pos = pos34
             goto .loop_skip7
-        elif mode34 is None:
-            mode33 = mode34
-            value35 = value36
-            pos33 = pos34
         else:
             mode33 = 1
             value35 = None
@@ -757,7 +724,7 @@ def _parse_Comma1(text, pos):
         pos30 = pos33
     else:
         mode30 = False
-        value31 = 140115314052288
+        value31 = 139748909221088
         pos30 = pos
     label .end_discard1
     if not mode30:
@@ -771,10 +738,6 @@ def _parse_Comma1(text, pos):
     if mode38:
         pos = pos38
         goto .loop_skip8
-    elif mode38 is None:
-        mode37 = mode38
-        value39 = value40
-        pos37 = pos38
     else:
         mode37 = 1
         value39 = None
@@ -806,9 +769,9 @@ def _parse_StringLiteral1(text, pos):
             pos45 = match18.end()
         else:
             mode45 = False
-            value47 = 140115314136232
+            value47 = 139748909259464
             pos45 = pos
-        if mode45 or mode45 is None:
+        if mode45:
             mode44 = mode45
             value46 = value47
             pos44 = pos45
@@ -821,16 +784,16 @@ def _parse_StringLiteral1(text, pos):
             pos46 = match19.end()
         else:
             mode46 = False
-            value48 = 140115314093304
+            value48 = 139748909258232
             pos46 = pos
-        if mode46 or mode46 is None:
+        if mode46:
             mode44 = mode46
             value46 = value48
             pos44 = pos46
             goto .end_choice9
         pos = backtrack9
         mode44 = False
-        value46 = 140115314093024
+        value46 = 139748909221872
         pos44 = pos
         if pos44 < pos45:
             mode44 = mode45
@@ -844,10 +807,6 @@ def _parse_StringLiteral1(text, pos):
         if mode44:
             pos = pos44
             goto .loop_skip9
-        elif mode44 is None:
-            mode43 = mode44
-            value45 = value46
-            pos43 = pos44
         else:
             mode43 = 1
             value45 = None
@@ -857,9 +816,9 @@ def _parse_StringLiteral1(text, pos):
         pos42 = pos43
     else:
         mode42 = False
-        value44 = 140115314004208
+        value44 = 139748909123400
         pos42 = pos
-    if mode42 or mode42 is None:
+    if mode42:
         mode41 = mode42
         value43 = value44
         pos41 = pos42
@@ -877,9 +836,9 @@ def _parse_StringLiteral1(text, pos):
             pos50 = match21.end()
         else:
             mode50 = False
-            value52 = 140115314136232
+            value52 = 139748909259464
             pos50 = pos
-        if mode50 or mode50 is None:
+        if mode50:
             mode49 = mode50
             value51 = value52
             pos49 = pos50
@@ -892,16 +851,16 @@ def _parse_StringLiteral1(text, pos):
             pos51 = match22.end()
         else:
             mode51 = False
-            value53 = 140115314093304
+            value53 = 139748909258232
             pos51 = pos
-        if mode51 or mode51 is None:
+        if mode51:
             mode49 = mode51
             value51 = value53
             pos49 = pos51
             goto .end_choice10
         pos = backtrack10
         mode49 = False
-        value51 = 140115314093024
+        value51 = 139748909221872
         pos49 = pos
         if pos49 < pos50:
             mode49 = mode50
@@ -915,10 +874,6 @@ def _parse_StringLiteral1(text, pos):
         if mode49:
             pos = pos49
             goto .loop_skip10
-        elif mode49 is None:
-            mode48 = mode49
-            value50 = value51
-            pos48 = pos49
         else:
             mode48 = 1
             value50 = None
@@ -928,9 +883,9 @@ def _parse_StringLiteral1(text, pos):
         pos47 = pos48
     else:
         mode47 = False
-        value49 = 140115314466544
+        value49 = 139748909123344
         pos47 = pos
-    if mode47 or mode47 is None:
+    if mode47:
         mode41 = mode47
         value43 = value49
         pos41 = pos47
@@ -948,9 +903,9 @@ def _parse_StringLiteral1(text, pos):
             pos55 = match24.end()
         else:
             mode55 = False
-            value57 = 140115314136232
+            value57 = 139748909259464
             pos55 = pos
-        if mode55 or mode55 is None:
+        if mode55:
             mode54 = mode55
             value56 = value57
             pos54 = pos55
@@ -963,16 +918,16 @@ def _parse_StringLiteral1(text, pos):
             pos56 = match25.end()
         else:
             mode56 = False
-            value58 = 140115314093304
+            value58 = 139748909258232
             pos56 = pos
-        if mode56 or mode56 is None:
+        if mode56:
             mode54 = mode56
             value56 = value58
             pos54 = pos56
             goto .end_choice11
         pos = backtrack11
         mode54 = False
-        value56 = 140115314093024
+        value56 = 139748909221872
         pos54 = pos
         if pos54 < pos55:
             mode54 = mode55
@@ -986,10 +941,6 @@ def _parse_StringLiteral1(text, pos):
         if mode54:
             pos = pos54
             goto .loop_skip11
-        elif mode54 is None:
-            mode53 = mode54
-            value55 = value56
-            pos53 = pos54
         else:
             mode53 = 1
             value55 = None
@@ -999,9 +950,9 @@ def _parse_StringLiteral1(text, pos):
         pos52 = pos53
     else:
         mode52 = False
-        value54 = 140115314004264
+        value54 = 139748909123848
         pos52 = pos
-    if mode52 or mode52 is None:
+    if mode52:
         mode41 = mode52
         value43 = value54
         pos41 = pos52
@@ -1019,9 +970,9 @@ def _parse_StringLiteral1(text, pos):
             pos60 = match27.end()
         else:
             mode60 = False
-            value62 = 140115314136232
+            value62 = 139748909259464
             pos60 = pos
-        if mode60 or mode60 is None:
+        if mode60:
             mode59 = mode60
             value61 = value62
             pos59 = pos60
@@ -1034,16 +985,16 @@ def _parse_StringLiteral1(text, pos):
             pos61 = match28.end()
         else:
             mode61 = False
-            value63 = 140115314093304
+            value63 = 139748909258232
             pos61 = pos
-        if mode61 or mode61 is None:
+        if mode61:
             mode59 = mode61
             value61 = value63
             pos59 = pos61
             goto .end_choice12
         pos = backtrack12
         mode59 = False
-        value61 = 140115314093024
+        value61 = 139748909221872
         pos59 = pos
         if pos59 < pos60:
             mode59 = mode60
@@ -1057,10 +1008,6 @@ def _parse_StringLiteral1(text, pos):
         if mode59:
             pos = pos59
             goto .loop_skip12
-        elif mode59 is None:
-            mode58 = mode59
-            value60 = value61
-            pos58 = pos59
         else:
             mode58 = 1
             value60 = None
@@ -1070,16 +1017,16 @@ def _parse_StringLiteral1(text, pos):
         pos57 = pos58
     else:
         mode57 = False
-        value59 = 140115314004320
+        value59 = 139748909123288
         pos57 = pos
-    if mode57 or mode57 is None:
+    if mode57:
         mode41 = mode57
         value43 = value59
         pos41 = pos57
         goto .end_choice8
     pos = backtrack8
     mode41 = False
-    value43 = 140115313713280
+    value43 = 139748910167600
     pos41 = pos
     if pos41 < pos42:
         mode41 = mode42
@@ -1143,9 +1090,9 @@ def _parse_RegexLiteral1(text, pos):
             pos68 = match30.end()
         else:
             mode68 = False
-            value70 = 140115314136232
+            value70 = 139748909259464
             pos68 = pos
-        if mode68 or mode68 is None:
+        if mode68:
             mode67 = mode68
             value69 = value70
             pos67 = pos68
@@ -1158,16 +1105,16 @@ def _parse_RegexLiteral1(text, pos):
             pos69 = match31.end()
         else:
             mode69 = False
-            value71 = 140115314093304
+            value71 = 139748909258232
             pos69 = pos
-        if mode69 or mode69 is None:
+        if mode69:
             mode67 = mode69
             value69 = value71
             pos67 = pos69
             goto .end_choice13
         pos = backtrack13
         mode67 = False
-        value69 = 140115314093024
+        value69 = 139748909221872
         pos67 = pos
         if pos67 < pos68:
             mode67 = mode68
@@ -1181,10 +1128,6 @@ def _parse_RegexLiteral1(text, pos):
         if mode67:
             pos = pos67
             goto .loop_skip13
-        elif mode67 is None:
-            mode66 = mode67
-            value68 = value69
-            pos66 = pos67
         else:
             mode66 = 1
             value68 = None
@@ -1194,7 +1137,7 @@ def _parse_RegexLiteral1(text, pos):
         pos65 = pos66
     else:
         mode65 = False
-        value67 = 140115314465648
+        value67 = 139748909122392
         pos65 = pos
     if not mode65:
         mode64 = mode65
@@ -1241,9 +1184,9 @@ def _parse_PythonSection1(text, pos):
             pos76 = match33.end()
         else:
             mode76 = False
-            value78 = 140115314136232
+            value78 = 139748909259464
             pos76 = pos
-        if mode76 or mode76 is None:
+        if mode76:
             mode75 = mode76
             value77 = value78
             pos75 = pos76
@@ -1256,16 +1199,16 @@ def _parse_PythonSection1(text, pos):
             pos77 = match34.end()
         else:
             mode77 = False
-            value79 = 140115314093304
+            value79 = 139748909258232
             pos77 = pos
-        if mode77 or mode77 is None:
+        if mode77:
             mode75 = mode77
             value77 = value79
             pos75 = pos77
             goto .end_choice14
         pos = backtrack14
         mode75 = False
-        value77 = 140115314093024
+        value77 = 139748909221872
         pos75 = pos
         if pos75 < pos76:
             mode75 = mode76
@@ -1279,10 +1222,6 @@ def _parse_PythonSection1(text, pos):
         if mode75:
             pos = pos75
             goto .loop_skip14
-        elif mode75 is None:
-            mode74 = mode75
-            value76 = value77
-            pos74 = pos75
         else:
             mode74 = 1
             value76 = None
@@ -1292,7 +1231,7 @@ def _parse_PythonSection1(text, pos):
         pos73 = pos74
     else:
         mode73 = False
-        value75 = 140115314343608
+        value75 = 139748901834536
         pos73 = pos
     if not mode73:
         mode72 = mode73
@@ -1339,9 +1278,9 @@ def _parse_PythonExpression1(text, pos):
             pos84 = match36.end()
         else:
             mode84 = False
-            value86 = 140115314136232
+            value86 = 139748909259464
             pos84 = pos
-        if mode84 or mode84 is None:
+        if mode84:
             mode83 = mode84
             value85 = value86
             pos83 = pos84
@@ -1354,16 +1293,16 @@ def _parse_PythonExpression1(text, pos):
             pos85 = match37.end()
         else:
             mode85 = False
-            value87 = 140115314093304
+            value87 = 139748909258232
             pos85 = pos
-        if mode85 or mode85 is None:
+        if mode85:
             mode83 = mode85
             value85 = value87
             pos83 = pos85
             goto .end_choice15
         pos = backtrack15
         mode83 = False
-        value85 = 140115314093024
+        value85 = 139748909221872
         pos83 = pos
         if pos83 < pos84:
             mode83 = mode84
@@ -1377,10 +1316,6 @@ def _parse_PythonExpression1(text, pos):
         if mode83:
             pos = pos83
             goto .loop_skip15
-        elif mode83 is None:
-            mode82 = mode83
-            value84 = value85
-            pos82 = pos83
         else:
             mode82 = 1
             value84 = None
@@ -1390,7 +1325,7 @@ def _parse_PythonExpression1(text, pos):
         pos81 = pos82
     else:
         mode81 = False
-        value83 = 140115314186392
+        value83 = 139748909329264
         pos81 = pos
     if not mode81:
         mode80 = mode81
@@ -1440,9 +1375,9 @@ def _parse_RuleDef1(text, pos):
             pos94 = match38.end()
         else:
             mode94 = False
-            value97 = 140115314136232
+            value97 = 139748909259464
             pos94 = pos
-        if mode94 or mode94 is None:
+        if mode94:
             mode93 = mode94
             value96 = value97
             pos93 = pos94
@@ -1455,16 +1390,16 @@ def _parse_RuleDef1(text, pos):
             pos95 = match39.end()
         else:
             mode95 = False
-            value98 = 140115314093304
+            value98 = 139748909258232
             pos95 = pos
-        if mode95 or mode95 is None:
+        if mode95:
             mode93 = mode95
             value96 = value98
             pos93 = pos95
             goto .end_choice17
         pos = backtrack18
         mode93 = False
-        value96 = 140115314093024
+        value96 = 139748909221872
         pos93 = pos
         if pos93 < pos94:
             mode93 = mode94
@@ -1478,10 +1413,6 @@ def _parse_RuleDef1(text, pos):
         if mode93:
             pos = pos93
             goto .loop_skip16
-        elif mode93 is None:
-            mode92 = mode93
-            value95 = value96
-            pos92 = pos93
         else:
             mode92 = 1
             value95 = None
@@ -1491,9 +1422,9 @@ def _parse_RuleDef1(text, pos):
         pos91 = pos92
     else:
         mode91 = False
-        value93 = 140115314187008
+        value93 = 139748909363384
         pos91 = pos
-    if mode91 or mode91 is None:
+    if mode91:
         mode90 = mode91
         value92 = value93
         pos90 = pos91
@@ -1512,9 +1443,9 @@ def _parse_RuleDef1(text, pos):
             pos99 = match40.end()
         else:
             mode99 = False
-            value103 = 140115314136232
+            value103 = 139748909259464
             pos99 = pos
-        if mode99 or mode99 is None:
+        if mode99:
             mode98 = mode99
             value102 = value103
             pos98 = pos99
@@ -1527,16 +1458,16 @@ def _parse_RuleDef1(text, pos):
             pos100 = match41.end()
         else:
             mode100 = False
-            value104 = 140115314093304
+            value104 = 139748909258232
             pos100 = pos
-        if mode100 or mode100 is None:
+        if mode100:
             mode98 = mode100
             value102 = value104
             pos98 = pos100
             goto .end_choice18
         pos = backtrack19
         mode98 = False
-        value102 = 140115314093024
+        value102 = 139748909221872
         pos98 = pos
         if pos98 < pos99:
             mode98 = mode99
@@ -1550,10 +1481,6 @@ def _parse_RuleDef1(text, pos):
         if mode98:
             pos = pos98
             goto .loop_skip17
-        elif mode98 is None:
-            mode97 = mode98
-            value101 = value102
-            pos97 = pos98
         else:
             mode97 = 1
             value101 = None
@@ -1563,16 +1490,16 @@ def _parse_RuleDef1(text, pos):
         pos96 = pos97
     else:
         mode96 = False
-        value99 = 140115314187064
+        value99 = 139748909363440
         pos96 = pos
-    if mode96 or mode96 is None:
+    if mode96:
         mode90 = mode96
         value92 = value99
         pos90 = pos96
         goto .end_choice16
     pos = backtrack17
     mode90 = False
-    value92 = 140115313714064
+    value92 = 139748910168384
     pos90 = pos
     if pos90 < pos91:
         mode90 = mode91
@@ -1583,7 +1510,7 @@ def _parse_RuleDef1(text, pos):
         value92 = value99
         pos90 = pos96
     label .end_choice16
-    if mode90 or mode90 is None:
+    if mode90:
         mode89 = mode90
         value91 = value92
         pos89 = pos90
@@ -1636,9 +1563,9 @@ def _parse_RuleDef1(text, pos):
             pos108 = match42.end()
         else:
             mode108 = False
-            value113 = 140115314136232
+            value113 = 139748909259464
             pos108 = pos
-        if mode108 or mode108 is None:
+        if mode108:
             mode107 = mode108
             value112 = value113
             pos107 = pos108
@@ -1651,16 +1578,16 @@ def _parse_RuleDef1(text, pos):
             pos109 = match43.end()
         else:
             mode109 = False
-            value114 = 140115314093304
+            value114 = 139748909258232
             pos109 = pos
-        if mode109 or mode109 is None:
+        if mode109:
             mode107 = mode109
             value112 = value114
             pos107 = pos109
             goto .end_choice20
         pos = backtrack21
         mode107 = False
-        value112 = 140115314093024
+        value112 = 139748909221872
         pos107 = pos
         if pos107 < pos108:
             mode107 = mode108
@@ -1674,10 +1601,6 @@ def _parse_RuleDef1(text, pos):
         if mode107:
             pos = pos107
             goto .loop_skip18
-        elif mode107 is None:
-            mode106 = mode107
-            value111 = value112
-            pos106 = pos107
         else:
             mode106 = 1
             value111 = None
@@ -1687,9 +1610,9 @@ def _parse_RuleDef1(text, pos):
         pos105 = pos106
     else:
         mode105 = False
-        value109 = 140115314187288
+        value109 = 139748909363664
         pos105 = pos
-    if mode105 or mode105 is None:
+    if mode105:
         mode104 = mode105
         value108 = value109
         pos104 = pos105
@@ -1708,9 +1631,9 @@ def _parse_RuleDef1(text, pos):
             pos113 = match44.end()
         else:
             mode113 = False
-            value119 = 140115314136232
+            value119 = 139748909259464
             pos113 = pos
-        if mode113 or mode113 is None:
+        if mode113:
             mode112 = mode113
             value118 = value119
             pos112 = pos113
@@ -1723,16 +1646,16 @@ def _parse_RuleDef1(text, pos):
             pos114 = match45.end()
         else:
             mode114 = False
-            value120 = 140115314093304
+            value120 = 139748909258232
             pos114 = pos
-        if mode114 or mode114 is None:
+        if mode114:
             mode112 = mode114
             value118 = value120
             pos112 = pos114
             goto .end_choice21
         pos = backtrack22
         mode112 = False
-        value118 = 140115314093024
+        value118 = 139748909221872
         pos112 = pos
         if pos112 < pos113:
             mode112 = mode113
@@ -1746,10 +1669,6 @@ def _parse_RuleDef1(text, pos):
         if mode112:
             pos = pos112
             goto .loop_skip19
-        elif mode112 is None:
-            mode111 = mode112
-            value117 = value118
-            pos111 = pos112
         else:
             mode111 = 1
             value117 = None
@@ -1759,16 +1678,16 @@ def _parse_RuleDef1(text, pos):
         pos110 = pos111
     else:
         mode110 = False
-        value115 = 140115314187344
+        value115 = 139748909363720
         pos110 = pos
-    if mode110 or mode110 is None:
+    if mode110:
         mode104 = mode110
         value108 = value115
         pos104 = pos110
         goto .end_choice19
     pos = backtrack20
     mode104 = False
-    value108 = 140115313714232
+    value108 = 139748910168552
     pos104 = pos
     if pos104 < pos105:
         mode104 = mode105
@@ -1823,9 +1742,9 @@ def _parse_ClassDef1(text, pos):
             pos121 = match46.end()
         else:
             mode121 = False
-            value128 = 140115314136232
+            value128 = 139748909259464
             pos121 = pos
-        if mode121 or mode121 is None:
+        if mode121:
             mode120 = mode121
             value127 = value128
             pos120 = pos121
@@ -1838,16 +1757,16 @@ def _parse_ClassDef1(text, pos):
             pos122 = match47.end()
         else:
             mode122 = False
-            value129 = 140115314093304
+            value129 = 139748909258232
             pos122 = pos
-        if mode122 or mode122 is None:
+        if mode122:
             mode120 = mode122
             value127 = value129
             pos120 = pos122
             goto .end_choice22
         pos = backtrack23
         mode120 = False
-        value127 = 140115314093024
+        value127 = 139748909221872
         pos120 = pos
         if pos120 < pos121:
             mode120 = mode121
@@ -1861,10 +1780,6 @@ def _parse_ClassDef1(text, pos):
         if mode120:
             pos = pos120
             goto .loop_skip20
-        elif mode120 is None:
-            mode119 = mode120
-            value126 = value127
-            pos119 = pos120
         else:
             mode119 = 1
             value126 = None
@@ -1874,7 +1789,7 @@ def _parse_ClassDef1(text, pos):
         pos118 = pos119
     else:
         mode118 = False
-        value124 = 140115314187904
+        value124 = 139748909364280
         pos118 = pos
     if not mode118:
         mode117 = mode118
@@ -1895,10 +1810,6 @@ def _parse_ClassDef1(text, pos):
     if mode128:
         pos = pos128
         goto .loop_skip21
-    elif mode128 is None:
-        mode127 = mode128
-        value134 = value135
-        pos127 = pos128
     else:
         mode127 = 1
         value134 = None
@@ -1922,9 +1833,9 @@ def _parse_ClassDef1(text, pos):
             pos131 = match48.end()
         else:
             mode131 = False
-            value139 = 140115314136232
+            value139 = 139748909259464
             pos131 = pos
-        if mode131 or mode131 is None:
+        if mode131:
             mode130 = mode131
             value138 = value139
             pos130 = pos131
@@ -1937,16 +1848,16 @@ def _parse_ClassDef1(text, pos):
             pos132 = match49.end()
         else:
             mode132 = False
-            value140 = 140115314093304
+            value140 = 139748909258232
             pos132 = pos
-        if mode132 or mode132 is None:
+        if mode132:
             mode130 = mode132
             value138 = value140
             pos130 = pos132
             goto .end_choice23
         pos = backtrack24
         mode130 = False
-        value138 = 140115314093024
+        value138 = 139748909221872
         pos130 = pos
         if pos130 < pos131:
             mode130 = mode131
@@ -1960,10 +1871,6 @@ def _parse_ClassDef1(text, pos):
         if mode130:
             pos = pos130
             goto .loop_skip22
-        elif mode130 is None:
-            mode129 = mode130
-            value137 = value138
-            pos129 = pos130
         else:
             mode129 = 1
             value137 = None
@@ -1973,7 +1880,7 @@ def _parse_ClassDef1(text, pos):
         pos126 = pos129
     else:
         mode126 = False
-        value133 = 140115313717320
+        value133 = 139748909364672
         pos126 = pos
     label .end_discard5
     if not mode126:
@@ -1987,10 +1894,6 @@ def _parse_ClassDef1(text, pos):
     if mode134:
         pos = pos134
         goto .loop_skip23
-    elif mode134 is None:
-        mode133 = mode134
-        value141 = value142
-        pos133 = pos134
     else:
         mode133 = 1
         value141 = None
@@ -2015,19 +1918,11 @@ def _parse_ClassDef1(text, pos):
     label .loop_alt1
     mode135, value143, pos135 = yield (3, _parse_RuleDef1, pos)
     if not mode135:
-        if mode135 is None:
-            mode124 = mode135
-            value131 = value143
-            pos124 = pos135
         goto .end_alt1
     buf2.append(value143)
     pos = pos135
     mode136, value144, pos136 = yield (3, _parse_Sep1, pos)
     if not mode136:
-        if mode136 is None:
-            mode124 = mode136
-            value131 = value144
-            pos124 = pos136
         goto .end_alt1
     pos = pos136
     goto .loop_alt1
@@ -2055,9 +1950,9 @@ def _parse_ClassDef1(text, pos):
             pos140 = match50.end()
         else:
             mode140 = False
-            value149 = 140115314136232
+            value149 = 139748909259464
             pos140 = pos
-        if mode140 or mode140 is None:
+        if mode140:
             mode139 = mode140
             value148 = value149
             pos139 = pos140
@@ -2070,16 +1965,16 @@ def _parse_ClassDef1(text, pos):
             pos141 = match51.end()
         else:
             mode141 = False
-            value150 = 140115314093304
+            value150 = 139748909258232
             pos141 = pos
-        if mode141 or mode141 is None:
+        if mode141:
             mode139 = mode141
             value148 = value150
             pos139 = pos141
             goto .end_choice24
         pos = backtrack25
         mode139 = False
-        value148 = 140115314093024
+        value148 = 139748909221872
         pos139 = pos
         if pos139 < pos140:
             mode139 = mode140
@@ -2093,10 +1988,6 @@ def _parse_ClassDef1(text, pos):
         if mode139:
             pos = pos139
             goto .loop_skip24
-        elif mode139 is None:
-            mode138 = mode139
-            value147 = value148
-            pos138 = pos139
         else:
             mode138 = 1
             value147 = None
@@ -2106,7 +1997,7 @@ def _parse_ClassDef1(text, pos):
         pos137 = pos138
     else:
         mode137 = False
-        value145 = 140115314188016
+        value145 = 139748909364392
         pos137 = pos
     if mode137:
         mode123 = 1
@@ -2145,9 +2036,9 @@ def _parse_TemplateDef1(text, pos):
             pos147 = match52.end()
         else:
             mode147 = False
-            value157 = 140115314136232
+            value157 = 139748909259464
             pos147 = pos
-        if mode147 or mode147 is None:
+        if mode147:
             mode146 = mode147
             value156 = value157
             pos146 = pos147
@@ -2160,16 +2051,16 @@ def _parse_TemplateDef1(text, pos):
             pos148 = match53.end()
         else:
             mode148 = False
-            value158 = 140115314093304
+            value158 = 139748909258232
             pos148 = pos
-        if mode148 or mode148 is None:
+        if mode148:
             mode146 = mode148
             value156 = value158
             pos146 = pos148
             goto .end_choice25
         pos = backtrack26
         mode146 = False
-        value156 = 140115314093024
+        value156 = 139748909221872
         pos146 = pos
         if pos146 < pos147:
             mode146 = mode147
@@ -2183,10 +2074,6 @@ def _parse_TemplateDef1(text, pos):
         if mode146:
             pos = pos146
             goto .loop_skip25
-        elif mode146 is None:
-            mode145 = mode146
-            value155 = value156
-            pos145 = pos146
         else:
             mode145 = 1
             value155 = None
@@ -2196,7 +2083,7 @@ def _parse_TemplateDef1(text, pos):
         pos144 = pos145
     else:
         mode144 = False
-        value153 = 140115313717880
+        value153 = 139748909365232
         pos144 = pos
     if not mode144:
         mode143 = mode144
@@ -2217,10 +2104,6 @@ def _parse_TemplateDef1(text, pos):
     if mode154:
         pos = pos154
         goto .loop_skip26
-    elif mode154 is None:
-        mode153 = mode154
-        value163 = value164
-        pos153 = pos154
     else:
         mode153 = 1
         value163 = None
@@ -2244,9 +2127,9 @@ def _parse_TemplateDef1(text, pos):
             pos157 = match54.end()
         else:
             mode157 = False
-            value168 = 140115314136232
+            value168 = 139748909259464
             pos157 = pos
-        if mode157 or mode157 is None:
+        if mode157:
             mode156 = mode157
             value167 = value168
             pos156 = pos157
@@ -2259,16 +2142,16 @@ def _parse_TemplateDef1(text, pos):
             pos158 = match55.end()
         else:
             mode158 = False
-            value169 = 140115314093304
+            value169 = 139748909258232
             pos158 = pos
-        if mode158 or mode158 is None:
+        if mode158:
             mode156 = mode158
             value167 = value169
             pos156 = pos158
             goto .end_choice26
         pos = backtrack27
         mode156 = False
-        value167 = 140115314093024
+        value167 = 139748909221872
         pos156 = pos
         if pos156 < pos157:
             mode156 = mode157
@@ -2282,10 +2165,6 @@ def _parse_TemplateDef1(text, pos):
         if mode156:
             pos = pos156
             goto .loop_skip27
-        elif mode156 is None:
-            mode155 = mode156
-            value166 = value167
-            pos155 = pos156
         else:
             mode155 = 1
             value166 = None
@@ -2295,7 +2174,7 @@ def _parse_TemplateDef1(text, pos):
         pos152 = pos155
     else:
         mode152 = False
-        value162 = 140115313718272
+        value162 = 139748909365624
         pos152 = pos
     label .end_discard10
     if not mode152:
@@ -2309,10 +2188,6 @@ def _parse_TemplateDef1(text, pos):
     if mode160:
         pos = pos160
         goto .loop_skip28
-    elif mode160 is None:
-        mode159 = mode160
-        value170 = value171
-        pos159 = pos160
     else:
         mode159 = 1
         value170 = None
@@ -2340,10 +2215,6 @@ def _parse_TemplateDef1(text, pos):
     if mode164:
         pos = pos164
         goto .loop_skip29
-    elif mode164 is None:
-        mode163 = mode164
-        value174 = value175
-        pos163 = pos164
     else:
         mode163 = 1
         value174 = None
@@ -2367,10 +2238,6 @@ def _parse_TemplateDef1(text, pos):
     if mode166:
         pos = pos166
         goto .loop_skip30
-    elif mode166 is None:
-        mode165 = mode166
-        value176 = value177
-        pos165 = pos166
     else:
         mode165 = 1
         value176 = None
@@ -2385,19 +2252,11 @@ def _parse_TemplateDef1(text, pos):
         pos161 = pos165
     label .end_discard14
     if not mode161:
-        if mode161 is None:
-            mode150 = mode161
-            value160 = value172
-            pos150 = pos161
         goto .end_alt2
     buf3.append(value172)
     pos = pos161
     mode167, value178, pos167 = yield (3, _parse_Comma1, pos)
     if not mode167:
-        if mode167 is None:
-            mode150 = mode167
-            value160 = value178
-            pos150 = pos167
         goto .end_alt2
     pos = pos167
     goto .loop_alt2
@@ -2425,9 +2284,9 @@ def _parse_TemplateDef1(text, pos):
             pos171 = match56.end()
         else:
             mode171 = False
-            value183 = 140115314136232
+            value183 = 139748909259464
             pos171 = pos
-        if mode171 or mode171 is None:
+        if mode171:
             mode170 = mode171
             value182 = value183
             pos170 = pos171
@@ -2440,16 +2299,16 @@ def _parse_TemplateDef1(text, pos):
             pos172 = match57.end()
         else:
             mode172 = False
-            value184 = 140115314093304
+            value184 = 139748909258232
             pos172 = pos
-        if mode172 or mode172 is None:
+        if mode172:
             mode170 = mode172
             value182 = value184
             pos170 = pos172
             goto .end_choice27
         pos = backtrack28
         mode170 = False
-        value182 = 140115314093024
+        value182 = 139748909221872
         pos170 = pos
         if pos170 < pos171:
             mode170 = mode171
@@ -2463,10 +2322,6 @@ def _parse_TemplateDef1(text, pos):
         if mode170:
             pos = pos170
             goto .loop_skip31
-        elif mode170 is None:
-            mode169 = mode170
-            value181 = value182
-            pos169 = pos170
         else:
             mode169 = 1
             value181 = None
@@ -2476,7 +2331,7 @@ def _parse_TemplateDef1(text, pos):
         pos168 = pos169
     else:
         mode168 = False
-        value179 = 140115313717992
+        value179 = 139748909365344
         pos168 = pos
     if mode168:
         mode149 = 1
@@ -2498,10 +2353,6 @@ def _parse_TemplateDef1(text, pos):
     if mode177:
         pos = pos177
         goto .loop_skip32
-    elif mode177 is None:
-        mode176 = mode177
-        value188 = value189
-        pos176 = pos177
     else:
         mode176 = 1
         value188 = None
@@ -2526,9 +2377,9 @@ def _parse_TemplateDef1(text, pos):
             pos181 = match58.end()
         else:
             mode181 = False
-            value194 = 140115314136232
+            value194 = 139748909259464
             pos181 = pos
-        if mode181 or mode181 is None:
+        if mode181:
             mode180 = mode181
             value193 = value194
             pos180 = pos181
@@ -2541,16 +2392,16 @@ def _parse_TemplateDef1(text, pos):
             pos182 = match59.end()
         else:
             mode182 = False
-            value195 = 140115314093304
+            value195 = 139748909258232
             pos182 = pos
-        if mode182 or mode182 is None:
+        if mode182:
             mode180 = mode182
             value193 = value195
             pos180 = pos182
             goto .end_choice29
         pos = backtrack30
         mode180 = False
-        value193 = 140115314093024
+        value193 = 139748909221872
         pos180 = pos
         if pos180 < pos181:
             mode180 = mode181
@@ -2564,10 +2415,6 @@ def _parse_TemplateDef1(text, pos):
         if mode180:
             pos = pos180
             goto .loop_skip33
-        elif mode180 is None:
-            mode179 = mode180
-            value192 = value193
-            pos179 = pos180
         else:
             mode179 = 1
             value192 = None
@@ -2577,9 +2424,9 @@ def _parse_TemplateDef1(text, pos):
         pos178 = pos179
     else:
         mode178 = False
-        value190 = 140115313719000
+        value190 = 139748909366352
         pos178 = pos
-    if mode178 or mode178 is None:
+    if mode178:
         mode175 = mode178
         value187 = value190
         pos175 = pos178
@@ -2598,9 +2445,9 @@ def _parse_TemplateDef1(text, pos):
             pos186 = match60.end()
         else:
             mode186 = False
-            value200 = 140115314136232
+            value200 = 139748909259464
             pos186 = pos
-        if mode186 or mode186 is None:
+        if mode186:
             mode185 = mode186
             value199 = value200
             pos185 = pos186
@@ -2613,16 +2460,16 @@ def _parse_TemplateDef1(text, pos):
             pos187 = match61.end()
         else:
             mode187 = False
-            value201 = 140115314093304
+            value201 = 139748909258232
             pos187 = pos
-        if mode187 or mode187 is None:
+        if mode187:
             mode185 = mode187
             value199 = value201
             pos185 = pos187
             goto .end_choice30
         pos = backtrack31
         mode185 = False
-        value199 = 140115314093024
+        value199 = 139748909221872
         pos185 = pos
         if pos185 < pos186:
             mode185 = mode186
@@ -2636,10 +2483,6 @@ def _parse_TemplateDef1(text, pos):
         if mode185:
             pos = pos185
             goto .loop_skip34
-        elif mode185 is None:
-            mode184 = mode185
-            value198 = value199
-            pos184 = pos185
         else:
             mode184 = 1
             value198 = None
@@ -2649,9 +2492,9 @@ def _parse_TemplateDef1(text, pos):
         pos183 = pos184
     else:
         mode183 = False
-        value196 = 140115313719056
+        value196 = 139748909366408
         pos183 = pos
-    if mode183 or mode183 is None:
+    if mode183:
         mode175 = mode183
         value187 = value196
         pos175 = pos183
@@ -2670,9 +2513,9 @@ def _parse_TemplateDef1(text, pos):
             pos191 = match62.end()
         else:
             mode191 = False
-            value206 = 140115314136232
+            value206 = 139748909259464
             pos191 = pos
-        if mode191 or mode191 is None:
+        if mode191:
             mode190 = mode191
             value205 = value206
             pos190 = pos191
@@ -2685,16 +2528,16 @@ def _parse_TemplateDef1(text, pos):
             pos192 = match63.end()
         else:
             mode192 = False
-            value207 = 140115314093304
+            value207 = 139748909258232
             pos192 = pos
-        if mode192 or mode192 is None:
+        if mode192:
             mode190 = mode192
             value205 = value207
             pos190 = pos192
             goto .end_choice31
         pos = backtrack32
         mode190 = False
-        value205 = 140115314093024
+        value205 = 139748909221872
         pos190 = pos
         if pos190 < pos191:
             mode190 = mode191
@@ -2708,10 +2551,6 @@ def _parse_TemplateDef1(text, pos):
         if mode190:
             pos = pos190
             goto .loop_skip35
-        elif mode190 is None:
-            mode189 = mode190
-            value204 = value205
-            pos189 = pos190
         else:
             mode189 = 1
             value204 = None
@@ -2721,16 +2560,16 @@ def _parse_TemplateDef1(text, pos):
         pos188 = pos189
     else:
         mode188 = False
-        value202 = 140115313718944
+        value202 = 139748909366296
         pos188 = pos
-    if mode188 or mode188 is None:
+    if mode188:
         mode175 = mode188
         value187 = value202
         pos175 = pos188
         goto .end_choice28
     pos = backtrack29
     mode175 = False
-    value187 = 140115313715968
+    value187 = 139748910207216
     pos175 = pos
     if pos175 < pos178:
         mode175 = mode178
@@ -2757,10 +2596,6 @@ def _parse_TemplateDef1(text, pos):
     if mode194:
         pos = pos194
         goto .loop_skip36
-    elif mode194 is None:
-        mode193 = mode194
-        value208 = value209
-        pos193 = pos194
     else:
         mode193 = 1
         value208 = None
@@ -2799,42 +2634,42 @@ def _parse_TemplateDef1(text, pos):
 def _parse_Stmt1(text, pos):
     backtrack33 = pos
     mode196, value211, pos196 = yield (3, _parse_ClassDef1, pos)
-    if mode196 or mode196 is None:
+    if mode196:
         mode195 = mode196
         value210 = value211
         pos195 = pos196
         goto .end_choice32
     pos = backtrack33
     mode197, value212, pos197 = yield (3, _parse_TemplateDef1, pos)
-    if mode197 or mode197 is None:
+    if mode197:
         mode195 = mode197
         value210 = value212
         pos195 = pos197
         goto .end_choice32
     pos = backtrack33
     mode198, value213, pos198 = yield (3, _parse_RuleDef1, pos)
-    if mode198 or mode198 is None:
+    if mode198:
         mode195 = mode198
         value210 = value213
         pos195 = pos198
         goto .end_choice32
     pos = backtrack33
     mode199, value214, pos199 = yield (3, _parse_PythonSection1, pos)
-    if mode199 or mode199 is None:
+    if mode199:
         mode195 = mode199
         value210 = value214
         pos195 = pos199
         goto .end_choice32
     pos = backtrack33
     mode200, value215, pos200 = yield (3, _parse_PythonExpression1, pos)
-    if mode200 or mode200 is None:
+    if mode200:
         mode195 = mode200
         value210 = value215
         pos195 = pos200
         goto .end_choice32
     pos = backtrack33
     mode195 = False
-    value210 = 140115313716304
+    value210 = 139748910207552
     pos195 = pos
     if pos195 < pos196:
         mode195 = mode196
@@ -2891,9 +2726,9 @@ def _parse_ListLiteral1(text, pos):
             pos209 = match64.end()
         else:
             mode209 = False
-            value225 = 140115314136232
+            value225 = 139748909259464
             pos209 = pos
-        if mode209 or mode209 is None:
+        if mode209:
             mode208 = mode209
             value224 = value225
             pos208 = pos209
@@ -2906,16 +2741,16 @@ def _parse_ListLiteral1(text, pos):
             pos210 = match65.end()
         else:
             mode210 = False
-            value226 = 140115314093304
+            value226 = 139748909258232
             pos210 = pos
-        if mode210 or mode210 is None:
+        if mode210:
             mode208 = mode210
             value224 = value226
             pos208 = pos210
             goto .end_choice33
         pos = backtrack34
         mode208 = False
-        value224 = 140115314093024
+        value224 = 139748909221872
         pos208 = pos
         if pos208 < pos209:
             mode208 = mode209
@@ -2929,10 +2764,6 @@ def _parse_ListLiteral1(text, pos):
         if mode208:
             pos = pos208
             goto .loop_skip37
-        elif mode208 is None:
-            mode207 = mode208
-            value223 = value224
-            pos207 = pos208
         else:
             mode207 = 1
             value223 = None
@@ -2942,7 +2773,7 @@ def _parse_ListLiteral1(text, pos):
         pos206 = pos207
     else:
         mode206 = False
-        value221 = 140115313719840
+        value221 = 139748909367192
         pos206 = pos
     if not mode206:
         mode205 = mode206
@@ -2958,10 +2789,6 @@ def _parse_ListLiteral1(text, pos):
     if mode214:
         pos = pos214
         goto .loop_skip38
-    elif mode214 is None:
-        mode213 = mode214
-        value229 = value230
-        pos213 = pos214
     else:
         mode213 = 1
         value229 = None
@@ -2985,10 +2812,6 @@ def _parse_ListLiteral1(text, pos):
     if mode216:
         pos = pos216
         goto .loop_skip39
-    elif mode216 is None:
-        mode215 = mode216
-        value231 = value232
-        pos215 = pos216
     else:
         mode215 = 1
         value231 = None
@@ -3003,19 +2826,11 @@ def _parse_ListLiteral1(text, pos):
         pos211 = pos215
     label .end_discard21
     if not mode211:
-        if mode211 is None:
-            mode205 = mode211
-            value220 = value227
-            pos205 = pos211
         goto .end_alt3
     buf4.append(value227)
     pos = pos211
     mode217, value233, pos217 = yield (3, _parse_Comma1, pos)
     if not mode217:
-        if mode217 is None:
-            mode205 = mode217
-            value220 = value233
-            pos205 = pos217
         goto .end_alt3
     pos = pos217
     goto .loop_alt3
@@ -3043,9 +2858,9 @@ def _parse_ListLiteral1(text, pos):
             pos221 = match66.end()
         else:
             mode221 = False
-            value238 = 140115314136232
+            value238 = 139748909259464
             pos221 = pos
-        if mode221 or mode221 is None:
+        if mode221:
             mode220 = mode221
             value237 = value238
             pos220 = pos221
@@ -3058,16 +2873,16 @@ def _parse_ListLiteral1(text, pos):
             pos222 = match67.end()
         else:
             mode222 = False
-            value239 = 140115314093304
+            value239 = 139748909258232
             pos222 = pos
-        if mode222 or mode222 is None:
+        if mode222:
             mode220 = mode222
             value237 = value239
             pos220 = pos222
             goto .end_choice34
         pos = backtrack35
         mode220 = False
-        value237 = 140115314093024
+        value237 = 139748909221872
         pos220 = pos
         if pos220 < pos221:
             mode220 = mode221
@@ -3081,10 +2896,6 @@ def _parse_ListLiteral1(text, pos):
         if mode220:
             pos = pos220
             goto .loop_skip40
-        elif mode220 is None:
-            mode219 = mode220
-            value236 = value237
-            pos219 = pos220
         else:
             mode219 = 1
             value236 = None
@@ -3094,7 +2905,7 @@ def _parse_ListLiteral1(text, pos):
         pos218 = pos219
     else:
         mode218 = False
-        value234 = 140115313719784
+        value234 = 139748909367136
         pos218 = pos
     if mode218:
         mode204 = 1
@@ -3134,9 +2945,9 @@ def _parse_Atom1(text, pos):
             pos229 = match68.end()
         else:
             mode229 = False
-            value247 = 140115314136232
+            value247 = 139748909259464
             pos229 = pos
-        if mode229 or mode229 is None:
+        if mode229:
             mode228 = mode229
             value246 = value247
             pos228 = pos229
@@ -3149,16 +2960,16 @@ def _parse_Atom1(text, pos):
             pos230 = match69.end()
         else:
             mode230 = False
-            value248 = 140115314093304
+            value248 = 139748909258232
             pos230 = pos
-        if mode230 or mode230 is None:
+        if mode230:
             mode228 = mode230
             value246 = value248
             pos228 = pos230
             goto .end_choice36
         pos = backtrack37
         mode228 = False
-        value246 = 140115314093024
+        value246 = 139748909221872
         pos228 = pos
         if pos228 < pos229:
             mode228 = mode229
@@ -3172,10 +2983,6 @@ def _parse_Atom1(text, pos):
         if mode228:
             pos = pos228
             goto .loop_skip41
-        elif mode228 is None:
-            mode227 = mode228
-            value245 = value246
-            pos227 = pos228
         else:
             mode227 = 1
             value245 = None
@@ -3185,7 +2992,7 @@ def _parse_Atom1(text, pos):
         pos226 = pos227
     else:
         mode226 = False
-        value243 = 140115313720624
+        value243 = 139748910162664
         pos226 = pos
     if not mode226:
         mode225 = mode226
@@ -3198,10 +3005,6 @@ def _parse_Atom1(text, pos):
     if mode233:
         pos = pos233
         goto .loop_skip42
-    elif mode233 is None:
-        mode232 = mode233
-        value250 = value251
-        pos232 = pos233
     else:
         mode232 = 1
         value250 = None
@@ -3225,10 +3028,6 @@ def _parse_Atom1(text, pos):
     if mode235:
         pos = pos235
         goto .loop_skip43
-    elif mode235 is None:
-        mode234 = mode235
-        value252 = value253
-        pos234 = pos235
     else:
         mode234 = 1
         value252 = None
@@ -3262,9 +3061,9 @@ def _parse_Atom1(text, pos):
             pos239 = match70.end()
         else:
             mode239 = False
-            value258 = 140115314136232
+            value258 = 139748909259464
             pos239 = pos
-        if mode239 or mode239 is None:
+        if mode239:
             mode238 = mode239
             value257 = value258
             pos238 = pos239
@@ -3277,16 +3076,16 @@ def _parse_Atom1(text, pos):
             pos240 = match71.end()
         else:
             mode240 = False
-            value259 = 140115314093304
+            value259 = 139748909258232
             pos240 = pos
-        if mode240 or mode240 is None:
+        if mode240:
             mode238 = mode240
             value257 = value259
             pos238 = pos240
             goto .end_choice37
         pos = backtrack38
         mode238 = False
-        value257 = 140115314093024
+        value257 = 139748909221872
         pos238 = pos
         if pos238 < pos239:
             mode238 = mode239
@@ -3300,10 +3099,6 @@ def _parse_Atom1(text, pos):
         if mode238:
             pos = pos238
             goto .loop_skip44
-        elif mode238 is None:
-            mode237 = mode238
-            value256 = value257
-            pos237 = pos238
         else:
             mode237 = 1
             value256 = None
@@ -3313,7 +3108,7 @@ def _parse_Atom1(text, pos):
         pos236 = pos237
     else:
         mode236 = False
-        value254 = 140115313720568
+        value254 = 139748910162608
         pos236 = pos
     if mode236:
         mode224 = 1
@@ -3324,49 +3119,49 @@ def _parse_Atom1(text, pos):
         value241 = value254
         pos224 = pos236
     label .end_discard26
-    if mode224 or mode224 is None:
+    if mode224:
         mode223 = mode224
         value240 = value241
         pos223 = pos224
         goto .end_choice35
     pos = backtrack36
     mode241, value260, pos241 = yield (3, _parse_Ref1, pos)
-    if mode241 or mode241 is None:
+    if mode241:
         mode223 = mode241
         value240 = value260
         pos223 = pos241
         goto .end_choice35
     pos = backtrack36
     mode242, value261, pos242 = yield (3, _parse_StringLiteral1, pos)
-    if mode242 or mode242 is None:
+    if mode242:
         mode223 = mode242
         value240 = value261
         pos223 = pos242
         goto .end_choice35
     pos = backtrack36
     mode243, value262, pos243 = yield (3, _parse_RegexLiteral1, pos)
-    if mode243 or mode243 is None:
+    if mode243:
         mode223 = mode243
         value240 = value262
         pos223 = pos243
         goto .end_choice35
     pos = backtrack36
     mode244, value263, pos244 = yield (3, _parse_ListLiteral1, pos)
-    if mode244 or mode244 is None:
+    if mode244:
         mode223 = mode244
         value240 = value263
         pos223 = pos244
         goto .end_choice35
     pos = backtrack36
     mode245, value264, pos245 = yield (3, _parse_PythonExpression1, pos)
-    if mode245 or mode245 is None:
+    if mode245:
         mode223 = mode245
         value240 = value264
         pos223 = pos245
         goto .end_choice35
     pos = backtrack36
     mode223 = False
-    value240 = 140115313717032
+    value240 = 139748910208280
     pos223 = pos
     if pos223 < pos224:
         mode223 = mode224
@@ -3419,9 +3214,9 @@ def _parse_KeywordArg1(text, pos):
             pos253 = match72.end()
         else:
             mode253 = False
-            value273 = 140115314136232
+            value273 = 139748909259464
             pos253 = pos
-        if mode253 or mode253 is None:
+        if mode253:
             mode252 = mode253
             value272 = value273
             pos252 = pos253
@@ -3434,16 +3229,16 @@ def _parse_KeywordArg1(text, pos):
             pos254 = match73.end()
         else:
             mode254 = False
-            value274 = 140115314093304
+            value274 = 139748909258232
             pos254 = pos
-        if mode254 or mode254 is None:
+        if mode254:
             mode252 = mode254
             value272 = value274
             pos252 = pos254
             goto .end_choice39
         pos = backtrack40
         mode252 = False
-        value272 = 140115314093024
+        value272 = 139748909221872
         pos252 = pos
         if pos252 < pos253:
             mode252 = mode253
@@ -3457,10 +3252,6 @@ def _parse_KeywordArg1(text, pos):
         if mode252:
             pos = pos252
             goto .loop_skip45
-        elif mode252 is None:
-            mode251 = mode252
-            value271 = value272
-            pos251 = pos252
         else:
             mode251 = 1
             value271 = None
@@ -3470,9 +3261,9 @@ def _parse_KeywordArg1(text, pos):
         pos250 = pos251
     else:
         mode250 = False
-        value269 = 140115313721296
+        value269 = 139748910163336
         pos250 = pos
-    if mode250 or mode250 is None:
+    if mode250:
         mode249 = mode250
         value268 = value269
         pos249 = pos250
@@ -3491,9 +3282,9 @@ def _parse_KeywordArg1(text, pos):
             pos258 = match74.end()
         else:
             mode258 = False
-            value279 = 140115314136232
+            value279 = 139748909259464
             pos258 = pos
-        if mode258 or mode258 is None:
+        if mode258:
             mode257 = mode258
             value278 = value279
             pos257 = pos258
@@ -3506,16 +3297,16 @@ def _parse_KeywordArg1(text, pos):
             pos259 = match75.end()
         else:
             mode259 = False
-            value280 = 140115314093304
+            value280 = 139748909258232
             pos259 = pos
-        if mode259 or mode259 is None:
+        if mode259:
             mode257 = mode259
             value278 = value280
             pos257 = pos259
             goto .end_choice40
         pos = backtrack41
         mode257 = False
-        value278 = 140115314093024
+        value278 = 139748909221872
         pos257 = pos
         if pos257 < pos258:
             mode257 = mode258
@@ -3529,10 +3320,6 @@ def _parse_KeywordArg1(text, pos):
         if mode257:
             pos = pos257
             goto .loop_skip46
-        elif mode257 is None:
-            mode256 = mode257
-            value277 = value278
-            pos256 = pos257
         else:
             mode256 = 1
             value277 = None
@@ -3542,16 +3329,16 @@ def _parse_KeywordArg1(text, pos):
         pos255 = pos256
     else:
         mode255 = False
-        value275 = 140115313705032
+        value275 = 139748910163392
         pos255 = pos
-    if mode255 or mode255 is None:
+    if mode255:
         mode249 = mode255
         value268 = value275
         pos249 = pos255
         goto .end_choice38
     pos = backtrack39
     mode249 = False
-    value268 = 140115314213216
+    value268 = 139748910208784
     pos249 = pos
     if pos249 < pos250:
         mode249 = mode250
@@ -3606,9 +3393,9 @@ def _parse_ArgList1(text, pos):
             pos267 = match76.end()
         else:
             mode267 = False
-            value289 = 140115314136232
+            value289 = 139748909259464
             pos267 = pos
-        if mode267 or mode267 is None:
+        if mode267:
             mode266 = mode267
             value288 = value289
             pos266 = pos267
@@ -3621,16 +3408,16 @@ def _parse_ArgList1(text, pos):
             pos268 = match77.end()
         else:
             mode268 = False
-            value290 = 140115314093304
+            value290 = 139748909258232
             pos268 = pos
-        if mode268 or mode268 is None:
+        if mode268:
             mode266 = mode268
             value288 = value290
             pos266 = pos268
             goto .end_choice41
         pos = backtrack42
         mode266 = False
-        value288 = 140115314093024
+        value288 = 139748909221872
         pos266 = pos
         if pos266 < pos267:
             mode266 = mode267
@@ -3644,10 +3431,6 @@ def _parse_ArgList1(text, pos):
         if mode266:
             pos = pos266
             goto .loop_skip47
-        elif mode266 is None:
-            mode265 = mode266
-            value287 = value288
-            pos265 = pos266
         else:
             mode265 = 1
             value287 = None
@@ -3657,7 +3440,7 @@ def _parse_ArgList1(text, pos):
         pos264 = pos265
     else:
         mode264 = False
-        value285 = 140115313705424
+        value285 = 139748910163784
         pos264 = pos
     if not mode264:
         mode263 = mode264
@@ -3673,10 +3456,6 @@ def _parse_ArgList1(text, pos):
     if mode272:
         pos = pos272
         goto .loop_skip48
-    elif mode272 is None:
-        mode271 = mode272
-        value293 = value294
-        pos271 = pos272
     else:
         mode271 = 1
         value293 = None
@@ -3689,21 +3468,21 @@ def _parse_ArgList1(text, pos):
     pos = pos271
     backtrack43 = pos
     mode273, value295, pos273 = yield (3, _parse_KeywordArg1, pos)
-    if mode273 or mode273 is None:
+    if mode273:
         mode270 = mode273
         value292 = value295
         pos270 = pos273
         goto .end_choice42
     pos = backtrack43
     mode274, value296, pos274 = yield (3, _parse_Expr1, pos)
-    if mode274 or mode274 is None:
+    if mode274:
         mode270 = mode274
         value292 = value296
         pos270 = pos274
         goto .end_choice42
     pos = backtrack43
     mode270 = False
-    value292 = 140115314213552
+    value292 = 139748910209120
     pos270 = pos
     if pos270 < pos273:
         mode270 = mode273
@@ -3726,10 +3505,6 @@ def _parse_ArgList1(text, pos):
     if mode276:
         pos = pos276
         goto .loop_skip49
-    elif mode276 is None:
-        mode275 = mode276
-        value297 = value298
-        pos275 = pos276
     else:
         mode275 = 1
         value297 = None
@@ -3744,19 +3519,11 @@ def _parse_ArgList1(text, pos):
         pos269 = pos275
     label .end_discard30
     if not mode269:
-        if mode269 is None:
-            mode263 = mode269
-            value284 = value291
-            pos263 = pos269
         goto .end_alt4
     buf5.append(value291)
     pos = pos269
     mode277, value299, pos277 = yield (3, _parse_Comma1, pos)
     if not mode277:
-        if mode277 is None:
-            mode263 = mode277
-            value284 = value299
-            pos263 = pos277
         goto .end_alt4
     pos = pos277
     goto .loop_alt4
@@ -3784,9 +3551,9 @@ def _parse_ArgList1(text, pos):
             pos281 = match78.end()
         else:
             mode281 = False
-            value304 = 140115314136232
+            value304 = 139748909259464
             pos281 = pos
-        if mode281 or mode281 is None:
+        if mode281:
             mode280 = mode281
             value303 = value304
             pos280 = pos281
@@ -3799,16 +3566,16 @@ def _parse_ArgList1(text, pos):
             pos282 = match79.end()
         else:
             mode282 = False
-            value305 = 140115314093304
+            value305 = 139748909258232
             pos282 = pos
-        if mode282 or mode282 is None:
+        if mode282:
             mode280 = mode282
             value303 = value305
             pos280 = pos282
             goto .end_choice43
         pos = backtrack44
         mode280 = False
-        value303 = 140115314093024
+        value303 = 139748909221872
         pos280 = pos
         if pos280 < pos281:
             mode280 = mode281
@@ -3822,10 +3589,6 @@ def _parse_ArgList1(text, pos):
         if mode280:
             pos = pos280
             goto .loop_skip50
-        elif mode280 is None:
-            mode279 = mode280
-            value302 = value303
-            pos279 = pos280
         else:
             mode279 = 1
             value302 = None
@@ -3835,7 +3598,7 @@ def _parse_ArgList1(text, pos):
         pos278 = pos279
     else:
         mode278 = False
-        value300 = 140115313705368
+        value300 = 139748910163728
         pos278 = pos
     if mode278:
         mode262 = 1
@@ -3869,10 +3632,6 @@ def _parse_Expr1(text, pos):
     if mode287:
         pos = pos287
         goto .loop_skip51
-    elif mode287 is None:
-        mode286 = mode287
-        value309 = value310
-        pos286 = pos287
     else:
         mode286 = 1
         value309 = None
@@ -3896,9 +3655,9 @@ def _parse_Expr1(text, pos):
             pos290 = match80.end()
         else:
             mode290 = False
-            value314 = 140115314136232
+            value314 = 139748909259464
             pos290 = pos
-        if mode290 or mode290 is None:
+        if mode290:
             mode289 = mode290
             value313 = value314
             pos289 = pos290
@@ -3911,16 +3670,16 @@ def _parse_Expr1(text, pos):
             pos291 = match81.end()
         else:
             mode291 = False
-            value315 = 140115314093304
+            value315 = 139748909258232
             pos291 = pos
-        if mode291 or mode291 is None:
+        if mode291:
             mode289 = mode291
             value313 = value315
             pos289 = pos291
             goto .end_choice44
         pos = backtrack45
         mode289 = False
-        value313 = 140115314093024
+        value313 = 139748909221872
         pos289 = pos
         if pos289 < pos290:
             mode289 = mode290
@@ -3934,10 +3693,6 @@ def _parse_Expr1(text, pos):
         if mode289:
             pos = pos289
             goto .loop_skip52
-        elif mode289 is None:
-            mode288 = mode289
-            value312 = value313
-            pos288 = pos289
         else:
             mode288 = 1
             value312 = None
@@ -3947,7 +3702,7 @@ def _parse_Expr1(text, pos):
         pos285 = pos288
     else:
         mode285 = False
-        value308 = 140115313708112
+        value308 = 139748910166536
         pos285 = pos
     label .end_discard32
     if not mode285:
@@ -3961,10 +3716,6 @@ def _parse_Expr1(text, pos):
     if mode293:
         pos = pos293
         goto .loop_skip53
-    elif mode293 is None:
-        mode292 = mode293
-        value316 = value317
-        pos292 = pos293
     else:
         mode292 = 1
         value316 = None
@@ -3979,10 +3730,6 @@ def _parse_Expr1(text, pos):
         pos284 = pos292
     label .end_discard33
     if not mode284:
-        if mode284 is None:
-            mode283 = mode284
-            value306 = value307
-            pos283 = pos284
         goto .end_left_assoc1
     pos = pos284
     label .left_assoc_operand1
@@ -3994,10 +3741,6 @@ def _parse_Expr1(text, pos):
     if mode298:
         pos = pos298
         goto .loop_skip54
-    elif mode298 is None:
-        mode297 = mode298
-        value321 = value322
-        pos297 = pos298
     else:
         mode297 = 1
         value321 = None
@@ -4022,9 +3765,9 @@ def _parse_Expr1(text, pos):
             pos302 = match82.end()
         else:
             mode302 = False
-            value327 = 140115314136232
+            value327 = 139748909259464
             pos302 = pos
-        if mode302 or mode302 is None:
+        if mode302:
             mode301 = mode302
             value326 = value327
             pos301 = pos302
@@ -4037,16 +3780,16 @@ def _parse_Expr1(text, pos):
             pos303 = match83.end()
         else:
             mode303 = False
-            value328 = 140115314093304
+            value328 = 139748909258232
             pos303 = pos
-        if mode303 or mode303 is None:
+        if mode303:
             mode301 = mode303
             value326 = value328
             pos301 = pos303
             goto .end_choice46
         pos = backtrack47
         mode301 = False
-        value326 = 140115314093024
+        value326 = 139748909221872
         pos301 = pos
         if pos301 < pos302:
             mode301 = mode302
@@ -4060,10 +3803,6 @@ def _parse_Expr1(text, pos):
         if mode301:
             pos = pos301
             goto .loop_skip55
-        elif mode301 is None:
-            mode300 = mode301
-            value325 = value326
-            pos300 = pos301
         else:
             mode300 = 1
             value325 = None
@@ -4073,9 +3812,9 @@ def _parse_Expr1(text, pos):
         pos299 = pos300
     else:
         mode299 = False
-        value323 = 140115313707832
+        value323 = 139748910166256
         pos299 = pos
-    if mode299 or mode299 is None:
+    if mode299:
         mode296 = mode299
         value320 = value323
         pos296 = pos299
@@ -4094,9 +3833,9 @@ def _parse_Expr1(text, pos):
             pos307 = match84.end()
         else:
             mode307 = False
-            value333 = 140115314136232
+            value333 = 139748909259464
             pos307 = pos
-        if mode307 or mode307 is None:
+        if mode307:
             mode306 = mode307
             value332 = value333
             pos306 = pos307
@@ -4109,16 +3848,16 @@ def _parse_Expr1(text, pos):
             pos308 = match85.end()
         else:
             mode308 = False
-            value334 = 140115314093304
+            value334 = 139748909258232
             pos308 = pos
-        if mode308 or mode308 is None:
+        if mode308:
             mode306 = mode308
             value332 = value334
             pos306 = pos308
             goto .end_choice47
         pos = backtrack48
         mode306 = False
-        value332 = 140115314093024
+        value332 = 139748909221872
         pos306 = pos
         if pos306 < pos307:
             mode306 = mode307
@@ -4132,10 +3871,6 @@ def _parse_Expr1(text, pos):
         if mode306:
             pos = pos306
             goto .loop_skip56
-        elif mode306 is None:
-            mode305 = mode306
-            value331 = value332
-            pos305 = pos306
         else:
             mode305 = 1
             value331 = None
@@ -4145,16 +3880,84 @@ def _parse_Expr1(text, pos):
         pos304 = pos305
     else:
         mode304 = False
-        value329 = 140115313707888
+        value329 = 139748910166312
         pos304 = pos
-    if mode304 or mode304 is None:
+    if mode304:
         mode296 = mode304
         value320 = value329
         pos296 = pos304
         goto .end_choice45
     pos = backtrack46
+    value336 = 'where'
+    end27 = pos + 5
+    if text[pos:end27] == value336:
+        pos = end27
+        label .loop_skip57
+        backtrack49 = pos
+        match86 = pattern1.match(text, pos)
+        if match86:
+            mode312 = 1
+            value339 = match86.group(0)
+            pos312 = match86.end()
+        else:
+            mode312 = False
+            value339 = 139748909259464
+            pos312 = pos
+        if mode312:
+            mode311 = mode312
+            value338 = value339
+            pos311 = pos312
+            goto .end_choice48
+        pos = backtrack49
+        match87 = pattern2.match(text, pos)
+        if match87:
+            mode313 = 1
+            value340 = match87.group(0)
+            pos313 = match87.end()
+        else:
+            mode313 = False
+            value340 = 139748909258232
+            pos313 = pos
+        if mode313:
+            mode311 = mode313
+            value338 = value340
+            pos311 = pos313
+            goto .end_choice48
+        pos = backtrack49
+        mode311 = False
+        value338 = 139748909221872
+        pos311 = pos
+        if pos311 < pos312:
+            mode311 = mode312
+            value338 = value339
+            pos311 = pos312
+        if pos311 < pos313:
+            mode311 = mode313
+            value338 = value340
+            pos311 = pos313
+        label .end_choice48
+        if mode311:
+            pos = pos311
+            goto .loop_skip57
+        else:
+            mode310 = 1
+            value337 = None
+            pos310 = pos
+        mode309 = 1
+        value335 = value336
+        pos309 = pos310
+    else:
+        mode309 = False
+        value335 = 139748910166200
+        pos309 = pos
+    if mode309:
+        mode296 = mode309
+        value320 = value335
+        pos296 = pos309
+        goto .end_choice45
+    pos = backtrack46
     mode296 = False
-    value320 = 140115314214952
+    value320 = 139748910210520
     pos296 = pos
     if pos296 < pos299:
         mode296 = mode299
@@ -4164,6 +3967,10 @@ def _parse_Expr1(text, pos):
         mode296 = mode304
         value320 = value329
         pos296 = pos304
+    if pos296 < pos309:
+        mode296 = mode309
+        value320 = value335
+        pos296 = pos309
     label .end_choice45
     label .end_discard34
     if not mode296:
@@ -4172,132 +3979,48 @@ def _parse_Expr1(text, pos):
         pos295 = pos296
         goto .end_discard35
     pos = pos296
-    label .loop_skip57
-    mode310, value336, pos310 = yield (3, _parse_Newline1, pos)
-    if mode310:
-        pos = pos310
-        goto .loop_skip57
-    elif mode310 is None:
-        mode309 = mode310
-        value335 = value336
-        pos309 = pos310
+    label .loop_skip58
+    mode315, value342, pos315 = yield (3, _parse_Newline1, pos)
+    if mode315:
+        pos = pos315
+        goto .loop_skip58
     else:
-        mode309 = 1
-        value335 = None
-        pos309 = pos
-    if mode309:
+        mode314 = 1
+        value341 = None
+        pos314 = pos
+    if mode314:
         mode295 = 1
         value319 = value320
-        pos295 = pos309
+        pos295 = pos314
     else:
-        mode295 = mode309
-        value319 = value335
-        pos295 = pos309
+        mode295 = mode314
+        value319 = value341
+        pos295 = pos314
     label .end_discard35
     if not mode295:
-        if mode295 is None:
-            mode294 = mode295
-            value318 = value319
-            pos294 = pos295
         goto .end_left_assoc2
     pos = pos295
     label .left_assoc_operand2
     is_first3 = True
     goto .left_assoc_operand3
     label .loop_left_assoc3
-    label .loop_skip58
-    mode315, value341, pos315 = yield (3, _parse_Newline1, pos)
-    if mode315:
-        pos = pos315
-        goto .loop_skip58
-    elif mode315 is None:
-        mode314 = mode315
-        value340 = value341
-        pos314 = pos315
+    label .loop_skip59
+    mode320, value347, pos320 = yield (3, _parse_Newline1, pos)
+    if mode320:
+        pos = pos320
+        goto .loop_skip59
     else:
-        mode314 = 1
-        value340 = None
-        pos314 = pos
-    if not mode314:
-        mode313 = mode314
-        value339 = value340
-        pos313 = pos314
+        mode319 = 1
+        value346 = None
+        pos319 = pos
+    if not mode319:
+        mode318 = mode319
+        value345 = value346
+        pos318 = pos319
         goto .end_discard36
-    pos = pos314
-    backtrack49 = pos
-    value343 = '<<'
-    end27 = pos + 2
-    if text[pos:end27] == value343:
-        pos = end27
-        label .loop_skip59
-        backtrack50 = pos
-        match86 = pattern1.match(text, pos)
-        if match86:
-            mode319 = 1
-            value346 = match86.group(0)
-            pos319 = match86.end()
-        else:
-            mode319 = False
-            value346 = 140115314136232
-            pos319 = pos
-        if mode319 or mode319 is None:
-            mode318 = mode319
-            value345 = value346
-            pos318 = pos319
-            goto .end_choice49
-        pos = backtrack50
-        match87 = pattern2.match(text, pos)
-        if match87:
-            mode320 = 1
-            value347 = match87.group(0)
-            pos320 = match87.end()
-        else:
-            mode320 = False
-            value347 = 140115314093304
-            pos320 = pos
-        if mode320 or mode320 is None:
-            mode318 = mode320
-            value345 = value347
-            pos318 = pos320
-            goto .end_choice49
-        pos = backtrack50
-        mode318 = False
-        value345 = 140115314093024
-        pos318 = pos
-        if pos318 < pos319:
-            mode318 = mode319
-            value345 = value346
-            pos318 = pos319
-        if pos318 < pos320:
-            mode318 = mode320
-            value345 = value347
-            pos318 = pos320
-        label .end_choice49
-        if mode318:
-            pos = pos318
-            goto .loop_skip59
-        elif mode318 is None:
-            mode317 = mode318
-            value344 = value345
-            pos317 = pos318
-        else:
-            mode317 = 1
-            value344 = None
-            pos317 = pos
-        mode316 = 1
-        value342 = value343
-        pos316 = pos317
-    else:
-        mode316 = False
-        value342 = 140115313707496
-        pos316 = pos
-    if mode316 or mode316 is None:
-        mode313 = mode316
-        value339 = value342
-        pos313 = pos316
-        goto .end_choice48
-    pos = backtrack49
-    value349 = '>>'
+    pos = pos319
+    backtrack50 = pos
+    value349 = '<<'
     end28 = pos + 2
     if text[pos:end28] == value349:
         pos = end28
@@ -4310,9 +4033,9 @@ def _parse_Expr1(text, pos):
             pos324 = match88.end()
         else:
             mode324 = False
-            value352 = 140115314136232
+            value352 = 139748909259464
             pos324 = pos
-        if mode324 or mode324 is None:
+        if mode324:
             mode323 = mode324
             value351 = value352
             pos323 = pos324
@@ -4325,16 +4048,16 @@ def _parse_Expr1(text, pos):
             pos325 = match89.end()
         else:
             mode325 = False
-            value353 = 140115314093304
+            value353 = 139748909258232
             pos325 = pos
-        if mode325 or mode325 is None:
+        if mode325:
             mode323 = mode325
             value351 = value353
             pos323 = pos325
             goto .end_choice50
         pos = backtrack51
         mode323 = False
-        value351 = 140115314093024
+        value351 = 139748909221872
         pos323 = pos
         if pos323 < pos324:
             mode323 = mode324
@@ -4348,10 +4071,6 @@ def _parse_Expr1(text, pos):
         if mode323:
             pos = pos323
             goto .loop_skip60
-        elif mode323 is None:
-            mode322 = mode323
-            value350 = value351
-            pos322 = pos323
         else:
             mode322 = 1
             value350 = None
@@ -4361,160 +4080,144 @@ def _parse_Expr1(text, pos):
         pos321 = pos322
     else:
         mode321 = False
-        value348 = 140115313707552
+        value348 = 139748910165800
         pos321 = pos
-    if mode321 or mode321 is None:
-        mode313 = mode321
-        value339 = value348
-        pos313 = pos321
-        goto .end_choice48
-    pos = backtrack49
-    mode313 = False
-    value339 = 140115314214616
-    pos313 = pos
-    if pos313 < pos316:
-        mode313 = mode316
-        value339 = value342
-        pos313 = pos316
-    if pos313 < pos321:
-        mode313 = mode321
-        value339 = value348
-        pos313 = pos321
-    label .end_choice48
-    label .end_discard36
-    if not mode313:
-        mode312 = mode313
-        value338 = value339
-        pos312 = pos313
-        goto .end_discard37
-    pos = pos313
-    label .loop_skip61
-    mode327, value355, pos327 = yield (3, _parse_Newline1, pos)
-    if mode327:
-        pos = pos327
-        goto .loop_skip61
-    elif mode327 is None:
-        mode326 = mode327
+    if mode321:
+        mode318 = mode321
+        value345 = value348
+        pos318 = pos321
+        goto .end_choice49
+    pos = backtrack50
+    value355 = '>>'
+    end29 = pos + 2
+    if text[pos:end29] == value355:
+        pos = end29
+        label .loop_skip61
+        backtrack52 = pos
+        match90 = pattern1.match(text, pos)
+        if match90:
+            mode329 = 1
+            value358 = match90.group(0)
+            pos329 = match90.end()
+        else:
+            mode329 = False
+            value358 = 139748909259464
+            pos329 = pos
+        if mode329:
+            mode328 = mode329
+            value357 = value358
+            pos328 = pos329
+            goto .end_choice51
+        pos = backtrack52
+        match91 = pattern2.match(text, pos)
+        if match91:
+            mode330 = 1
+            value359 = match91.group(0)
+            pos330 = match91.end()
+        else:
+            mode330 = False
+            value359 = 139748909258232
+            pos330 = pos
+        if mode330:
+            mode328 = mode330
+            value357 = value359
+            pos328 = pos330
+            goto .end_choice51
+        pos = backtrack52
+        mode328 = False
+        value357 = 139748909221872
+        pos328 = pos
+        if pos328 < pos329:
+            mode328 = mode329
+            value357 = value358
+            pos328 = pos329
+        if pos328 < pos330:
+            mode328 = mode330
+            value357 = value359
+            pos328 = pos330
+        label .end_choice51
+        if mode328:
+            pos = pos328
+            goto .loop_skip61
+        else:
+            mode327 = 1
+            value356 = None
+            pos327 = pos
+        mode326 = 1
         value354 = value355
         pos326 = pos327
     else:
-        mode326 = 1
-        value354 = None
+        mode326 = False
+        value354 = 139748910165856
         pos326 = pos
     if mode326:
-        mode312 = 1
-        value338 = value339
-        pos312 = pos326
+        mode318 = mode326
+        value345 = value354
+        pos318 = pos326
+        goto .end_choice49
+    pos = backtrack50
+    mode318 = False
+    value345 = 139748910210184
+    pos318 = pos
+    if pos318 < pos321:
+        mode318 = mode321
+        value345 = value348
+        pos318 = pos321
+    if pos318 < pos326:
+        mode318 = mode326
+        value345 = value354
+        pos318 = pos326
+    label .end_choice49
+    label .end_discard36
+    if not mode318:
+        mode317 = mode318
+        value344 = value345
+        pos317 = pos318
+        goto .end_discard37
+    pos = pos318
+    label .loop_skip62
+    mode332, value361, pos332 = yield (3, _parse_Newline1, pos)
+    if mode332:
+        pos = pos332
+        goto .loop_skip62
     else:
-        mode312 = mode326
-        value338 = value354
-        pos312 = pos326
+        mode331 = 1
+        value360 = None
+        pos331 = pos
+    if mode331:
+        mode317 = 1
+        value344 = value345
+        pos317 = pos331
+    else:
+        mode317 = mode331
+        value344 = value360
+        pos317 = pos331
     label .end_discard37
-    if not mode312:
-        if mode312 is None:
-            mode311 = mode312
-            value337 = value338
-            pos311 = pos312
+    if not mode317:
         goto .end_left_assoc3
-    pos = pos312
+    pos = pos317
     label .left_assoc_operand3
     is_first4 = True
     goto .left_assoc_operand4
     label .loop_left_assoc4
-    label .loop_skip62
-    mode332, value360, pos332 = yield (3, _parse_Newline1, pos)
-    if mode332:
-        pos = pos332
-        goto .loop_skip62
-    elif mode332 is None:
-        mode331 = mode332
-        value359 = value360
-        pos331 = pos332
+    label .loop_skip63
+    mode337, value366, pos337 = yield (3, _parse_Newline1, pos)
+    if mode337:
+        pos = pos337
+        goto .loop_skip63
     else:
-        mode331 = 1
-        value359 = None
-        pos331 = pos
-    if not mode331:
-        mode330 = mode331
-        value358 = value359
-        pos330 = pos331
+        mode336 = 1
+        value365 = None
+        pos336 = pos
+    if not mode336:
+        mode335 = mode336
+        value364 = value365
+        pos335 = pos336
         goto .end_discard38
-    pos = pos331
-    backtrack52 = pos
-    value362 = '//'
-    end29 = pos + 2
-    if text[pos:end29] == value362:
-        pos = end29
-        label .loop_skip63
-        backtrack53 = pos
-        match90 = pattern1.match(text, pos)
-        if match90:
-            mode336 = 1
-            value365 = match90.group(0)
-            pos336 = match90.end()
-        else:
-            mode336 = False
-            value365 = 140115314136232
-            pos336 = pos
-        if mode336 or mode336 is None:
-            mode335 = mode336
-            value364 = value365
-            pos335 = pos336
-            goto .end_choice52
-        pos = backtrack53
-        match91 = pattern2.match(text, pos)
-        if match91:
-            mode337 = 1
-            value366 = match91.group(0)
-            pos337 = match91.end()
-        else:
-            mode337 = False
-            value366 = 140115314093304
-            pos337 = pos
-        if mode337 or mode337 is None:
-            mode335 = mode337
-            value364 = value366
-            pos335 = pos337
-            goto .end_choice52
-        pos = backtrack53
-        mode335 = False
-        value364 = 140115314093024
-        pos335 = pos
-        if pos335 < pos336:
-            mode335 = mode336
-            value364 = value365
-            pos335 = pos336
-        if pos335 < pos337:
-            mode335 = mode337
-            value364 = value366
-            pos335 = pos337
-        label .end_choice52
-        if mode335:
-            pos = pos335
-            goto .loop_skip63
-        elif mode335 is None:
-            mode334 = mode335
-            value363 = value364
-            pos334 = pos335
-        else:
-            mode334 = 1
-            value363 = None
-            pos334 = pos
-        mode333 = 1
-        value361 = value362
-        pos333 = pos334
-    else:
-        mode333 = False
-        value361 = 140115313707160
-        pos333 = pos
-    if mode333 or mode333 is None:
-        mode330 = mode333
-        value358 = value361
-        pos330 = pos333
-        goto .end_choice51
-    pos = backtrack52
-    value368 = '/'
-    end30 = pos + 1
+    pos = pos336
+    backtrack53 = pos
+    value368 = '//'
+    end30 = pos + 2
     if text[pos:end30] == value368:
         pos = end30
         label .loop_skip64
@@ -4526,9 +4229,9 @@ def _parse_Expr1(text, pos):
             pos341 = match92.end()
         else:
             mode341 = False
-            value371 = 140115314136232
+            value371 = 139748909259464
             pos341 = pos
-        if mode341 or mode341 is None:
+        if mode341:
             mode340 = mode341
             value370 = value371
             pos340 = pos341
@@ -4541,16 +4244,16 @@ def _parse_Expr1(text, pos):
             pos342 = match93.end()
         else:
             mode342 = False
-            value372 = 140115314093304
+            value372 = 139748909258232
             pos342 = pos
-        if mode342 or mode342 is None:
+        if mode342:
             mode340 = mode342
             value370 = value372
             pos340 = pos342
             goto .end_choice53
         pos = backtrack54
         mode340 = False
-        value370 = 140115314093024
+        value370 = 139748909221872
         pos340 = pos
         if pos340 < pos341:
             mode340 = mode341
@@ -4564,10 +4267,6 @@ def _parse_Expr1(text, pos):
         if mode340:
             pos = pos340
             goto .loop_skip64
-        elif mode340 is None:
-            mode339 = mode340
-            value369 = value370
-            pos339 = pos340
         else:
             mode339 = 1
             value369 = None
@@ -4577,164 +4276,148 @@ def _parse_Expr1(text, pos):
         pos338 = pos339
     else:
         mode338 = False
-        value367 = 140115313707216
+        value367 = 139748910165464
         pos338 = pos
-    if mode338 or mode338 is None:
-        mode330 = mode338
-        value358 = value367
-        pos330 = pos338
-        goto .end_choice51
-    pos = backtrack52
-    mode330 = False
-    value358 = 140115314214280
-    pos330 = pos
-    if pos330 < pos333:
-        mode330 = mode333
-        value358 = value361
-        pos330 = pos333
-    if pos330 < pos338:
-        mode330 = mode338
-        value358 = value367
-        pos330 = pos338
-    label .end_choice51
-    label .end_discard38
-    if not mode330:
-        mode329 = mode330
-        value357 = value358
-        pos329 = pos330
-        goto .end_discard39
-    pos = pos330
-    label .loop_skip65
-    mode344, value374, pos344 = yield (3, _parse_Newline1, pos)
-    if mode344:
-        pos = pos344
-        goto .loop_skip65
-    elif mode344 is None:
-        mode343 = mode344
+    if mode338:
+        mode335 = mode338
+        value364 = value367
+        pos335 = pos338
+        goto .end_choice52
+    pos = backtrack53
+    value374 = '/'
+    end31 = pos + 1
+    if text[pos:end31] == value374:
+        pos = end31
+        label .loop_skip65
+        backtrack55 = pos
+        match94 = pattern1.match(text, pos)
+        if match94:
+            mode346 = 1
+            value377 = match94.group(0)
+            pos346 = match94.end()
+        else:
+            mode346 = False
+            value377 = 139748909259464
+            pos346 = pos
+        if mode346:
+            mode345 = mode346
+            value376 = value377
+            pos345 = pos346
+            goto .end_choice54
+        pos = backtrack55
+        match95 = pattern2.match(text, pos)
+        if match95:
+            mode347 = 1
+            value378 = match95.group(0)
+            pos347 = match95.end()
+        else:
+            mode347 = False
+            value378 = 139748909258232
+            pos347 = pos
+        if mode347:
+            mode345 = mode347
+            value376 = value378
+            pos345 = pos347
+            goto .end_choice54
+        pos = backtrack55
+        mode345 = False
+        value376 = 139748909221872
+        pos345 = pos
+        if pos345 < pos346:
+            mode345 = mode346
+            value376 = value377
+            pos345 = pos346
+        if pos345 < pos347:
+            mode345 = mode347
+            value376 = value378
+            pos345 = pos347
+        label .end_choice54
+        if mode345:
+            pos = pos345
+            goto .loop_skip65
+        else:
+            mode344 = 1
+            value375 = None
+            pos344 = pos
+        mode343 = 1
         value373 = value374
         pos343 = pos344
     else:
-        mode343 = 1
-        value373 = None
+        mode343 = False
+        value373 = 139748910165520
         pos343 = pos
     if mode343:
-        mode329 = 1
-        value357 = value358
-        pos329 = pos343
+        mode335 = mode343
+        value364 = value373
+        pos335 = pos343
+        goto .end_choice52
+    pos = backtrack53
+    mode335 = False
+    value364 = 139748910209848
+    pos335 = pos
+    if pos335 < pos338:
+        mode335 = mode338
+        value364 = value367
+        pos335 = pos338
+    if pos335 < pos343:
+        mode335 = mode343
+        value364 = value373
+        pos335 = pos343
+    label .end_choice52
+    label .end_discard38
+    if not mode335:
+        mode334 = mode335
+        value363 = value364
+        pos334 = pos335
+        goto .end_discard39
+    pos = pos335
+    label .loop_skip66
+    mode349, value380, pos349 = yield (3, _parse_Newline1, pos)
+    if mode349:
+        pos = pos349
+        goto .loop_skip66
     else:
-        mode329 = mode343
-        value357 = value373
-        pos329 = pos343
-    label .end_discard39
-    if not mode329:
-        if mode329 is None:
-            mode328 = mode329
-            value356 = value357
-            pos328 = pos329
-        goto .end_left_assoc4
-    pos = pos329
-    label .left_assoc_operand4
-    mode347, value377, pos347 = yield (3, _parse_Atom1, pos)
-    mode346 = mode347
-    value376 = value377
-    pos346 = pos347
-    if not mode347:
-        goto .end_postfix1
-    pos = pos347
-    label .loop_postfix1
-    mode348, value378, pos348 = yield (3, _parse_ArgList1, pos)
+        mode348 = 1
+        value379 = None
+        pos348 = pos
     if mode348:
-        pos = pos348
-        value376 = Postfix(value376, value378)
+        mode334 = 1
+        value363 = value364
+        pos334 = pos348
+    else:
+        mode334 = mode348
+        value363 = value379
+        pos334 = pos348
+    label .end_discard39
+    if not mode334:
+        goto .end_left_assoc4
+    pos = pos334
+    label .left_assoc_operand4
+    mode352, value383, pos352 = yield (3, _parse_Atom1, pos)
+    mode351 = mode352
+    value382 = value383
+    pos351 = pos352
+    if not mode352:
+        goto .end_postfix1
+    pos = pos352
+    label .loop_postfix1
+    mode353, value384, pos353 = yield (3, _parse_ArgList1, pos)
+    if mode353:
+        pos = pos353
+        value382 = Postfix(value382, value384)
         goto .loop_postfix1
-    elif mode348 is None:
-        mode346 = mode348
-        value376 = value378
-        pos346 = pos348
     else:
-        pos346 = pos
+        pos351 = pos
     label .end_postfix1
-    mode345 = mode346
-    value375 = value376
-    pos345 = pos346
-    if not mode346:
+    mode350 = mode351
+    value381 = value382
+    pos350 = pos351
+    if not mode351:
         goto .end_postfix2
-    pos = pos346
+    pos = pos351
     label .loop_postfix2
-    backtrack55 = pos
-    value381 = '?'
-    end31 = pos + 1
-    if text[pos:end31] == value381:
-        pos = end31
-        label .loop_skip66
-        backtrack56 = pos
-        match94 = pattern1.match(text, pos)
-        if match94:
-            mode353 = 1
-            value384 = match94.group(0)
-            pos353 = match94.end()
-        else:
-            mode353 = False
-            value384 = 140115314136232
-            pos353 = pos
-        if mode353 or mode353 is None:
-            mode352 = mode353
-            value383 = value384
-            pos352 = pos353
-            goto .end_choice55
-        pos = backtrack56
-        match95 = pattern2.match(text, pos)
-        if match95:
-            mode354 = 1
-            value385 = match95.group(0)
-            pos354 = match95.end()
-        else:
-            mode354 = False
-            value385 = 140115314093304
-            pos354 = pos
-        if mode354 or mode354 is None:
-            mode352 = mode354
-            value383 = value385
-            pos352 = pos354
-            goto .end_choice55
-        pos = backtrack56
-        mode352 = False
-        value383 = 140115314093024
-        pos352 = pos
-        if pos352 < pos353:
-            mode352 = mode353
-            value383 = value384
-            pos352 = pos353
-        if pos352 < pos354:
-            mode352 = mode354
-            value383 = value385
-            pos352 = pos354
-        label .end_choice55
-        if mode352:
-            pos = pos352
-            goto .loop_skip66
-        elif mode352 is None:
-            mode351 = mode352
-            value382 = value383
-            pos351 = pos352
-        else:
-            mode351 = 1
-            value382 = None
-            pos351 = pos
-        mode350 = 1
-        value380 = value381
-        pos350 = pos351
-    else:
-        mode350 = False
-        value380 = 140115313706712
-        pos350 = pos
-    if mode350 or mode350 is None:
-        mode349 = mode350
-        value379 = value380
-        pos349 = pos350
-        goto .end_choice54
-    pos = backtrack55
-    value387 = '*'
+    backtrack56 = pos
+    value387 = '?'
     end32 = pos + 1
     if text[pos:end32] == value387:
         pos = end32
@@ -4747,9 +4430,9 @@ def _parse_Expr1(text, pos):
             pos358 = match96.end()
         else:
             mode358 = False
-            value390 = 140115314136232
+            value390 = 139748909259464
             pos358 = pos
-        if mode358 or mode358 is None:
+        if mode358:
             mode357 = mode358
             value389 = value390
             pos357 = pos358
@@ -4762,16 +4445,16 @@ def _parse_Expr1(text, pos):
             pos359 = match97.end()
         else:
             mode359 = False
-            value391 = 140115314093304
+            value391 = 139748909258232
             pos359 = pos
-        if mode359 or mode359 is None:
+        if mode359:
             mode357 = mode359
             value389 = value391
             pos357 = pos359
             goto .end_choice56
         pos = backtrack57
         mode357 = False
-        value389 = 140115314093024
+        value389 = 139748909221872
         pos357 = pos
         if pos357 < pos358:
             mode357 = mode358
@@ -4785,10 +4468,6 @@ def _parse_Expr1(text, pos):
         if mode357:
             pos = pos357
             goto .loop_skip67
-        elif mode357 is None:
-            mode356 = mode357
-            value388 = value389
-            pos356 = pos357
         else:
             mode356 = 1
             value388 = None
@@ -4798,15 +4477,15 @@ def _parse_Expr1(text, pos):
         pos355 = pos356
     else:
         mode355 = False
-        value386 = 140115313706768
+        value386 = 139748910165016
         pos355 = pos
-    if mode355 or mode355 is None:
-        mode349 = mode355
-        value379 = value386
-        pos349 = pos355
-        goto .end_choice54
-    pos = backtrack55
-    value393 = '+'
+    if mode355:
+        mode354 = mode355
+        value385 = value386
+        pos354 = pos355
+        goto .end_choice55
+    pos = backtrack56
+    value393 = '*'
     end33 = pos + 1
     if text[pos:end33] == value393:
         pos = end33
@@ -4819,9 +4498,9 @@ def _parse_Expr1(text, pos):
             pos363 = match98.end()
         else:
             mode363 = False
-            value396 = 140115314136232
+            value396 = 139748909259464
             pos363 = pos
-        if mode363 or mode363 is None:
+        if mode363:
             mode362 = mode363
             value395 = value396
             pos362 = pos363
@@ -4834,16 +4513,16 @@ def _parse_Expr1(text, pos):
             pos364 = match99.end()
         else:
             mode364 = False
-            value397 = 140115314093304
+            value397 = 139748909258232
             pos364 = pos
-        if mode364 or mode364 is None:
+        if mode364:
             mode362 = mode364
             value395 = value397
             pos362 = pos364
             goto .end_choice57
         pos = backtrack58
         mode362 = False
-        value395 = 140115314093024
+        value395 = 139748909221872
         pos362 = pos
         if pos362 < pos363:
             mode362 = mode363
@@ -4857,10 +4536,6 @@ def _parse_Expr1(text, pos):
         if mode362:
             pos = pos362
             goto .loop_skip68
-        elif mode362 is None:
-            mode361 = mode362
-            value394 = value395
-            pos361 = pos362
         else:
             mode361 = 1
             value394 = None
@@ -4870,15 +4545,15 @@ def _parse_Expr1(text, pos):
         pos360 = pos361
     else:
         mode360 = False
-        value392 = 140115313706656
+        value392 = 139748910165072
         pos360 = pos
-    if mode360 or mode360 is None:
-        mode349 = mode360
-        value379 = value392
-        pos349 = pos360
-        goto .end_choice54
-    pos = backtrack55
-    value399 = '!'
+    if mode360:
+        mode354 = mode360
+        value385 = value392
+        pos354 = pos360
+        goto .end_choice55
+    pos = backtrack56
+    value399 = '+'
     end34 = pos + 1
     if text[pos:end34] == value399:
         pos = end34
@@ -4891,9 +4566,9 @@ def _parse_Expr1(text, pos):
             pos368 = match100.end()
         else:
             mode368 = False
-            value402 = 140115314136232
+            value402 = 139748909259464
             pos368 = pos
-        if mode368 or mode368 is None:
+        if mode368:
             mode367 = mode368
             value401 = value402
             pos367 = pos368
@@ -4906,16 +4581,16 @@ def _parse_Expr1(text, pos):
             pos369 = match101.end()
         else:
             mode369 = False
-            value403 = 140115314093304
+            value403 = 139748909258232
             pos369 = pos
-        if mode369 or mode369 is None:
+        if mode369:
             mode367 = mode369
             value401 = value403
             pos367 = pos369
             goto .end_choice58
         pos = backtrack59
         mode367 = False
-        value401 = 140115314093024
+        value401 = 139748909221872
         pos367 = pos
         if pos367 < pos368:
             mode367 = mode368
@@ -4929,10 +4604,6 @@ def _parse_Expr1(text, pos):
         if mode367:
             pos = pos367
             goto .loop_skip69
-        elif mode367 is None:
-            mode366 = mode367
-            value400 = value401
-            pos366 = pos367
         else:
             mode366 = 1
             value400 = None
@@ -4942,92 +4613,84 @@ def _parse_Expr1(text, pos):
         pos365 = pos366
     else:
         mode365 = False
-        value398 = 140115313706824
+        value398 = 139748910164960
         pos365 = pos
-    if mode365 or mode365 is None:
-        mode349 = mode365
-        value379 = value398
-        pos349 = pos365
-        goto .end_choice54
-    pos = backtrack55
-    mode349 = False
-    value379 = 140115314214112
-    pos349 = pos
-    if pos349 < pos350:
-        mode349 = mode350
-        value379 = value380
-        pos349 = pos350
-    if pos349 < pos355:
-        mode349 = mode355
-        value379 = value386
-        pos349 = pos355
-    if pos349 < pos360:
-        mode349 = mode360
-        value379 = value392
-        pos349 = pos360
-    if pos349 < pos365:
-        mode349 = mode365
-        value379 = value398
-        pos349 = pos365
-    label .end_choice54
-    if mode349:
-        pos = pos349
-        value375 = Postfix(value375, value379)
+    if mode365:
+        mode354 = mode365
+        value385 = value398
+        pos354 = pos365
+        goto .end_choice55
+    pos = backtrack56
+    mode354 = False
+    value385 = 139748910209680
+    pos354 = pos
+    if pos354 < pos355:
+        mode354 = mode355
+        value385 = value386
+        pos354 = pos355
+    if pos354 < pos360:
+        mode354 = mode360
+        value385 = value392
+        pos354 = pos360
+    if pos354 < pos365:
+        mode354 = mode365
+        value385 = value398
+        pos354 = pos365
+    label .end_choice55
+    if mode354:
+        pos = pos354
+        value381 = Postfix(value381, value385)
         goto .loop_postfix2
-    elif mode349 is None:
-        mode345 = mode349
-        value375 = value379
-        pos345 = pos349
     else:
-        pos345 = pos
+        pos350 = pos
     label .end_postfix2
-    if not mode345:
-        if is_first4 or mode345 is None:
-            mode328 = mode345
-            value356 = value375
-            pos328 = pos345
+    if not mode350:
+        if is_first4:
+            mode333 = mode350
+            value362 = value381
+            pos333 = pos350
         goto .end_left_assoc4
-    pos = pos328 = pos345
+    pos = pos333 = pos350
     if is_first4:
         is_first4 = False
-        value356 = value375
-        mode328 = 1
+        value362 = value381
+        mode333 = 1
     else:
-        value356 = Infix(value356, value357, value375)
+        value362 = Infix(value362, value363, value381)
     goto .loop_left_assoc4
     label .end_left_assoc4
-    if not mode328:
-        if is_first3 or mode328 is None:
-            mode311 = mode328
-            value337 = value356
-            pos311 = pos328
+    if not mode333:
+        if is_first3:
+            mode316 = mode333
+            value343 = value362
+            pos316 = pos333
         goto .end_left_assoc3
-    pos = pos311 = pos328
+    pos = pos316 = pos333
     if is_first3:
         is_first3 = False
-        value337 = value356
-        mode311 = 1
+        value343 = value362
+        mode316 = 1
     else:
-        value337 = Infix(value337, value338, value356)
+        value343 = Infix(value343, value344, value362)
     goto .loop_left_assoc3
     label .end_left_assoc3
-    if not mode311:
-        if is_first2 or mode311 is None:
-            mode294 = mode311
-            value318 = value337
-            pos294 = pos311
+    if not mode316:
+        if is_first2:
+            mode294 = mode316
+            value318 = value343
+            pos294 = pos316
         goto .end_left_assoc2
-    pos = pos294 = pos311
+    pos = pos294 = pos316
     if is_first2:
         is_first2 = False
-        value318 = value337
+        value318 = value343
         mode294 = 1
     else:
-        value318 = Infix(value318, value319, value337)
+        value318 = Infix(value318, value319, value343)
     goto .loop_left_assoc2
     label .end_left_assoc2
     if not mode294:
-        if is_first1 or mode294 is None:
+        if is_first1:
             mode283 = mode294
             value306 = value318
             pos283 = pos294
@@ -5051,10 +4714,6 @@ def _parse_start1(text, pos):
     if mode372:
         pos = pos372
         goto .loop_skip70
-    elif mode372 is None:
-        mode371 = mode372
-        value405 = value406
-        pos371 = pos372
     else:
         mode371 = 1
         value405 = None
@@ -5070,19 +4729,11 @@ def _parse_start1(text, pos):
     label .loop_alt5
     mode373, value407, pos373 = yield (3, _parse_Stmt1, pos)
     if not mode373:
-        if mode373 is None:
-            mode370 = mode373
-            value404 = value407
-            pos370 = pos373
         goto .end_alt5
     buf6.append(value407)
     pos = pos373
     mode374, value408, pos374 = yield (3, _parse_Sep1, pos)
     if not mode374:
-        if mode374 is None:
-            mode370 = mode374
-            value404 = value408
-            pos370 = pos374
         goto .end_alt5
     pos = pos374
     goto .loop_alt5
@@ -5110,9 +4761,9 @@ def _skip_then_start(text, pos):
             pos381 = match103.end()
         else:
             mode381 = False
-            value415 = 140115314136232
+            value415 = 139748909259464
             pos381 = pos
-        if mode381 or mode381 is None:
+        if mode381:
             mode380 = mode381
             value414 = value415
             pos380 = pos381
@@ -5125,16 +4776,16 @@ def _skip_then_start(text, pos):
             pos382 = match104.end()
         else:
             mode382 = False
-            value416 = 140115314093304
+            value416 = 139748909258232
             pos382 = pos
-        if mode382 or mode382 is None:
+        if mode382:
             mode380 = mode382
             value414 = value416
             pos380 = pos382
             goto .end_choice60
         pos = backtrack61
         mode380 = False
-        value414 = 140115314093024
+        value414 = 139748909221872
         pos380 = pos
         if pos380 < pos381:
             mode380 = mode381
@@ -5148,10 +4799,6 @@ def _skip_then_start(text, pos):
         if mode380:
             pos = pos380
             goto .loop_skip72
-        elif mode380 is None:
-            mode379 = mode380
-            value413 = value414
-            pos379 = pos380
         else:
             mode379 = 1
             value413 = None
@@ -5161,9 +4808,9 @@ def _skip_then_start(text, pos):
         pos378 = pos379
     else:
         mode378 = False
-        value412 = 140115314136232
+        value412 = 139748909259464
         pos378 = pos
-    if mode378 or mode378 is None:
+    if mode378:
         mode377 = mode378
         value411 = value412
         pos377 = pos378
@@ -5181,9 +4828,9 @@ def _skip_then_start(text, pos):
             pos386 = match106.end()
         else:
             mode386 = False
-            value420 = 140115314136232
+            value420 = 139748909259464
             pos386 = pos
-        if mode386 or mode386 is None:
+        if mode386:
             mode385 = mode386
             value419 = value420
             pos385 = pos386
@@ -5196,16 +4843,16 @@ def _skip_then_start(text, pos):
             pos387 = match107.end()
         else:
             mode387 = False
-            value421 = 140115314093304
+            value421 = 139748909258232
             pos387 = pos
-        if mode387 or mode387 is None:
+        if mode387:
             mode385 = mode387
             value419 = value421
             pos385 = pos387
             goto .end_choice61
         pos = backtrack62
         mode385 = False
-        value419 = 140115314093024
+        value419 = 139748909221872
         pos385 = pos
         if pos385 < pos386:
             mode385 = mode386
@@ -5219,10 +4866,6 @@ def _skip_then_start(text, pos):
         if mode385:
             pos = pos385
             goto .loop_skip73
-        elif mode385 is None:
-            mode384 = mode385
-            value418 = value419
-            pos384 = pos385
         else:
             mode384 = 1
             value418 = None
@@ -5232,16 +4875,16 @@ def _skip_then_start(text, pos):
         pos383 = pos384
     else:
         mode383 = False
-        value417 = 140115314093304
+        value417 = 139748909258232
         pos383 = pos
-    if mode383 or mode383 is None:
+    if mode383:
         mode377 = mode383
         value411 = value417
         pos377 = pos383
         goto .end_choice59
     pos = backtrack60
     mode377 = False
-    value411 = 140115314093024
+    value411 = 139748909221872
     pos377 = pos
     if pos377 < pos378:
         mode377 = mode378
@@ -5255,10 +4898,6 @@ def _skip_then_start(text, pos):
     if mode377:
         pos = pos377
         goto .loop_skip71
-    elif mode377 is None:
-        mode376 = mode377
-        value410 = value411
-        pos376 = pos377
     else:
         mode376 = 1
         value410 = None

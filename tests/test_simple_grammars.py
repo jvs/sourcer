@@ -141,8 +141,27 @@ def test_postfix_operators():
     ''')
 
     result = g.parse('foo(bar+, baz! | fiz)?')
-    print('result:', repr(result)) # TMP
     assert result == g.Postfix(g.Postfix('foo', g.ArgList([
         g.Postfix('bar', '+'),
         g.Infix(g.Postfix('baz', '!'), '|', 'fiz'),
     ])), '?')
+
+
+def test_where_expressions():
+    g = Grammar(r'''
+        start = (Odd | Even)+
+
+        class Odd {
+            value: Int where `lambda x: x % 2`
+        }
+
+        class Even {
+            value: Int where `lambda x: x % 2 == 0`
+        }
+
+        Int = @/\d+/ |> `int`
+
+        ignore Space = @/[ \t]+/
+    ''')
+    result = g.parse('11 22 33 44')
+    assert result == [g.Odd(11), g.Even(22), g.Odd(33), g.Even(44)]
