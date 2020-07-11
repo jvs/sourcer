@@ -165,3 +165,32 @@ def test_where_expressions():
     ''')
     result = g.parse('11 22 33 44')
     assert result == [g.Odd(11), g.Even(22), g.Odd(33), g.Even(44)]
+
+
+def test_expect_and_expect_not_expressions():
+    g = Grammar(r'''
+        ignore Space = @/[ \t]+/
+        Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+
+        class Angry {
+            value: Word << Expect("!")
+        }
+
+        class Calm {
+            value: Word << ExpectNot("!" | "?")
+        }
+
+        class Confused {
+            value: Word << Expect("?")
+        }
+
+        start = (Angry | Calm | Confused) // ("!" | "?" | "." | ";")
+    ''')
+    result = g.parse('foo! bar? baz? fiz; buz.')
+    assert result == [
+        g.Angry('foo'),
+        g.Confused('bar'),
+        g.Confused('baz'),
+        g.Calm('fiz'),
+        g.Calm('buz'),
+    ]

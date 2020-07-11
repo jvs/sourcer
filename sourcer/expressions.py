@@ -216,16 +216,17 @@ class Expect:
     def _compile(self, out, target):
         backtrack = out.define('backtrack', 'pos')
         item = out.compile(self.expr)
-        out.set(target.mode, item.mode)
-        out.set(target.value, None)
-        out.set(target.pos, backtrack)
+        with out.IF(out.is_success(item)):
+            out.succeed(target, item.value, backtrack)
+        with out.ELSE():
+            out.fail(target, self, backtrack)
 
 
 class ExpectNot:
     def __init__(self, expr):
         self.expr = expr
 
-    def _eval(self):
+    def _eval(self, env):
         return ExpectNot(self.expr._eval(env))
 
     def _compile(self, out, target):
