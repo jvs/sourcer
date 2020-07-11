@@ -196,7 +196,7 @@ class ProgramBuilder:
 
     def reserve(self, basename):
         self.names[basename] += 1
-        return f'{basename}{self.names[basename]}'
+        return f'_{basename}{self.names[basename]}'
 
     def set(self, target, value):
         self(f'{target} = {value}')
@@ -266,7 +266,7 @@ class ProgramBuilder:
         self.constants = {}
         self.indent = 0
         self.names = defaultdict(int)
-        self.rule_map = {x.name: self.reserve(f'_parse_{x.name}') for x in rules}
+        self.rule_map = {x.name: self.reserve(f'parse_{x.name}') for x in rules}
 
         if self.ignored_expr is not None:
             real_name = '_skip_then_start'
