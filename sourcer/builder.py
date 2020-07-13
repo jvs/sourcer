@@ -218,7 +218,7 @@ class ProgramBuilder:
         elif len(ignored) == 1:
             self.ignored_expr = Skip(ignored[0])
         else:
-            self.ignored_expr = Skip(Choice(*ignored))
+            self.ignored_expr = SkipAny(*ignored)
 
         self.is_ignoring = False
 

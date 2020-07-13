@@ -406,7 +406,6 @@ class Skip:
     def _compile(self, out):
         checkpoint = out.define('checkpoint', '_pos')
         loop = out.reserve('loop_skip')
-        end = out.reserve('end_skip')
 
         out.label(loop)
         out.compile(self.expr)
@@ -415,10 +414,32 @@ class Skip:
             out.set(checkpoint, '_pos')
             out.goto(loop)
 
-        with out.ELSE():
-            out.set('_mode', True)
-            out.set('_result', None)
-            out.set('_pos', checkpoint)
+        out.set('_mode', True)
+        out.set('_result', None)
+        out.set('_pos', checkpoint)
+
+
+class SkipAny:
+    def __init__(self, *exprs):
+        self.exprs = exprs
+
+    def _eval(self, env):
+        return SkipAny(*[x._eval(env) for x in self.exprs])
+
+    def _compile(self, out):
+        checkpoint = out.define('checkpoint', '_pos')
+        loop = out.reserve('loop_skip_all')
+
+        out.label(loop)
+        for expr in self.exprs:
+            out.compile(expr)
+            with out.IF('_mode'):
+                out.set(checkpoint, '_pos')
+                out.goto(loop)
+
+        out.set('_mode', True)
+        out.set('_result', None)
+        out.set('_pos', checkpoint)
 
 
 def Some(expr):
