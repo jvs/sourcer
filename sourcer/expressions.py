@@ -157,7 +157,7 @@ class Class:
         write(f'        return f\'{self.name}({inits})\'\n\n')
 
         exprs = (x.expr for x in self.fields)
-        return out.compile(Seq(*exprs, constructor=self.name))
+        return out.compile(Seq(*exprs, names=names, constructor=self.name))
 
 
 class Discard:
@@ -368,10 +368,18 @@ class Rule:
 
 
 class Seq:
-    def __init__(self, *exprs, constructor=None):
+    def __init__(self, *exprs, names=None, constructor=None):
         if isinstance(constructor, type):
             constructor = constructor.__name__
         self.exprs = exprs
+
+        if names is not None:
+            if len(names) != len(exprs):
+                raise Exception('Expected same number of expressions and names.')
+            self.names = names
+        else:
+            self.names = [None] * len(exprs)
+
         self.constructor = constructor
 
     def _eval(self, env):
@@ -380,12 +388,15 @@ class Seq:
     def _compile(self, out):
         end = out.reserve('end_sequence')
         items = []
-        for expr in self.exprs:
+        for name, expr in zip(self.names, self.exprs):
             out.compile(expr)
             with out.IF_NOT('_mode'):
                 out.goto(end)
-            item = out.define('item', '_result')
-            items.append(item)
+            if name is None:
+                name = out.define('item', '_result')
+            else:
+                out.set(name, '_result')
+            items.append(name)
 
         values = ', '.join(items)
         if self.constructor is None:

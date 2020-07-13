@@ -194,3 +194,33 @@ def test_expect_and_expect_not_expressions():
         g.Calm('fiz'),
         g.Calm('buz'),
     ]
+
+
+def test_simple_data_dependent_class():
+    g = Grammar(r'''
+        class Element {
+            open_tag: "<" >> Word << ">"
+            content: Item*
+            close_tag: "</" >> Word << ">" where `lambda x: x == open_tag`
+        }
+
+        class Text {
+            content: @/[^<]+/
+        }
+
+        Item = Element | Text
+
+        Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+
+        start = Item+
+    ''')
+    result = g.parse('foo <bar>baz <zim>zam</zim> fiz</bar> buz')
+    assert result == [
+        g.Text('foo '),
+        g.Element('bar', [
+            g.Text('baz '),
+            g.Element('zim', [g.Text('zam')], 'zim'),
+            g.Text(' fiz'),
+        ], 'bar'),
+        g.Text(' buz'),
+    ]
