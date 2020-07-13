@@ -213,7 +213,12 @@ class ProgramBuilder:
             names = sorted(x.name for x in rules)
             raise Exception(f'Expected "start" rule. Received: {names}')
 
-        self.ignored_expr = Skip(*ignored) if ignored else None
+        if ignored:
+            rules.append(Rule('_ignored', Skip(*ignored)))
+            self.ignored_expr = Ref('_ignored')
+        else:
+            self.ignored_expr = None
+
         self.is_ignoring = False
 
         self.buf = io.StringIO()
