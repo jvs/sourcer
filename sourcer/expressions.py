@@ -16,46 +16,40 @@ class Alt:
             allow_empty=self.allow_empty,
         )
 
-    def _compile(self, out, target):
-        buf = out.define('buf', '[]')
-        out(f'{target.pos} = pos')
+    def _compile(self, out):
+        staging = out.define('staging', '[]')
+        checkpoint = out.define('checkpoint', '_pos')
 
         loop = out.reserve('loop_alt')
         end = out.reserve('end_alt')
 
         out.label(loop)
-        item = out.compile(self.expr)
+        out.compile(self.expr)
 
-        with out.IF_NOT(out.is_success(item)):
+        with out.IF_NOT('_mode'):
             out.goto(end)
 
-        out(f'{buf}.append({item.value})')
+        out(f'{staging}.append(_result)')
+        out.set(checkpoint, '_pos')
+
+        out.compile(self.separator)
+
+        with out.IF_NOT('_mode'):
+            out.goto(end)
+
         if self.allow_trailer:
-            out.set('pos', item.pos)
-        else:
-            out(f'pos = {target.pos} = {item.pos}')
+            out.set(checkpoint, '_pos')
 
-        sep = out.compile(self.separator)
-
-        with out.IF_NOT(out.is_success(sep)):
-            out.goto(end)
-
-        out.set('pos', sep.pos)
         out.goto(loop)
-
         out.label(end)
 
         if not self.allow_empty:
-            with out.IF(f'not {buf}'):
-                out.fail(target, self, 'pos')
-            out('else:')
+            out(f'if {staging}:')
             out.indent += 1
 
-        # out.succeed:
-        out.set(target.mode, out.SUCCESS)
-        out.set(target.value, buf)
-        if self.allow_trailer:
-            out.set(target.pos, 'pos')
+        out.set('_mode', True)
+        out.set('_result', staging)
+        out.set('_pos', checkpoint)
 
 
 class Apply:
@@ -71,23 +65,19 @@ class Apply:
             apply_left=self.apply_left,
         )
 
-    def _compile(self, out, target):
-        item1 = out.compile(self.expr1)
+    def _compile(self, out):
+        out.compile(self.expr1)
         end = out.reserve('end_apply')
 
-        with out.IF_NOT(out.is_success(item1)):
-            out.copy_result(target, item1)
+        with out.IF_NOT('_mode'):
             out.goto(end)
 
-        out.set('pos', item1.pos)
-        item2 = out.compile(self.expr2)
-        func, arg = (item1, item2) if self.apply_left else (item2, item1)
+        first = out.define('_item', '_result')
+        out.compile(self.expr2)
+        func, arg = (first, '_result') if self.apply_left else ('_result', first)
 
-        with out.IF(out.is_success(func)):
-            out.succeed(target, f'{func.value}({arg.value})', item2.pos)
-
-        with out.ELSE():
-            out.copy_result(target, item2)
+        with out.IF('_mode'):
+            out.set('_result', f'{func}({arg})')
 
         out.label(end)
 
@@ -114,23 +104,23 @@ class Choice:
     def _eval(self, env):
         return Choice(*[x._eval(env) for x in self.exprs])
 
-    def _compile(self, out, target):
-        backtrack = out.define('backtrack', 'pos')
+    def _compile(self, out):
+        backtrack = out.define('backtrack', '_pos')
+        farthest_pos = out.define('farthest_pos', '_pos')
+        farthest_expr = out.define('farthest_expr', id(self))
+
         end = out.reserve('end_choice')
-        items = []
         for expr in self.exprs:
-            item = out.compile(expr)
-            items.append(item)
-            with out.IF(out.is_success(item)):
-                out.copy_result(target, item)
+            out.compile(expr)
+            with out.IF('_mode'):
                 out.goto(end)
-            out.set('pos', backtrack)
+            with out.IF(f'{farthest_pos} < _pos'):
+                out.set(farthest_pos, '_pos')
+                out.set(farthest_expr, id(expr))
+            out.set('_pos', backtrack)
 
-        out.fail(target, self, 'pos')
-        for item in items:
-            with out.IF(f'{target.pos} < {item.pos}'):
-                out.copy_result(target, item)
-
+        out.set('_result', farthest_expr)
+        out.set('_pos', farthest_pos)
         out.label(end)
 
 
@@ -149,7 +139,7 @@ class Class:
     def _eval(self, env):
         return self._replace(fields=[x._eval(env) for x in self.fields])
 
-    def _compile(self, out, target):
+    def _compile(self, out):
         write = out.global_defs.write
         write(f'\nclass {self.name}(Node):\n')
 
@@ -167,8 +157,7 @@ class Class:
         write(f'        return f\'{self.name}({inits})\'\n\n')
 
         exprs = (x.expr for x in self.fields)
-        delegate = Seq(*exprs, constructor=self.name)
-        return out.compile(delegate, target=target)
+        return out.compile(Seq(*exprs, constructor=self.name))
 
 
 class Discard:
@@ -184,24 +173,20 @@ class Discard:
             discard_left=self.discard_left,
         )
 
-    def _compile(self, out, target):
-        item1 = out.compile(self.expr1)
+    def _compile(self, out):
+        out.compile(self.expr1)
         end = out.reserve('end_discard')
 
-        with out.IF_NOT(out.is_success(item1)):
-            out.copy_result(target, item1)
+        with out.IF_NOT('_mode'):
             out.goto(end)
 
-        out.set('pos', item1.pos)
-
         if self.discard_left:
-            out.compile(self.expr2, target)
+            out.compile(self.expr2)
         else:
-            item2 = out.compile(self.expr2)
-            with out.IF(out.is_success(item2)):
-                out.succeed(target, item1.value, item2.pos)
-            with out.ELSE():
-                out.copy_result(target, item2)
+            staging = out.define('staging', '_result')
+            out.compile(self.expr2)
+            with out.IF('_mode'):
+                out.set('_result', staging)
 
         out.label(end)
 
@@ -213,13 +198,10 @@ class Expect:
     def _eval(self, env):
         return Expect(self.expr._eval(env))
 
-    def _compile(self, out, target):
-        backtrack = out.define('backtrack', 'pos')
-        item = out.compile(self.expr)
-        with out.IF(out.is_success(item)):
-            out.succeed(target, item.value, backtrack)
-        with out.ELSE():
-            out.fail(target, self, backtrack)
+    def _compile(self, out):
+        backtrack = out.define('backtrack', '_pos')
+        out.compile(self.expr)
+        out.set('_pos', backtrack)
 
 
 class ExpectNot:
@@ -229,13 +211,16 @@ class ExpectNot:
     def _eval(self, env):
         return ExpectNot(self.expr._eval(env))
 
-    def _compile(self, out, target):
-        backtrack = out.define('backtrack', 'pos')
-        item = out.compile(self.expr)
-        with out.IF(out.is_success(item)):
-            out.fail(target, self, backtrack)
+    def _compile(self, out):
+        backtrack = out.define('backtrack', '_pos')
+        out.compile(self.expr)
+        out.set('_pos', backtrack)
+        with out.IF('_mode'):
+            out.set('_mode', False)
+            out.set('_result', id(self))
         with out.ELSE():
-            out.succeed(target, None, backtrack)
+            out.set('_mode', True)
+            out.set('_result', None)
 
 
 class Fail:
@@ -245,8 +230,9 @@ class Fail:
     def _eval(self, env):
         return self
 
-    def _compile(self, out, target):
-        out.fail(target, self, 'pos')
+    def _compile(self, out):
+        out.set('_mode', False)
+        out.set('_result', id(self))
 
 
 class KeywordArg:
@@ -270,30 +256,31 @@ class List:
     def _eval(self, env):
         return List(expr=self.expr._eval(env), allow_empty=self.allow_empty)
 
-    def _compile(self, out, target):
-        buf = out.define('buf', '[]')
+    def _compile(self, out):
+        staging = out.define('staging', '[]')
         loop = out.reserve('loop_list')
         end = out.reserve('end_list')
 
         out.label(loop)
-        item = out.compile(self.expr)
+        checkpoint = out.define('checkpoint', '_pos')
+        out.compile(self.expr)
 
-        with out.IF_NOT(out.is_success(item)):
+        with out.IF('_mode'):
+            out(f'{staging}.append(_result)')
+            out.goto(loop)
+
+        with out.ELSE():
+            out.set('_pos', checkpoint)
             out.goto(end)
 
-        out(f'{buf}.append({item.value})')
-        out.set('pos', item.pos)
-        out.goto(loop)
         out.label(end)
 
-        if self.allow_empty:
-            out.succeed(target, buf, 'pos')
-        else:
-            with out.IF(f'not {buf}'):
-                out.fail(target, self, 'pos')
+        if not self.allow_empty:
+            out(f'if {staging}:')
+            out.indent += 1
 
-            with out.ELSE():
-                out.succeed(target, buf, 'pos')
+        out.set('_mode', True)
+        out.set('_result', staging)
 
 
 class Opt:
@@ -303,13 +290,13 @@ class Opt:
     def _eval(self, env):
         return Opt(self.expr._eval(env))
 
-    def _compile(self, out, target):
-        backtrack = out.define('backtrack', 'pos')
-        item = out.compile(self.expr)
-        with out.IF(out.is_success(item)):
-            out.copy_result(target, item)
-        with out.ELSE():
-            out.succeed(target, 'None', backtrack)
+    def _compile(self, out):
+        backtrack = out.define('backtrack', '_pos')
+        out.compile(self.expr)
+        with out.IF_NOT('_mode'):
+            out.set('_mode', True)
+            out.set('_result', None)
+            out.set('_pos', backtrack)
 
 
 class Pass:
@@ -319,8 +306,9 @@ class Pass:
     def _eval(self, env):
         return self
 
-    def _compile(self, out, target):
-        out.succeed(target, repr(self.value), 'pos')
+    def _compile(self, out):
+        out.set('_mode', True)
+        out.set('_result', repr(self.value))
 
 
 class Ref:
@@ -330,12 +318,9 @@ class Ref:
     def _eval(self, env):
         return env.get(self.name, self)
 
-    def _compile(self, out, target):
+    def _compile(self, out):
         rule = out.rule_map[self.name]
-        out(
-            f'{target.mode}, {target.value}, {target.pos}'
-            f' = yield ({out.CONTINUE}, {rule}, pos)'
-        )
+        out(f'_mode, _result, _pos = yield ({out.CONTINUE}, {rule}, _pos)')
 
 
 class RegexLiteral:
@@ -349,16 +334,20 @@ class RegexLiteral:
     def _eval(self, env):
         return self
 
-    def _compile(self, out, target):
+    def _compile(self, out):
         out.add_import('re')
         pattern = out.define_constant('pattern', f're.compile({self.pattern!r})')
-        match = out.define('match', f'{pattern}.match(text, pos)')
+        match = out.define('match', f'{pattern}.match(_text, _pos)')
 
         with out.IF(match):
-            out.succeed(target, f'{match}.group(0)', f'{match}.end()', skip_ignored=True)
+            out.set('_pos', f'{match}.end()')
+            out.skip_ignored()
+            out.set('_mode', True)
+            out.set('_result', f'{match}.group(0)')
 
         with out.ELSE():
-            out.fail(target, self, 'pos')
+            out.set('_mode', False)
+            out.set('_result', id(self))
 
 
 def Right(expr1, expr2):
@@ -374,8 +363,8 @@ class Rule:
     def _eval(self, env):
         return Rule(self.name, self.expr._eval(env), is_ignored=self.is_ignored)
 
-    def _compile(self, out, target):
-        return self.expr._compile(out, target)
+    def _compile(self, out):
+        return self.expr._compile(out)
 
 
 class Seq:
@@ -388,23 +377,22 @@ class Seq:
     def _eval(self, env):
         return Seq(*[x._eval(env) for x in self.exprs], constructor=self.constructor,)
 
-    def _compile(self, out, target):
+    def _compile(self, out):
         end = out.reserve('end_sequence')
         items = []
         for expr in self.exprs:
-            item = out.compile(expr)
-            items.append(item)
-            with out.IF_NOT(out.is_success(item)):
-                out.copy_result(target, item)
+            out.compile(expr)
+            with out.IF_NOT('_mode'):
                 out.goto(end)
-            out(f'pos = {item.pos}')
+            item = out.define('item', '_result')
+            items.append(item)
 
-        values = ', '.join(x.value for x in items)
+        values = ', '.join(items)
         if self.constructor is None:
             value = f'[{values}]'
         else:
             value = f'{self.constructor}({values})'
-        out.succeed(target, value, 'pos')
+        out.set('_result', value)
         out.label(end)
 
 
@@ -415,19 +403,22 @@ class Skip:
     def _eval(self, env):
         return Skip(self.expr._eval(env))
 
-    def _compile(self, out, target):
+    def _compile(self, out):
+        checkpoint = out.define('checkpoint', '_pos')
         loop = out.reserve('loop_skip')
         end = out.reserve('end_skip')
 
         out.label(loop)
-        item = out.compile(self.expr)
+        out.compile(self.expr)
 
-        with out.IF(out.is_success(item)):
-            out.set('pos', item.pos)
+        with out.IF('_mode'):
+            out.set(checkpoint, '_pos')
             out.goto(loop)
 
         with out.ELSE():
-            out.succeed(target, None, 'pos')
+            out.set('_mode', True)
+            out.set('_result', None)
+            out.set('_pos', checkpoint)
 
 
 def Some(expr):
@@ -443,17 +434,22 @@ class StringLiteral:
     def _eval(self, env):
         return self
 
-    def _compile(self, out, target):
+    def _compile(self, out):
         if self.value == '':
-            out.succeed(target, "''", 'pos')
+            out.set('_mode', True)
+            out.set('_result', "''")
             return
 
         value = out.define('value', repr(self.value))
-        end = out.define('end', f'pos + {len(self.value)}')
-        with out.IF(f'text[pos:{end}] == {value}'):
-            out.succeed(target, value, end, skip_ignored=True)
+        end = out.define('end', f'_pos + {len(self.value)}')
+        with out.IF(f'_text[_pos:{end}] == {value}'):
+            out.set('_pos', end)
+            out.skip_ignored()
+            out.set('_mode', True)
+            out.set('_result', value)
         with out.ELSE():
-            out.fail(target, self, 'pos')
+            out.set('_mode', False)
+            out.set('_result', id(self))
 
 
 class Template:
@@ -484,12 +480,12 @@ class OperatorPrecedence:
             self.atom._eval(env), *[x._eval(env) for x in self.rules],
         )
 
-    def _compile(self, out, target):
+    def _compile(self, out):
         prev = self.atom
         for rule in self.rules:
             rule.operand = prev
             prev = rule
-        return prev._compile(out, target)
+        prev._compile(out)
 
 
 class OperatorPrecedenceRule:
@@ -505,44 +501,54 @@ class OperatorPrecedenceRule:
 
 
 class LeftAssoc(OperatorPrecedenceRule):
-    def _compile(self, out, target):
+    def _compile(self, out):
         operand_part = out.reserve('left_assoc_operand')
         loop = out.reserve('loop_left_assoc')
+        succeed = out.reserve('suceed_left_assoc')
         end = out.reserve('end_left_assoc')
 
+        staging = out.define('staging', None)
+        checkpoint = out.define('checkpoint', '_pos')
         is_first = out.define('is_first', True)
+
         out.goto(operand_part)
+
         out.label(loop)
-        operator = out.compile(self.operators)
+        out.compile(self.operators)
 
-        with out.IF_NOT(out.is_success(operator)):
-            out.goto(end)
+        with out.IF_NOT('_mode'):
+            out.goto(succeed)
 
-        out.set('pos', operator.pos)
+        operator = out.define('operator', '_result')
 
         out.label(operand_part)
-        item = out.compile(self.operand)
+        out.compile(self.operand)
 
-        with out.IF_NOT(out.is_success(item)):
+        with out.IF_NOT('_mode'):
             with out.IF(is_first):
-                out.copy_result(target, item)
-            out.goto(end)
+                out.goto(end)
+            with out.ELSE():
+                out.goto(succeed)
 
-        out(f'pos = {target.pos} = {item.pos}')
+        out.set(checkpoint, '_pos')
 
         with out.IF(is_first):
             out.set(is_first, False)
-            out.set(target.value, item.value)
-            out.set(target.mode, out.SUCCESS)
+            out.set(staging, '_result')
 
         with out.ELSE():
-            value = f'Infix({target.value}, {operator.value}, {item.value})'
-            out.set(target.value, value)
+            out.set(staging, f'Infix({staging}, {operator}, _result)')
 
             if isinstance(self, NonAssoc):
-                out.goto(end)
+                out.goto(succeed)
 
         out.goto(loop)
+
+        out.label(succeed)
+        out.set('_mode', True)
+        out.set('_result', staging)
+        out.set('_pos', checkpoint)
+
         out.label(end)
 
 
@@ -551,112 +557,118 @@ class NonAssoc(LeftAssoc):
 
 
 class RightAssoc(OperatorPrecedenceRule):
-    def _compile(self, out, target):
+    def _compile(self, out):
         backup = out.define('backup', None)
         prev = out.define('prev', None)
+
+        staging = out.reserve('staging')
+        checkpoint = out.define('checkpoint', '_pos')
 
         loop = out.reserve('loop_right_assoc')
         end = out.reserve('end_right_assoc')
 
         out.label(loop)
-        item = out.compile(self.operand)
+        out.compile(self.operand)
 
-        with out.IF_NOT(out.is_success(item)):
-            with out.IF(f'{prev} is None'):
-                out.copy_result(target, item)
-
-            with out.ELIF(f'{backup} is None'):
-                out.set(target.value, f'{prev}.left')
-                out.set(target.mode, out.SUCCESS)
-
-            with out.ELSE():
-                out.set(f'{backup}.right', f'{prev}.left')
-
+        with out.IF_NOT('_mode'):
+            with out.IF(prev):
+                with out.IF(backup):
+                    out.set(f'{backup}.right', f'{prev}.left')
+                    out.set('_result', staging)
+                with out.ELSE():
+                    out.set('_result', f'{prev}.left')
+                out.set('_mode', True)
+                out.set('_pos', checkpoint)
             out.goto(end)
 
-        out(f'pos = {target.pos} = {item.pos}')
-        operator = out.compile(self.operators)
+        operand = out.define('operand', '_result')
+        out.set(checkpoint, '_pos')
+        out.compile(self.operators)
 
-        with out.IF(out.is_success(operator)):
-            value = f'Infix({item.value}, {operator.value}, None)'
+        with out.IF('_mode'):
+            step = f'Infix({operand}, _result, None)'
 
-            with out.IF(f'{prev} is None'):
-                out.set(prev, value)
-                out.set(target.value, prev)
+            with out.IF(prev):
+                out.set(backup, prev)
+                out(f'{backup}.right = {prev} = {step}')
 
             with out.ELSE():
-                out.set(backup, prev)
-                out(f'{backup}.right = {prev} = {value}')
+                out(f'{staging} = {prev} = {step}')
 
             out.goto(loop)
 
-        with out.IF(f'{prev} is None'):
-            out.set(target.mode, out.SUCCESS)
-            out.set(target.value, item.value)
+        out.set('_mode', True)
+        out.set('_pos', checkpoint)
+
+        with out.IF(prev):
+            out.set(f'{prev}.right', operand)
+            out.set('_result', staging)
 
         with out.ELSE():
-            out.set(target.mode, out.SUCCESS)
-            out.set(f'{prev}.right', item.value)
+            out.set('_result', operand)
 
         out.label(end)
 
 
 class Postfix(OperatorPrecedenceRule):
-    def _compile(self, out, target):
-        item = out.compile(self.operand)
-        out.copy_result(target, item)
+    def _compile(self, out):
+        out.compile(self.operand)
 
         loop = out.reserve('loop_postfix')
         end = out.reserve('end_postfix')
 
-        with out.IF_NOT(out.is_success(item)):
+        with out.IF_NOT('_mode'):
             out.goto(end)
 
-        out.set('pos', item.pos)
-        out.label(loop)
-        op = out.compile(self.operators)
+        staging = out.define('staging', '_result')
+        checkpoint = out.define('checkpoint', '_pos')
 
-        with out.IF(out.is_success(op)):
-            out.set('pos', op.pos)
-            out.set(target.value, f'Postfix({target.value}, {op.value})')
+        out.label(loop)
+        out.compile(self.operators)
+
+        with out.IF('_mode'):
+            out.set(staging, f'Postfix({staging}, _result)')
+            out.set(checkpoint, '_pos')
             out.goto(loop)
 
         with out.ELSE():
-            out.set(target.pos, 'pos')
+            out.set('_mode', True)
+            out.set('_result', staging)
+            out.set('_pos', checkpoint)
 
         out.label(end)
 
 
 class Prefix(OperatorPrecedenceRule):
-    def _compile(self, out, target):
+    def _compile(self, out):
         loop = out.reserve('loop_prefix')
         end = out.reserve('end_prefix')
+
+        checkpoint = out.define('checkpoint', '_pos')
+        staging = out.define('staging', None)
         prev = out.define('prev', None)
 
         out.label(loop)
-        op = out.compile(self.operators)
+        out.compile(self.operators)
 
-        with out.IF(out.is_success(op)):
-            out.set('pos', op.pos)
-
+        with out.IF('_mode'):
+            out.set(checkpoint, '_pos')
+            step = out.define('step', 'Prefix(_result, None)')
             with out.IF(f'{prev} is None'):
-                out(f'{target.value} = {prev} = Prefix({op.value}, None)')
+                out(f'{prev} = {staging} = {step}')
 
             with out.ELSE():
-                value = out.define('value', f'Prefix({op.value}, None)')
-                out.set(f'{prev}.right', value)
-                out.set(prev, value)
+                out.set(f'{prev}.right', step)
+                out.set(prev, step)
 
             out.goto(loop)
 
-        item = out.compile(self.operand)
-        with out.IF(f'{prev} is None or not {out.is_success(item)}'):
-            out.copy_result(target, item)
+        out.set('_pos', checkpoint)
+        out.compile(self.operand)
 
-        with out.ELSE():
-            out.set(f'{prev}.right', item.value)
-            out.set(target.pos, item.pos)
-            out.set(target.mode, out.SUCCESS)
+        with out.IF(f'{prev} and _mode'):
+            out.set(f'{prev}.right', '_result')
+            out.set('_result', staging)
 
         out.label(end)
 
@@ -668,8 +680,9 @@ class PythonExpression:
     def _eval(self, env):
         return self
 
-    def _compile(self, out, target):
-        out.succeed(target, self.source_code, 'pos')
+    def _compile(self, out):
+        out.set('_mode', True)
+        out.set('_result', self.source_code)
 
 
 class PythonSection:
@@ -691,24 +704,25 @@ class Where:
             predicate=self.predicate._eval(env),
         )
 
-    def _compile(self, out, target):
-        arg = out.compile(self.expr)
+    def _compile(self, out):
+        out.compile(self.expr)
         end = out.reserve('end_where')
 
-        with out.IF_NOT(out.is_success(arg)):
-            out.copy_result(target, arg)
-            out.goto(end)
-
-        out.set('pos', arg.pos)
-        func = out.compile(self.predicate)
-
-        with out.IF(out.is_success(func)):
-            with out.IF(f'{func.value}({arg.value})'):
-                out.succeed(target, arg.value, func.pos)
-            with out.ELSE():
-                out.fail(target, self, func.pos)
+        with out.IF('_mode'):
+            arg = out.define('arg', '_result')
 
         with out.ELSE():
-            out.copy_result(target, func)
+            out.goto(end)
+
+        out.compile(self.predicate)
+
+        with out.IF('_mode'):
+            with out.IF(f'_result({arg})'):
+                out.set('_mode', True)
+                out.set('_result', arg)
+
+            with out.ELSE():
+                out.set('_mode', False)
+                out.set('_result', id(self))
 
         out.label(end)

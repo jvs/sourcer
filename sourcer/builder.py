@@ -111,9 +111,7 @@ Target = namedtuple('Target', 'mode, value, pos')
 
 
 class ProgramBuilder:
-    SUCCESS = 1
     CONTINUE = 3
-    FAILURE = False
 
     def __call__(self, text):
         self.buf.write('    ' * self.indent)
@@ -129,21 +127,10 @@ class ProgramBuilder:
     def goto(self, label):
         self(f'goto .{label}')
 
-    def copy_result(self, target, result):
-        for field in target._fields:
-            self.set(getattr(target, field), getattr(result, field))
-
-    def compile(self, expr, target=None):
+    def compile(self, expr):
         was = self.indent
-        if target is None:
-            target = Target(
-                mode=self.reserve('mode'),
-                value=self.reserve('value'),
-                pos=self.reserve('pos'),
-            )
         try:
-            expr._compile(self, target)
-            return target
+            expr._compile(self)
         finally:
             self.indent = was
 
@@ -161,16 +148,9 @@ class ProgramBuilder:
             self.constants[value] = name
             return name
 
-    def ELIF(self, condition):
-        self(f'elif {condition}:')
-        return self.indented()
-
     def ELSE(self):
         self('else:')
         return self.indented()
-
-    def fail(self, target, expr, pos):
-        self.set_result(target, mode=self.FAILURE, value=id(expr), pos=pos)
 
     def IF(self, condition):
         self(f'if {condition}:')
@@ -188,12 +168,6 @@ class ProgramBuilder:
         finally:
             self.indent = was
 
-    def is_failure(self, target):
-        return f'{target.mode} == {self.FAILURE}'
-
-    def is_success(self, target):
-        return f'{target.mode}'
-
     def reserve(self, basename):
         self.names[basename] += 1
         return f'_{basename}{self.names[basename]}'
@@ -201,22 +175,11 @@ class ProgramBuilder:
     def set(self, target, value):
         self(f'{target} = {value}')
 
-    def set_result(self, target, mode, value, pos):
-        self.set(target.mode, mode)
-        self.set(target.value, value)
-        self.set(target.pos, pos)
-
-    def skip_ignored(self, pos):
-        self.set('pos', pos)
-        self.is_ignoring = True
-        result = self.compile(self.ignored_expr)
-        self.is_ignoring = False
-        return result.pos
-
-    def succeed(self, target, value, pos, skip_ignored=False):
-        if skip_ignored and self.ignored_expr and not self.is_ignoring:
-            pos = self.skip_ignored(pos)
-        self.set_result(target, mode=self.SUCCESS, value=value, pos=pos)
+    def skip_ignored(self):
+        if not self.is_ignoring and self.ignored_expr:
+            self.is_ignoring = True
+            self.compile(self.ignored_expr)
+            self.is_ignoring = False
 
     def write_rule_function(self, name, expr):
         # TODO: Ask the expr if it needs to use goto.
@@ -225,10 +188,10 @@ class ProgramBuilder:
         else:
             self('\n')
 
-        self(f'def {name}(text, pos):')
+        self(f'def {name}(_text, _pos):')
         with self.indented():
             result = self.compile(expr)
-            self(f'yield ({result.mode}, {result.value}, {result.pos})')
+            self('yield (_mode, _result, _pos)')
             self('')
 
     def write_program(self, nodes):
