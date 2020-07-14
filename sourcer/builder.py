@@ -17,7 +17,10 @@ def Grammar(description, name='grammar', include_source=False):
     nodes = meta.transform(raw, _conv)
 
     # Apply templates.
-    env = {x.name: x for x in nodes if isinstance(x, Template)}
+    env = {}
+    for node in nodes:
+        if isinstance(node, Template):
+            env[node.name] = node._close_over(env)
     nodes = [x._eval(env) for x in nodes]
 
     # Generate the source code.

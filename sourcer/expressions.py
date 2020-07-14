@@ -462,21 +462,25 @@ class StringLiteral:
 
 
 class Template:
-    def __init__(self, name, params, expr):
+    def __init__(self, name, params, expr, env=None):
         self.name = name
         self.params = params
         self.expr = expr
+        self.env = env
 
     def __call__(self, *args, **kwargs):
-        sub = {}
+        sub = dict(self.env)
         for param, arg in zip(self.params, args):
             sub[param] = arg
         # TODO: Raise an exception if any kwargs aren't actual parameters.
         sub.update(kwargs)
         return self.expr._eval(sub)
 
+    def _close_over(self, env):
+        return Template(self.name, self.params, self.expr, env)
+
     def _eval(self, env):
-        return Template(self.name, self.params, self.expr._eval(env))
+        return self
 
 
 class OperatorPrecedence:

@@ -224,3 +224,18 @@ def test_simple_data_dependent_class():
         ], 'bar'),
         g.Text(' buz'),
     ]
+
+
+def test_template_that_calls_another_template():
+    g = Grammar(r'''
+        ignored Space = @/[ \t]+/
+        Newline = @/[\r\n][\s]*/
+        Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+        Comma = wrap(",")
+
+        template wrap(x) => Skip(Newline) >> x << Skip(Newline)
+        template Params() => wrap("(") >> (wrap(Name) / Comma) << ")"
+        start = Params()
+    ''')
+    result = g.parse('(foo,\nbar,\nbaz)')
+    assert result == ['foo', 'bar', 'baz']
