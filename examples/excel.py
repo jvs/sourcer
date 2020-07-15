@@ -61,11 +61,11 @@ description = r'''
         | DateTime
         | Error
 
-    Operators(union_operator) => OperatorPrecedence(
+    Operators(allow_union) => OperatorPrecedence(
         Atom,
         LeftAssoc(":"),
         LeftAssoc(""),
-        LeftAssoc(union_operator),
+        LeftAssoc("," where `lambda _: allow_union`),
         Prefix("-" | "+"),
         Postfix("%"),
         RightAssoc("^"),
@@ -75,8 +75,8 @@ description = r'''
         LeftAssoc("=" | "!=" | "<>" | "<=" | ">=" | "<" | ">"),
     )
 
-    Expr = Operators(",")
-    ExprList = Operators(Fail("Expected list."))? / ","
+    Expr = Operators(allow_union=`True`)
+    ExprList = Operators(allow_union=`False`)? / ","
 '''
 
 grammar = Grammar(description, include_source=True)
