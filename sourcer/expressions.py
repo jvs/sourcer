@@ -8,14 +8,6 @@ class Alt:
         self.allow_trailer = allow_trailer
         self.allow_empty = allow_empty
 
-    def _eval(self, env):
-        return Alt(
-            expr=self.expr._eval(env),
-            separator=self.separator._eval(env),
-            allow_trailer=self.allow_trailer,
-            allow_empty=self.allow_empty,
-        )
-
     def _compile(self, out):
         staging = out.define('staging', '[]')
         checkpoint = out.define('checkpoint', '_pos')
@@ -58,13 +50,6 @@ class Apply:
         self.expr2 = expr2
         self.apply_left = apply_left
 
-    def _eval(self, env):
-        return Apply(
-            expr1=self.expr1._eval(env),
-            expr2=self.expr2._eval(env),
-            apply_left=self.apply_left,
-        )
-
     def _compile(self, out):
         out.compile(self.expr1)
         end = out.reserve('end_apply')
@@ -86,16 +71,6 @@ class Call:
     def __init__(self, func, args):
         self.func = func
         self.args = args
-
-    def _eval(self, env):
-        func = self.func._eval(env)
-
-        if callable(func):
-            a = [x._eval(env) for x in self.args if not isinstance(x, KeywordArg)]
-            k = {x.name: x._eval(env) for x in self.args if isinstance(x, KeywordArg)}
-            return func(*a, **k)
-        else:
-            return Call(func, [x._eval(env) for x in self.args])
 
     def _compile(self, out):
         if not isinstance(self.func, Ref) or self.func.name not in out.rule_map:
@@ -141,9 +116,6 @@ class Choice:
     def __init__(self, *exprs):
         self.exprs = exprs
 
-    def _eval(self, env):
-        return Choice(*[x._eval(env) for x in self.exprs])
-
     def _compile(self, out):
         backtrack = out.define('backtrack', '_pos')
         farthest_pos = out.define('farthest_pos', '_pos')
@@ -176,9 +148,6 @@ class Class:
                 kw[field] = getattr(self, field)
         return Class(**kw)
 
-    def _eval(self, env):
-        return self._replace(fields=[x._eval(env) for x in self.fields])
-
     def _compile(self, out):
         write = out.global_defs.write
         write(f'\nclass {self.name}(Node):\n')
@@ -206,13 +175,6 @@ class Discard:
         self.expr2 = expr2
         self.discard_left = discard_left
 
-    def _eval(self, env):
-        return Discard(
-            expr1=self.expr1._eval(env),
-            expr2=self.expr2._eval(env),
-            discard_left=self.discard_left,
-        )
-
     def _compile(self, out):
         out.compile(self.expr1)
         end = out.reserve('end_discard')
@@ -235,9 +197,6 @@ class Expect:
     def __init__(self, expr):
         self.expr = expr
 
-    def _eval(self, env):
-        return Expect(self.expr._eval(env))
-
     def _compile(self, out):
         backtrack = out.define('backtrack', '_pos')
         out.compile(self.expr)
@@ -247,9 +206,6 @@ class Expect:
 class ExpectNot:
     def __init__(self, expr):
         self.expr = expr
-
-    def _eval(self, env):
-        return ExpectNot(self.expr._eval(env))
 
     def _compile(self, out):
         backtrack = out.define('backtrack', '_pos')
@@ -267,9 +223,6 @@ class Fail:
     def __init__(self, message):
         self.message = None
 
-    def _eval(self, env):
-        return self
-
     def _compile(self, out):
         out.set('_mode', False)
         out.set('_result', id(self))
@@ -280,9 +233,6 @@ class KeywordArg:
         self.name = name
         self.expr = expr
 
-    def _eval(self, env):
-        return KeywordArg(self.name, self.expr._eval(env))
-
 
 def Left(expr1, expr2):
     return Discard(expr1, expr2, discard_left=False)
@@ -292,9 +242,6 @@ class List:
     def __init__(self, expr, allow_empty=True):
         self.expr = expr
         self.allow_empty = allow_empty
-
-    def _eval(self, env):
-        return List(expr=self.expr._eval(env), allow_empty=self.allow_empty)
 
     def _compile(self, out):
         staging = out.define('staging', '[]')
@@ -327,9 +274,6 @@ class Opt:
     def __init__(self, expr):
         self.expr = expr
 
-    def _eval(self, env):
-        return Opt(self.expr._eval(env))
-
     def _compile(self, out):
         backtrack = out.define('backtrack', '_pos')
         out.compile(self.expr)
@@ -343,9 +287,6 @@ class Pass:
     def __init__(self, value):
         self.value = value
 
-    def _eval(self, env):
-        return self
-
     def _compile(self, out):
         out.set('_mode', True)
         out.set('_result', repr(self.value))
@@ -354,9 +295,6 @@ class Pass:
 class Ref:
     def __init__(self, name):
         self.name = name
-
-    def _eval(self, env):
-        return env.get(self.name, self)
 
     def _compile(self, out):
         # TODO: Allow parameters to shadow rules.
@@ -371,9 +309,6 @@ class RegexLiteral:
         if not isinstance(pattern, str):
             raise TypeError('Expected str')
         self.pattern = pattern
-
-    def _eval(self, env):
-        return self
 
     def _compile(self, out):
         out.add_import('re')
@@ -402,9 +337,6 @@ class Rule:
         self.expr = expr
         self.is_ignored = is_ignored
 
-    def _eval(self, env):
-        return Rule(self.name, self.params, self.expr._eval(env), is_ignored=self.is_ignored)
-
     def _compile(self, out):
         return self.expr._compile(out)
 
@@ -423,9 +355,6 @@ class Seq:
             self.names = [None] * len(exprs)
 
         self.constructor = constructor
-
-    def _eval(self, env):
-        return Seq(*[x._eval(env) for x in self.exprs], constructor=self.constructor,)
 
     def _compile(self, out):
         end = out.reserve('end_sequence')
@@ -453,9 +382,6 @@ class Skip:
     def __init__(self, *exprs):
         self.exprs = exprs
 
-    def _eval(self, env):
-        return Skip(*[x._eval(env) for x in self.exprs])
-
     def _compile(self, out):
         checkpoint = out.define('checkpoint', '_pos')
         loop = out.reserve('loop_skip')
@@ -482,9 +408,6 @@ class StringLiteral:
             raise TypeError(f'Expected str. Received: {type(value)}.')
         self.value = value
 
-    def _eval(self, env):
-        return self
-
     def _compile(self, out):
         if self.value == '':
             out.set('_mode', True)
@@ -508,11 +431,6 @@ class OperatorPrecedence:
         self.atom = atom
         self.rules = rules
 
-    def _eval(self, env):
-        return OperatorPrecedence(
-            self.atom._eval(env), *[x._eval(env) for x in self.rules],
-        )
-
     def _compile(self, out):
         prev = self.atom
         for rule in self.rules:
@@ -525,12 +443,6 @@ class OperatorPrecedenceRule:
     def __init__(self, *operators):
         self.operators = operators[0] if len(operators) == 1 else Choice(*operators)
         self.operand = None
-
-    def _eval(self, env):
-        result = self.__class__(self.operators._eval(env))
-        if self.operand is not None:
-            result.operand = self.operand._eval(env)
-        return result
 
 
 class LeftAssoc(OperatorPrecedenceRule):
@@ -710,9 +622,6 @@ class PythonExpression:
     def __init__(self, source_code):
         self.source_code = source_code
 
-    def _eval(self, env):
-        return self
-
     def _compile(self, out):
         out.set('_mode', True)
         out.set('_result', self.source_code)
@@ -722,20 +631,11 @@ class PythonSection:
     def __init__(self, source_code):
         self.source_code = source_code
 
-    def _eval(self, env):
-        return self
-
 
 class Where:
     def __init__(self, expr, predicate):
         self.expr = expr
         self.predicate = predicate
-
-    def _eval(self, env):
-        return Where(
-            expr=self.expr._eval(env),
-            predicate=self.predicate._eval(env),
-        )
 
     def _compile(self, out):
         out.compile(self.expr)
