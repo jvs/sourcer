@@ -252,7 +252,10 @@ def test_simple_rule_with_parameter():
             stop: Name
         }
 
-        start = Pair(Range)
+        start = Pair(Range | "ok")
     ''')
     result = g.parse('(foo to bar, fiz to buz)')
     assert result == [g.Range('foo', 'bar'), g.Range('fiz', 'buz')]
+
+    result = g.parse('(ok, ok)')
+    assert result == ['ok', 'ok']

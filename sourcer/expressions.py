@@ -108,16 +108,20 @@ class Call:
         for arg in self.args:
             is_kw = isinstance(arg, KeywordArg)
             expr = arg.expr if is_kw else arg
-            if not isinstance(expr, (Ref, PythonExpression)):
-                raise NotImplementedError(
-                    f'Arguments must be names or Python expressions. Received: {expr!r}'
-                )
 
             if isinstance(expr, Ref):
                 # TODO: Allow parameters to shadow rules.
                 value = out.rule_map.get(expr.name, expr.name)
-            else:
+            elif isinstance(expr, PythonExpression):
                 value = expr.source_code
+            else:
+                value = out.reserve('arg')
+                out('')
+                out('@with_goto')
+                out(f'def {value}(_text, _pos):')
+                with out.indented():
+                    out.compile(expr)
+                    out('yield (_mode, _result, _pos)\n')
 
             if is_kw:
                 kwargs.append(f'({arg.name!r}, {value})')
