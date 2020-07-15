@@ -16,6 +16,9 @@ template wrap(x) => Skip(Newline) >> x << Skip(Newline)
 # TODO: Make sure we don't match the first part of a longer word.
 template kw(x) => x
 
+Params = wrap("(") >> (wrap(Name) / Comma) << ")"
+
+
 class StringLiteral {
     value: (
         @/(?s)("""([^\\]|\\.)*?""")/
@@ -42,18 +45,20 @@ class PythonExpression {
 
 class RuleDef {
     is_ignored: kw("ignored" | "ignore")? |> `bool`
-    name: Name << ("=" | ":")
+    name: Name
+    params: Opt(Params) << ("=>" | "=" | ":")
     expr: Expr
 }
 
 class ClassDef {
     name: kw("class") >> Name
+    params: Opt(Params)
     fields: wrap("{") >> (RuleDef / Sep) << "}"
 }
 
 class TemplateDef {
     name: kw("template") >> Name
-    params: wrap("(") >> (wrap(Name) / Comma) << ")"
+    params: Params
     expr: wrap("=>" | "=" | ":") >> Expr
 }
 

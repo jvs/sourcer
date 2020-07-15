@@ -239,3 +239,20 @@ def test_template_that_calls_another_template():
     ''')
     result = g.parse('(foo,\nbar,\nbaz)')
     assert result == ['foo', 'bar', 'baz']
+
+
+def test_simple_rule_with_parameter():
+    g = Grammar(r'''
+        ignored Space = @/[ \t]+/
+        Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+        Pair(x) = "(" >> [x << ",", x] << ")"
+
+        class Range {
+            start: Name << "to"
+            stop: Name
+        }
+
+        start = Pair(Range)
+    ''')
+    result = g.parse('(foo to bar, fiz to buz)')
+    assert result == [g.Range('foo', 'bar'), g.Range('fiz', 'buz')]
