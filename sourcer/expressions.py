@@ -114,6 +114,7 @@ class Call:
                 )
 
             if isinstance(expr, Ref):
+                # TODO: Allow parameters to shadow rules.
                 value = out.rule_map.get(expr.name, expr.name)
             else:
                 value = expr.source_code
