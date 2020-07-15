@@ -11,10 +11,10 @@ Sep = Some(Newline | ";")
 Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
 Comma = wrap(",")
 
-template wrap(x) => Skip(Newline) >> x << Skip(Newline)
+wrap(x) => Skip(Newline) >> x << Skip(Newline)
 
 # TODO: Make sure we don't match the first part of a longer word.
-template kw(x) => x
+kw(x) => x
 
 Params = wrap("(") >> (wrap(Name) / Comma) << ")"
 
