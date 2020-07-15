@@ -16,13 +16,6 @@ def Grammar(description, name='grammar', include_source=False):
     # Transform the nodes into sourcer expression classes.
     nodes = meta.transform(raw, _conv)
 
-    # Apply templates.
-    env = {}
-    for node in nodes:
-        if isinstance(node, Template):
-            env[node.name] = node._close_over(env)
-    nodes = [x._eval(env) for x in nodes]
-
     # Generate the source code.
     source_code = ProgramBuilder().write_program(nodes)
 
@@ -102,9 +95,6 @@ def _conv(node):
 
     if isinstance(node, meta.ClassDef):
         return Class(node.name, node.fields)
-
-    if isinstance(node, meta.TemplateDef):
-        return Template(node.name, node.params, node.expr)
 
     # Otherwise, fail if we don't know what to do with this node.
     raise Exception(f'Unexpected expression: {node!r}')
@@ -204,9 +194,7 @@ class ProgramBuilder:
         sections, rules, ignored = [], [], []
         start = None
         for node in nodes:
-            if isinstance(node, Template):
-                continue
-            elif isinstance(node, (PythonExpression, PythonSection)):
+            if isinstance(node, (PythonExpression, PythonSection)):
                 sections.append(node.source_code)
             else:
                 rules.append(node)

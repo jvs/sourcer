@@ -61,11 +61,11 @@ description = r'''
         | DateTime
         | Error
 
-    template Operators(union_operator) => OperatorPrecedence(
+    Operators(union_operator) => OperatorPrecedence(
         Atom,
         LeftAssoc(":"),
         LeftAssoc(""),
-        union_operator,
+        LeftAssoc(union_operator),
         Prefix("-" | "+"),
         Postfix("%"),
         RightAssoc("^"),
@@ -75,8 +75,8 @@ description = r'''
         LeftAssoc("=" | "!=" | "<>" | "<=" | ">=" | "<" | ">"),
     )
 
-    Expr = Operators(LeftAssoc(","))
-    ExprList = Operators(LeftAssoc(Fail("Expected list.")))? / ","
+    Expr = Operators(",")
+    ExprList = Operators(Fail("Expected list."))? / ","
 '''
 
 grammar = Grammar(description, include_source=True)
