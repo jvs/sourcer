@@ -142,12 +142,6 @@ class Class:
         self.fields = fields
         self.is_ignored = is_ignored
 
-    def _replace(self, **kw):
-        for field in ['name', 'fields', 'is_ignored']:
-            if field not in kw:
-                kw[field] = getattr(self, field)
-        return Class(**kw)
-
     def _compile(self, out):
         write = out.global_defs.write
         write(f'\nclass {self.name}(Node):\n')
