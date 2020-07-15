@@ -281,7 +281,7 @@ def _parse_Space1(_text, _pos):
         _result = _match1.group(0)
     else:
         _mode = False
-        _result = 140080400583760
+        _result = 139689635547344
     yield (_mode, _result, _pos)
     
 
@@ -295,7 +295,7 @@ def _parse_Comment1(_text, _pos):
         _result = _match2.group(0)
     else:
         _mode = False
-        _result = 140080401001328
+        _result = 139689635972936
     yield (_mode, _result, _pos)
     
 
@@ -309,7 +309,7 @@ def _parse_Newline1(_text, _pos):
         _result = _match3.group(0)
     else:
         _mode = False
-        _result = 140080400999480
+        _result = 139689635971200
     yield (_mode, _result, _pos)
     
 
@@ -320,13 +320,13 @@ def _parse_Sep1(_text, _pos):
     _checkpoint1 = _pos
     _backtrack1 = _pos
     _farthest_pos1 = _pos
-    _farthest_expr1 = 140080400773640
+    _farthest_expr1 = 139689642851968
     _mode, _result, _pos = yield (3, _parse_Newline1, _pos)
     if _mode:
         goto ._end_choice1
     if _farthest_pos1 < _pos:
         _farthest_pos1 = _pos
-        _farthest_expr1 = 140080400774536
+        _farthest_expr1 = 139689642955328
     _pos = _backtrack1
     _value1 = ';'
     _end1 = _pos + 1
@@ -337,12 +337,12 @@ def _parse_Sep1(_text, _pos):
         _result = _value1
     else:
         _mode = False
-        _result = 140080400774088
+        _result = 139689642954880
     if _mode:
         goto ._end_choice1
     if _farthest_pos1 < _pos:
         _farthest_pos1 = _pos
-        _farthest_expr1 = 140080400774088
+        _farthest_expr1 = 139689642954880
     _pos = _backtrack1
     _result = _farthest_expr1
     _pos = _farthest_pos1
@@ -370,7 +370,7 @@ def _parse_Name1(_text, _pos):
         _result = _match4.group(0)
     else:
         _mode = False
-        _result = 140080400885240
+        _result = 139689635861224
     yield (_mode, _result, _pos)
     
 
@@ -388,7 +388,7 @@ def _parse_Comma1(_text, _pos):
             _result = _value2
         else:
             _mode = False
-            _result = 140080407993368
+            _result = 139689642731784
         yield (_mode, _result, _pos)
 
     _closure1 = _RuleClosure(_parse_wrap1, (_arg1,), ())
@@ -449,7 +449,7 @@ def _parse_Params1(_text, _pos):
             _result = _value3
         else:
             _mode = False
-            _result = 140080408615008
+            _result = 139689643361728
         yield (_mode, _result, _pos)
 
     _closure2 = _RuleClosure(_parse_wrap1, (_arg2,), ())
@@ -487,7 +487,7 @@ def _parse_Params1(_text, _pos):
         _result = _value4
     else:
         _mode = False
-        _result = 140080408311008
+        _result = 139689643057672
     if _mode:
         _result = _staging4
     label ._end_discard4
@@ -498,7 +498,7 @@ def _parse_Params1(_text, _pos):
 def _parse_StringLiteral1(_text, _pos):
     _backtrack2 = _pos
     _farthest_pos2 = _pos
-    _farthest_expr2 = 140080408490616
+    _farthest_expr2 = 139689644138392
     _match5 = _pattern5.match(_text, _pos)
     if _match5:
         _pos = _match5.end()
@@ -507,12 +507,12 @@ def _parse_StringLiteral1(_text, _pos):
         _result = _match5.group(0)
     else:
         _mode = False
-        _result = 140080408914352
+        _result = 139689644136152
     if _mode:
         goto ._end_choice2
     if _farthest_pos2 < _pos:
         _farthest_pos2 = _pos
-        _farthest_expr2 = 140080408914352
+        _farthest_expr2 = 139689644136152
     _pos = _backtrack2
     _match6 = _pattern6.match(_text, _pos)
     if _match6:
@@ -522,12 +522,12 @@ def _parse_StringLiteral1(_text, _pos):
         _result = _match6.group(0)
     else:
         _mode = False
-        _result = 140080408800336
+        _result = 139689644042784
     if _mode:
         goto ._end_choice2
     if _farthest_pos2 < _pos:
         _farthest_pos2 = _pos
-        _farthest_expr2 = 140080408800336
+        _farthest_expr2 = 139689644042784
     _pos = _backtrack2
     _match7 = _pattern7.match(_text, _pos)
     if _match7:
@@ -537,12 +537,12 @@ def _parse_StringLiteral1(_text, _pos):
         _result = _match7.group(0)
     else:
         _mode = False
-        _result = 140080408914968
+        _result = 139689644136880
     if _mode:
         goto ._end_choice2
     if _farthest_pos2 < _pos:
         _farthest_pos2 = _pos
-        _farthest_expr2 = 140080408914968
+        _farthest_expr2 = 139689644136880
     _pos = _backtrack2
     _match8 = _pattern8.match(_text, _pos)
     if _match8:
@@ -552,12 +552,12 @@ def _parse_StringLiteral1(_text, _pos):
         _result = _match8.group(0)
     else:
         _mode = False
-        _result = 140080408799216
+        _result = 139689644041776
     if _mode:
         goto ._end_choice2
     if _farthest_pos2 < _pos:
         _farthest_pos2 = _pos
-        _farthest_expr2 = 140080408799216
+        _farthest_expr2 = 139689644041776
     _pos = _backtrack2
     _result = _farthest_expr2
     _pos = _farthest_pos2
@@ -588,7 +588,7 @@ def _parse_RegexLiteral1(_text, _pos):
         _result = _match9.group(0)
     else:
         _mode = False
-        _result = 140080400377112
+        _result = 139689643741256
     if not _mode:
         goto ._end_apply2
     __item2 = _result
@@ -615,7 +615,7 @@ def _parse_PythonSection1(_text, _pos):
         _result = _match10.group(0)
     else:
         _mode = False
-        _result = 140080400377392
+        _result = 139689643741536
     if not _mode:
         goto ._end_apply3
     __item3 = _result
@@ -642,7 +642,7 @@ def _parse_PythonExpression1(_text, _pos):
         _result = _match11.group(0)
     else:
         _mode = False
-        _result = 140080400377672
+        _result = 139689643741816
     if not _mode:
         goto ._end_apply4
     __item4 = _result
@@ -667,7 +667,7 @@ def _parse_RuleDef1(_text, _pos):
     def _arg3(_text, _pos):
         _backtrack4 = _pos
         _farthest_pos3 = _pos
-        _farthest_expr3 = 140080400378400
+        _farthest_expr3 = 139689643742544
         _value5 = 'ignored'
         _end5 = _pos + 7
         if _text[_pos:_end5] == _value5:
@@ -677,12 +677,12 @@ def _parse_RuleDef1(_text, _pos):
             _result = _value5
         else:
             _mode = False
-            _result = 140080400378288
+            _result = 139689643742432
         if _mode:
             goto ._end_choice3
         if _farthest_pos3 < _pos:
             _farthest_pos3 = _pos
-            _farthest_expr3 = 140080400378288
+            _farthest_expr3 = 139689643742432
         _pos = _backtrack4
         _value6 = 'ignore'
         _end6 = _pos + 6
@@ -693,12 +693,12 @@ def _parse_RuleDef1(_text, _pos):
             _result = _value6
         else:
             _mode = False
-            _result = 140080400378344
+            _result = 139689643742488
         if _mode:
             goto ._end_choice3
         if _farthest_pos3 < _pos:
             _farthest_pos3 = _pos
-            _farthest_expr3 = 140080400378344
+            _farthest_expr3 = 139689643742488
         _pos = _backtrack4
         _result = _farthest_expr3
         _pos = _farthest_pos3
@@ -737,7 +737,7 @@ def _parse_RuleDef1(_text, _pos):
     _staging5 = _result
     _backtrack6 = _pos
     _farthest_pos4 = _pos
-    _farthest_expr4 = 140080400378960
+    _farthest_expr4 = 139689643743104
     _value7 = '=>'
     _end7 = _pos + 2
     if _text[_pos:_end7] == _value7:
@@ -747,12 +747,12 @@ def _parse_RuleDef1(_text, _pos):
         _result = _value7
     else:
         _mode = False
-        _result = 140080400378568
+        _result = 139689643742712
     if _mode:
         goto ._end_choice4
     if _farthest_pos4 < _pos:
         _farthest_pos4 = _pos
-        _farthest_expr4 = 140080400378568
+        _farthest_expr4 = 139689643742712
     _pos = _backtrack6
     _value8 = '='
     _end8 = _pos + 1
@@ -763,12 +763,12 @@ def _parse_RuleDef1(_text, _pos):
         _result = _value8
     else:
         _mode = False
-        _result = 140080400378848
+        _result = 139689643742992
     if _mode:
         goto ._end_choice4
     if _farthest_pos4 < _pos:
         _farthest_pos4 = _pos
-        _farthest_expr4 = 140080400378848
+        _farthest_expr4 = 139689643742992
     _pos = _backtrack6
     _value9 = ':'
     _end9 = _pos + 1
@@ -779,12 +779,12 @@ def _parse_RuleDef1(_text, _pos):
         _result = _value9
     else:
         _mode = False
-        _result = 140080400378624
+        _result = 139689643742768
     if _mode:
         goto ._end_choice4
     if _farthest_pos4 < _pos:
         _farthest_pos4 = _pos
-        _farthest_expr4 = 140080400378624
+        _farthest_expr4 = 139689643742768
     _pos = _backtrack6
     _result = _farthest_expr4
     _pos = _farthest_pos4
@@ -818,7 +818,7 @@ def _parse_ClassDef1(_text, _pos):
             _result = _value10
         else:
             _mode = False
-            _result = 140080400379408
+            _result = 139689643743552
         yield (_mode, _result, _pos)
 
     _closure5 = _RuleClosure(_parse_kw1, (_arg4,), ())
@@ -851,7 +851,7 @@ def _parse_ClassDef1(_text, _pos):
             _result = _value11
         else:
             _mode = False
-            _result = 140080409464960
+            _result = 139689643744112
         yield (_mode, _result, _pos)
 
     _closure6 = _RuleClosure(_parse_wrap1, (_arg5,), ())
@@ -888,7 +888,7 @@ def _parse_ClassDef1(_text, _pos):
         _result = _value12
     else:
         _mode = False
-        _result = 140080400379464
+        _result = 139689643743608
     if _mode:
         _result = _staging7
     label ._end_discard8
@@ -904,34 +904,34 @@ def _parse_ClassDef1(_text, _pos):
 def _parse_Stmt1(_text, _pos):
     _backtrack8 = _pos
     _farthest_pos5 = _pos
-    _farthest_expr5 = 140080409465184
+    _farthest_expr5 = 139689643744336
     _mode, _result, _pos = yield (3, _parse_ClassDef1, _pos)
     if _mode:
         goto ._end_choice5
     if _farthest_pos5 < _pos:
         _farthest_pos5 = _pos
-        _farthest_expr5 = 140080409465296
+        _farthest_expr5 = 139689643744448
     _pos = _backtrack8
     _mode, _result, _pos = yield (3, _parse_RuleDef1, _pos)
     if _mode:
         goto ._end_choice5
     if _farthest_pos5 < _pos:
         _farthest_pos5 = _pos
-        _farthest_expr5 = 140080409465352
+        _farthest_expr5 = 139689643744504
     _pos = _backtrack8
     _mode, _result, _pos = yield (3, _parse_PythonSection1, _pos)
     if _mode:
         goto ._end_choice5
     if _farthest_pos5 < _pos:
         _farthest_pos5 = _pos
-        _farthest_expr5 = 140080409465240
+        _farthest_expr5 = 139689643744392
     _pos = _backtrack8
     _mode, _result, _pos = yield (3, _parse_PythonExpression1, _pos)
     if _mode:
         goto ._end_choice5
     if _farthest_pos5 < _pos:
         _farthest_pos5 = _pos
-        _farthest_expr5 = 140080409465408
+        _farthest_expr5 = 139689643744560
     _pos = _backtrack8
     _result = _farthest_expr5
     _pos = _farthest_pos5
@@ -961,7 +961,7 @@ def _parse_ListLiteral1(_text, _pos):
         _result = _value13
     else:
         _mode = False
-        _result = 140080409465856
+        _result = 139689643745008
     if not _mode:
         goto ._end_discard9
     _staging8 = []
@@ -995,7 +995,7 @@ def _parse_ListLiteral1(_text, _pos):
         _result = _value14
     else:
         _mode = False
-        _result = 140080409465800
+        _result = 139689643744952
     if _mode:
         _result = _staging9
     label ._end_discard10
@@ -1011,7 +1011,7 @@ def _parse_ListLiteral1(_text, _pos):
 def _parse_Atom1(_text, _pos):
     _backtrack9 = _pos
     _farthest_pos6 = _pos
-    _farthest_expr6 = 140080409466304
+    _farthest_expr6 = 139689643684080
     _value15 = '('
     _end15 = _pos + 1
     if _text[_pos:_end15] == _value15:
@@ -1021,7 +1021,7 @@ def _parse_Atom1(_text, _pos):
         _result = _value15
     else:
         _mode = False
-        _result = 140080409466640
+        _result = 139689643684416
     if not _mode:
         goto ._end_discard11
     _closure8 = _RuleClosure(_parse_wrap1, (_parse_Expr1,), ())
@@ -1039,7 +1039,7 @@ def _parse_Atom1(_text, _pos):
         _result = _value16
     else:
         _mode = False
-        _result = 140080409466584
+        _result = 139689643684360
     if _mode:
         _result = _staging10
     label ._end_discard12
@@ -1047,42 +1047,42 @@ def _parse_Atom1(_text, _pos):
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 140080409466696
+        _farthest_expr6 = 139689643684472
     _pos = _backtrack9
     _mode, _result, _pos = yield (3, _parse_Ref1, _pos)
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 140080409466528
+        _farthest_expr6 = 139689643684304
     _pos = _backtrack9
     _mode, _result, _pos = yield (3, _parse_StringLiteral1, _pos)
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 140080409466472
+        _farthest_expr6 = 139689643684248
     _pos = _backtrack9
     _mode, _result, _pos = yield (3, _parse_RegexLiteral1, _pos)
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 140080409466976
+        _farthest_expr6 = 139689643684752
     _pos = _backtrack9
     _mode, _result, _pos = yield (3, _parse_ListLiteral1, _pos)
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 140080409467032
+        _farthest_expr6 = 139689643684808
     _pos = _backtrack9
     _mode, _result, _pos = yield (3, _parse_PythonExpression1, _pos)
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 140080409466416
+        _farthest_expr6 = 139689643684192
     _pos = _backtrack9
     _result = _farthest_expr6
     _pos = _farthest_pos6
@@ -1098,7 +1098,7 @@ def _parse_KeywordArg1(_text, _pos):
     _staging11 = _result
     _backtrack10 = _pos
     _farthest_pos7 = _pos
-    _farthest_expr7 = 140080409467424
+    _farthest_expr7 = 139689643685200
     _value17 = '='
     _end17 = _pos + 1
     if _text[_pos:_end17] == _value17:
@@ -1108,12 +1108,12 @@ def _parse_KeywordArg1(_text, _pos):
         _result = _value17
     else:
         _mode = False
-        _result = 140080409467312
+        _result = 139689643685088
     if _mode:
         goto ._end_choice7
     if _farthest_pos7 < _pos:
         _farthest_pos7 = _pos
-        _farthest_expr7 = 140080409467312
+        _farthest_expr7 = 139689643685088
     _pos = _backtrack10
     _value18 = ':'
     _end18 = _pos + 1
@@ -1124,12 +1124,12 @@ def _parse_KeywordArg1(_text, _pos):
         _result = _value18
     else:
         _mode = False
-        _result = 140080409467368
+        _result = 139689643685144
     if _mode:
         goto ._end_choice7
     if _farthest_pos7 < _pos:
         _farthest_pos7 = _pos
-        _farthest_expr7 = 140080409467368
+        _farthest_expr7 = 139689643685144
     _pos = _backtrack10
     _result = _farthest_expr7
     _pos = _farthest_pos7
@@ -1160,7 +1160,7 @@ def _parse_ArgList1(_text, _pos):
         _result = _value19
     else:
         _mode = False
-        _result = 140080409467760
+        _result = 139689643685536
     if not _mode:
         goto ._end_discard14
     _staging12 = []
@@ -1171,20 +1171,20 @@ def _parse_ArgList1(_text, _pos):
     def _arg6(_text, _pos):
         _backtrack11 = _pos
         _farthest_pos8 = _pos
-        _farthest_expr8 = 140080409468264
+        _farthest_expr8 = 139689643686040
         _mode, _result, _pos = yield (3, _parse_KeywordArg1, _pos)
         if _mode:
             goto ._end_choice8
         if _farthest_pos8 < _pos:
             _farthest_pos8 = _pos
-            _farthest_expr8 = 140080409468152
+            _farthest_expr8 = 139689643685928
         _pos = _backtrack11
         _mode, _result, _pos = yield (3, _parse_Expr1, _pos)
         if _mode:
             goto ._end_choice8
         if _farthest_pos8 < _pos:
             _farthest_pos8 = _pos
-            _farthest_expr8 = 140080409468208
+            _farthest_expr8 = 139689643685984
         _pos = _backtrack11
         _result = _farthest_expr8
         _pos = _farthest_pos8
@@ -1219,7 +1219,7 @@ def _parse_ArgList1(_text, _pos):
         _result = _value20
     else:
         _mode = False
-        _result = 140080409467704
+        _result = 139689643685480
     if _mode:
         _result = _staging13
     label ._end_discard15
@@ -1250,7 +1250,7 @@ def _parse_Expr1(_text, _pos):
             _result = _value21
         else:
             _mode = False
-            _result = 140080409478704
+            _result = 139689643716960
         yield (_mode, _result, _pos)
 
     _closure10 = _RuleClosure(_parse_wrap1, (_arg7,), ())
@@ -1269,7 +1269,7 @@ def _parse_Expr1(_text, _pos):
     def _arg8(_text, _pos):
         _backtrack12 = _pos
         _farthest_pos9 = _pos
-        _farthest_expr9 = 140080409478592
+        _farthest_expr9 = 139689643716848
         _value22 = '<|'
         _end22 = _pos + 2
         if _text[_pos:_end22] == _value22:
@@ -1279,12 +1279,12 @@ def _parse_Expr1(_text, _pos):
             _result = _value22
         else:
             _mode = False
-            _result = 140080409478424
+            _result = 139689643716680
         if _mode:
             goto ._end_choice9
         if _farthest_pos9 < _pos:
             _farthest_pos9 = _pos
-            _farthest_expr9 = 140080409478424
+            _farthest_expr9 = 139689643716680
         _pos = _backtrack12
         _value23 = '|>'
         _end23 = _pos + 2
@@ -1295,12 +1295,12 @@ def _parse_Expr1(_text, _pos):
             _result = _value23
         else:
             _mode = False
-            _result = 140080409478480
+            _result = 139689643716736
         if _mode:
             goto ._end_choice9
         if _farthest_pos9 < _pos:
             _farthest_pos9 = _pos
-            _farthest_expr9 = 140080409478480
+            _farthest_expr9 = 139689643716736
         _pos = _backtrack12
         _value24 = 'where'
         _end24 = _pos + 5
@@ -1311,12 +1311,12 @@ def _parse_Expr1(_text, _pos):
             _result = _value24
         else:
             _mode = False
-            _result = 140080409478368
+            _result = 139689643687888
         if _mode:
             goto ._end_choice9
         if _farthest_pos9 < _pos:
             _farthest_pos9 = _pos
-            _farthest_expr9 = 140080409478368
+            _farthest_expr9 = 139689643687888
         _pos = _backtrack12
         _result = _farthest_expr9
         _pos = _farthest_pos9
@@ -1339,7 +1339,7 @@ def _parse_Expr1(_text, _pos):
     def _arg9(_text, _pos):
         _backtrack13 = _pos
         _farthest_pos10 = _pos
-        _farthest_expr10 = 140080409478144
+        _farthest_expr10 = 139689643687664
         _value25 = '<<'
         _end25 = _pos + 2
         if _text[_pos:_end25] == _value25:
@@ -1349,12 +1349,12 @@ def _parse_Expr1(_text, _pos):
             _result = _value25
         else:
             _mode = False
-            _result = 140080409478032
+            _result = 139689643687552
         if _mode:
             goto ._end_choice10
         if _farthest_pos10 < _pos:
             _farthest_pos10 = _pos
-            _farthest_expr10 = 140080409478032
+            _farthest_expr10 = 139689643687552
         _pos = _backtrack13
         _value26 = '>>'
         _end26 = _pos + 2
@@ -1365,12 +1365,12 @@ def _parse_Expr1(_text, _pos):
             _result = _value26
         else:
             _mode = False
-            _result = 140080409478088
+            _result = 139689643687608
         if _mode:
             goto ._end_choice10
         if _farthest_pos10 < _pos:
             _farthest_pos10 = _pos
-            _farthest_expr10 = 140080409478088
+            _farthest_expr10 = 139689643687608
         _pos = _backtrack13
         _result = _farthest_expr10
         _pos = _farthest_pos10
@@ -1393,7 +1393,7 @@ def _parse_Expr1(_text, _pos):
     def _arg10(_text, _pos):
         _backtrack14 = _pos
         _farthest_pos11 = _pos
-        _farthest_expr11 = 140080409477808
+        _farthest_expr11 = 139689643687328
         _value27 = '//'
         _end27 = _pos + 2
         if _text[_pos:_end27] == _value27:
@@ -1403,12 +1403,12 @@ def _parse_Expr1(_text, _pos):
             _result = _value27
         else:
             _mode = False
-            _result = 140080409477696
+            _result = 139689643687216
         if _mode:
             goto ._end_choice11
         if _farthest_pos11 < _pos:
             _farthest_pos11 = _pos
-            _farthest_expr11 = 140080409477696
+            _farthest_expr11 = 139689643687216
         _pos = _backtrack14
         _value28 = '/'
         _end28 = _pos + 1
@@ -1419,12 +1419,12 @@ def _parse_Expr1(_text, _pos):
             _result = _value28
         else:
             _mode = False
-            _result = 140080409477752
+            _result = 139689643687272
         if _mode:
             goto ._end_choice11
         if _farthest_pos11 < _pos:
             _farthest_pos11 = _pos
-            _farthest_expr11 = 140080409477752
+            _farthest_expr11 = 139689643687272
         _pos = _backtrack14
         _result = _farthest_expr11
         _pos = _farthest_pos11
@@ -1460,7 +1460,7 @@ def _parse_Expr1(_text, _pos):
     label ._loop_postfix2
     _backtrack15 = _pos
     _farthest_pos12 = _pos
-    _farthest_expr12 = 140080409477416
+    _farthest_expr12 = 139689643686936
     _value29 = '?'
     _end29 = _pos + 1
     if _text[_pos:_end29] == _value29:
@@ -1470,12 +1470,12 @@ def _parse_Expr1(_text, _pos):
         _result = _value29
     else:
         _mode = False
-        _result = 140080409477248
+        _result = 139689643686768
     if _mode:
         goto ._end_choice12
     if _farthest_pos12 < _pos:
         _farthest_pos12 = _pos
-        _farthest_expr12 = 140080409477248
+        _farthest_expr12 = 139689643686768
     _pos = _backtrack15
     _value30 = '*'
     _end30 = _pos + 1
@@ -1486,12 +1486,12 @@ def _parse_Expr1(_text, _pos):
         _result = _value30
     else:
         _mode = False
-        _result = 140080409477304
+        _result = 139689643686824
     if _mode:
         goto ._end_choice12
     if _farthest_pos12 < _pos:
         _farthest_pos12 = _pos
-        _farthest_expr12 = 140080409477304
+        _farthest_expr12 = 139689643686824
     _pos = _backtrack15
     _value31 = '+'
     _end31 = _pos + 1
@@ -1502,12 +1502,12 @@ def _parse_Expr1(_text, _pos):
         _result = _value31
     else:
         _mode = False
-        _result = 140080409477192
+        _result = 139689643686712
     if _mode:
         goto ._end_choice12
     if _farthest_pos12 < _pos:
         _farthest_pos12 = _pos
-        _farthest_expr12 = 140080409477192
+        _farthest_expr12 = 139689643686712
     _pos = _backtrack15
     _result = _farthest_expr12
     _pos = _farthest_pos12
@@ -1638,7 +1638,7 @@ def _parse__ignored1(_text, _pos):
         _result = _match12.group(0)
     else:
         _mode = False
-        _result = 140080400583760
+        _result = 139689635547344
     if _mode:
         _checkpoint16 = _pos
         goto ._loop_skip4
@@ -1650,7 +1650,7 @@ def _parse__ignored1(_text, _pos):
         _result = _match13.group(0)
     else:
         _mode = False
-        _result = 140080401001328
+        _result = 139689635972936
     if _mode:
         _checkpoint16 = _pos
         goto ._loop_skip4

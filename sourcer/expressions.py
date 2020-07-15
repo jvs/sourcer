@@ -137,8 +137,9 @@ class Choice:
 
 
 class Class:
-    def __init__(self, name, fields, is_ignored=False):
+    def __init__(self, name, params, fields, is_ignored=False):
         self.name = name
+        self.params = params
         self.fields = fields
         self.is_ignored = is_ignored
 
@@ -149,8 +150,8 @@ class Class:
         names = tuple(x.name for x in self.fields)
         write(f'    _fields = {names!r}\n\n')
 
-        params = ', '.join(x.name for x in self.fields)
-        write(f'    def __init__(self, {params}):\n')
+        init_params = ', '.join(x.name for x in self.fields)
+        write(f'    def __init__(self, {init_params}):\n')
         for field in self.fields:
             write(f'        self.{field.name} = {field.name}\n')
         write('\n')

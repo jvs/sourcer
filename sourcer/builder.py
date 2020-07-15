@@ -94,7 +94,7 @@ def _conv(node):
         return Rule(node.name, node.params, node.expr, is_ignored=node.is_ignored)
 
     if isinstance(node, meta.ClassDef):
-        return Class(node.name, node.fields)
+        return Class(node.name, node.params, node.fields)
 
     # Otherwise, fail if we don't know what to do with this node.
     raise Exception(f'Unexpected expression: {node!r}')
@@ -181,7 +181,7 @@ class ProgramBuilder:
         else:
             self('\n')
 
-        extra = (', ' + ', '.join(expr.params)) if getattr(expr, 'params', None) else ''
+        extra = (', ' + ', '.join(expr.params)) if expr.params else ''
 
         self(f'def {name}(_text, _pos{extra}):')
 

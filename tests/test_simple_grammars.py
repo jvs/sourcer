@@ -244,3 +244,23 @@ def test_simple_rule_with_parameter():
 
     result = g.parse('(ok, ok)')
     assert result == ['ok', 'ok']
+
+
+def test_simple_class_with_parameters():
+    g = Grammar('''
+        ignored Space = @/[ \t]+/
+
+        Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+        Int = @/\d+/ |> `int`
+
+        class Pair(A, B) {
+            first: A << "&"
+            second: B
+        }
+
+        Names = "[" >> (Name / ",") << "]"
+        Ints = "[" >> (Int / ",") << "]"
+        Start = Pair(Names, Ints)
+    ''')
+    result = g.parse('[foo, bar, baz] & [11, 22, 33]')
+    assert result == g.Pair(['foo', 'bar', 'baz'], [11, 22, 33])
