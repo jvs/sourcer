@@ -89,12 +89,47 @@ class Call:
 
     def _eval(self, env):
         func = self.func._eval(env)
+
         if callable(func):
             a = [x._eval(env) for x in self.args if not isinstance(x, KeywordArg)]
             k = {x.name: x._eval(env) for x in self.args if isinstance(x, KeywordArg)}
             return func(*a, **k)
         else:
-            raise Exception(f'Not callable: {func!r}')
+            return Call(func, [x._eval(env) for x in self.args])
+
+    def _compile(self, out):
+        if not isinstance(self.func, Ref) or self.func.name not in out.rule_map:
+            raise NotImplementedError(
+                f'Expected a reference to a grammar rule. Received: {self.func!r}'
+            )
+
+        args = []
+        kwargs = []
+        for arg in self.args:
+            is_kw = isinstance(arg, KeywordArg)
+            expr = arg.expr if is_kw else arg
+            if not isinstance(expr, (Ref, PythonExpression)):
+                raise NotImplementedError(
+                    f'Arguments must be names or Python expressions. Received: {expr!r}'
+                )
+
+            if isinstance(expr, Ref):
+                value = out.rule_map.get(expr.name, expr.name)
+            else:
+                value = expr.source_code
+
+            if is_kw:
+                kwargs.append(f'({arg.name!r}, {value})')
+            else:
+                args.append(value)
+
+        tup = lambda x: ('(' + ', '.join(x) + ',)') if x else '()'
+
+        rule = out.rule_map[self.func.name]
+        closure = f'_RuleClosure({rule}, {tup(args)}, {tup(kwargs)})'
+        closure = out.define('closure', closure)
+
+        out(f'_mode, _result, _pos = yield ({out.CONTINUE}, {closure}, _pos)')
 
 
 class Choice:
@@ -319,7 +354,8 @@ class Ref:
         return env.get(self.name, self)
 
     def _compile(self, out):
-        rule = out.rule_map[self.name]
+        # TODO: Allow parameters to shadow rules.
+        rule = out.rule_map.get(self.name, self.name)
         out(f'_mode, _result, _pos = yield ({out.CONTINUE}, {rule}, _pos)')
 
 
@@ -355,13 +391,14 @@ def Right(expr1, expr2):
 
 
 class Rule:
-    def __init__(self, name, expr, is_ignored=False):
+    def __init__(self, name, params, expr, is_ignored=False):
         self.name = name
+        self.params = params
         self.expr = expr
         self.is_ignored = is_ignored
 
     def _eval(self, env):
-        return Rule(self.name, self.expr._eval(env), is_ignored=self.is_ignored)
+        return Rule(self.name, self.params, self.expr._eval(env), is_ignored=self.is_ignored)
 
     def _compile(self, out):
         return self.expr._compile(out)

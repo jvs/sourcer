@@ -98,7 +98,7 @@ def _conv(node):
         return KeywordArg(node.name, node.expr)
 
     if isinstance(node, meta.RuleDef):
-        return Rule(node.name, node.expr, is_ignored=node.is_ignored)
+        return Rule(node.name, node.params, node.expr, is_ignored=node.is_ignored)
 
     if isinstance(node, meta.ClassDef):
         return Class(node.name, node.fields)
@@ -191,7 +191,10 @@ class ProgramBuilder:
         else:
             self('\n')
 
-        self(f'def {name}(_text, _pos):')
+        extra = (', ' + ', '.join(expr.params)) if getattr(expr, 'params', None) else ''
+
+        self(f'def {name}(_text, _pos{extra}):')
+
         with self.indented():
             result = self.compile(expr)
             self('yield (_mode, _result, _pos)')
@@ -217,7 +220,7 @@ class ProgramBuilder:
             raise Exception(f'Expected "start" rule. Received: {names}')
 
         if ignored:
-            rules.append(Rule('_ignored', Skip(*ignored)))
+            rules.append(Rule('_ignored', None, Skip(*ignored)))
             self.ignored_expr = Ref('_ignored')
         else:
             self.ignored_expr = None
@@ -235,7 +238,7 @@ class ProgramBuilder:
 
         if self.ignored_expr is not None:
             real_name = '_skip_then_start'
-            real_start = Rule(real_name, Right(self.ignored_expr, Ref(start)))
+            real_start = Rule(real_name, None, Right(self.ignored_expr, Ref(start)))
             self.rule_map[real_name] = real_name
             rules.append(real_start)
             start = real_name
@@ -335,6 +338,13 @@ class Prefix(Node):
 
 def parse(text, pos=0):
     return _run(text, pos, $start)
+
+
+from collections import namedtuple as _nt
+
+class _RuleClosure(_nt('_RuleClosure', 'rule, args, kwargs')):
+    def __call__(self, _text, _pos):
+        return self.rule(_text, _pos, *self.args, **dict(self.kwargs))
 
 
 def _run(text, pos, start):
