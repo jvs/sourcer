@@ -180,7 +180,7 @@ class ProgramBuilder:
     def write_rule_function(self, name, expr):
         # TODO: Ask the expr if it needs to use goto.
         if not isinstance(expr, (RegexLiteral, StringLiteral)):
-            self('\n@with_goto')
+            self('\n@_with_goto')
         else:
             self('\n')
 
@@ -238,7 +238,7 @@ class ProgramBuilder:
             self.write_rule_function(self.rule_map[rule.name], rule)
 
         result = io.StringIO()
-        result.write('from goto import with_goto\n')
+        result.write('from goto import with_goto as _with_goto\n')
 
         for imp in self.imports:
             result.write('import ')

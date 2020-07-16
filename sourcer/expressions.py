@@ -92,7 +92,7 @@ class Call:
             else:
                 value = out.reserve('arg')
                 out('')
-                out('@with_goto')
+                out('@_with_goto')
                 out(f'def {value}(_text, _pos):')
                 with out.indented():
                     out.compile(expr)
