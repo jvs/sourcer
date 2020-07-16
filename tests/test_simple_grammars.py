@@ -247,7 +247,7 @@ def test_simple_rule_with_parameter():
 
 
 def test_simple_class_with_parameters():
-    g = Grammar('''
+    g = Grammar(r'''
         ignored Space = @/[ \t]+/
 
         Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
