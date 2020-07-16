@@ -45,7 +45,7 @@ class PythonExpression {
 class RuleDef {
     is_ignored: kw("ignored" | "ignore")? |> `bool`
     name: Name
-    params: Opt(Params) << ("=>" | "=" | ":")
+    params: Opt(Params) << wrap("=>" | "=" | ":")
     expr: Expr
 }
 
@@ -60,6 +60,12 @@ Stmt = ClassDef
     | PythonSection
     | PythonExpression
 
+class LetExpression {
+    name: kw("let") >> Name << wrap("=")
+    expr: Expr << wrap(kw("in"))
+    body: Expr
+}
+
 class Ref {
     value: Name
 }
@@ -69,6 +75,7 @@ class ListLiteral {
 }
 
 Atom = ("(" >> wrap(Expr) << ")")
+    | LetExpression
     | Ref
     | StringLiteral
     | RegexLiteral

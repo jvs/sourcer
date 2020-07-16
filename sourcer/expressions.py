@@ -233,6 +233,24 @@ def Left(expr1, expr2):
     return Discard(expr1, expr2, discard_left=False)
 
 
+class LetExpression:
+    def __init__(self, name, expr, body):
+        self.name = name
+        self.expr = expr
+        self.body = body
+
+    def _compile(self, out):
+        out.compile(self.expr)
+        end = out.reserve('end_let')
+
+        with out.IF_NOT('_mode'):
+            out.goto(end)
+
+        out.set(self.name, '_result')
+        out.compile(self.body)
+        out.label(end)
+
+
 class List:
     def __init__(self, expr, allow_empty=True):
         self.expr = expr

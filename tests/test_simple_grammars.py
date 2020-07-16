@@ -1,3 +1,4 @@
+from textwrap import dedent
 from sourcer import Grammar
 
 
@@ -264,3 +265,65 @@ def test_simple_class_with_parameters():
     ''')
     result = g.parse('[foo, bar, baz] & [11, 22, 33]')
     assert result == g.Pair(['foo', 'bar', 'baz'], [11, 22, 33])
+
+
+def test_simplified_indentation():
+    g = Grammar(r'''
+        ignore Space = @/[ \t]+/
+
+        Indent = @/\n[ \t]*/
+
+        MatchIndent(i) =>
+            Indent where `lambda x: x == i`
+
+        IncreaseIndent(i) =>
+            Indent where `lambda x: len(x) > len(i)`
+
+        Body(current_indent) =>
+            let i = IncreaseIndent(current_indent) in
+            Statement(i) // MatchIndent(i)
+
+        Statement(current_indent) =>
+            If(current_indent) | Print
+
+        class If(current_indent) {
+            test: "if" >> Name
+            body: Body(current_indent)
+        }
+
+        class Print {
+            name: "print" >> Name
+        }
+
+        Name = @/[a-zA-Z]+/
+        Newline = @/[\r\n]+/
+
+        Start = Opt(Newline) >> (Statement(`''`) // Newline)
+    ''')
+
+    result = g.parse('print ok\nprint bye')
+    assert result == [g.Print('ok'), g.Print('bye')]
+
+    result = g.parse('if foo\n  print bar')
+    assert result == [g.If('foo', [g.Print('bar')])]
+
+    result = g.parse(dedent('''
+        print ok
+        if foo
+            if bar
+                print baz
+                print fiz
+            print buz
+        print zim
+    '''))
+    assert result == [
+        g.Print('ok'),
+        g.If('foo', [
+            g.If('bar', [
+                g.Print('baz'),
+                g.Print('fiz'),
+            ]),
+            g.Print('buz'),
+        ]),
+        g.Print('zim'),
+    ]

@@ -103,6 +103,18 @@ class ClassDef(Node):
         return f'ClassDef(name={self.name!r}, params={self.params!r}, fields={self.fields!r})'
 
 
+class LetExpression(Node):
+    _fields = ('name', 'expr', 'body')
+
+    def __init__(self, name, expr, body):
+        self.name = name
+        self.expr = expr
+        self.body = body
+
+    def __repr__(self):
+        return f'LetExpression(name={self.name!r}, expr={self.expr!r}, body={self.body!r})'
+
+
 class Ref(Node):
     _fields = ('value',)
 
@@ -281,7 +293,7 @@ def _parse_Space1(_text, _pos):
         _result = _match1.group(0)
     else:
         _mode = False
-        _result = 139689635547344
+        _result = 139751142065544
     yield (_mode, _result, _pos)
     
 
@@ -295,7 +307,7 @@ def _parse_Comment1(_text, _pos):
         _result = _match2.group(0)
     else:
         _mode = False
-        _result = 139689635972936
+        _result = 139751142470992
     yield (_mode, _result, _pos)
     
 
@@ -309,7 +321,7 @@ def _parse_Newline1(_text, _pos):
         _result = _match3.group(0)
     else:
         _mode = False
-        _result = 139689635971200
+        _result = 139751142363088
     yield (_mode, _result, _pos)
     
 
@@ -320,13 +332,13 @@ def _parse_Sep1(_text, _pos):
     _checkpoint1 = _pos
     _backtrack1 = _pos
     _farthest_pos1 = _pos
-    _farthest_expr1 = 139689642851968
+    _farthest_expr1 = 139751142672368
     _mode, _result, _pos = yield (3, _parse_Newline1, _pos)
     if _mode:
         goto ._end_choice1
     if _farthest_pos1 < _pos:
         _farthest_pos1 = _pos
-        _farthest_expr1 = 139689642955328
+        _farthest_expr1 = 139751142673376
     _pos = _backtrack1
     _value1 = ';'
     _end1 = _pos + 1
@@ -337,12 +349,12 @@ def _parse_Sep1(_text, _pos):
         _result = _value1
     else:
         _mode = False
-        _result = 139689642954880
+        _result = 139751142672928
     if _mode:
         goto ._end_choice1
     if _farthest_pos1 < _pos:
         _farthest_pos1 = _pos
-        _farthest_expr1 = 139689642954880
+        _farthest_expr1 = 139751142672928
     _pos = _backtrack1
     _result = _farthest_expr1
     _pos = _farthest_pos1
@@ -370,7 +382,7 @@ def _parse_Name1(_text, _pos):
         _result = _match4.group(0)
     else:
         _mode = False
-        _result = 139689635861224
+        _result = 139751142783520
     yield (_mode, _result, _pos)
     
 
@@ -388,7 +400,7 @@ def _parse_Comma1(_text, _pos):
             _result = _value2
         else:
             _mode = False
-            _result = 139689642731784
+            _result = 139751142993088
         yield (_mode, _result, _pos)
 
     _closure1 = _RuleClosure(_parse_wrap1, (_arg1,), ())
@@ -449,7 +461,7 @@ def _parse_Params1(_text, _pos):
             _result = _value3
         else:
             _mode = False
-            _result = 139689643361728
+            _result = 139751150419920
         yield (_mode, _result, _pos)
 
     _closure2 = _RuleClosure(_parse_wrap1, (_arg2,), ())
@@ -487,7 +499,7 @@ def _parse_Params1(_text, _pos):
         _result = _value4
     else:
         _mode = False
-        _result = 139689643057672
+        _result = 139751150100432
     if _mode:
         _result = _staging4
     label ._end_discard4
@@ -498,7 +510,7 @@ def _parse_Params1(_text, _pos):
 def _parse_StringLiteral1(_text, _pos):
     _backtrack2 = _pos
     _farthest_pos2 = _pos
-    _farthest_expr2 = 139689644138392
+    _farthest_expr2 = 139751150727240
     _match5 = _pattern5.match(_text, _pos)
     if _match5:
         _pos = _match5.end()
@@ -507,12 +519,12 @@ def _parse_StringLiteral1(_text, _pos):
         _result = _match5.group(0)
     else:
         _mode = False
-        _result = 139689644136152
+        _result = 139751150610752
     if _mode:
         goto ._end_choice2
     if _farthest_pos2 < _pos:
         _farthest_pos2 = _pos
-        _farthest_expr2 = 139689644136152
+        _farthest_expr2 = 139751150610752
     _pos = _backtrack2
     _match6 = _pattern6.match(_text, _pos)
     if _match6:
@@ -522,12 +534,12 @@ def _parse_StringLiteral1(_text, _pos):
         _result = _match6.group(0)
     else:
         _mode = False
-        _result = 139689644042784
+        _result = 139751150610696
     if _mode:
         goto ._end_choice2
     if _farthest_pos2 < _pos:
         _farthest_pos2 = _pos
-        _farthest_expr2 = 139689644042784
+        _farthest_expr2 = 139751150610696
     _pos = _backtrack2
     _match7 = _pattern7.match(_text, _pos)
     if _match7:
@@ -537,12 +549,12 @@ def _parse_StringLiteral1(_text, _pos):
         _result = _match7.group(0)
     else:
         _mode = False
-        _result = 139689644136880
+        _result = 139751150611984
     if _mode:
         goto ._end_choice2
     if _farthest_pos2 < _pos:
         _farthest_pos2 = _pos
-        _farthest_expr2 = 139689644136880
+        _farthest_expr2 = 139751150611984
     _pos = _backtrack2
     _match8 = _pattern8.match(_text, _pos)
     if _match8:
@@ -552,12 +564,12 @@ def _parse_StringLiteral1(_text, _pos):
         _result = _match8.group(0)
     else:
         _mode = False
-        _result = 139689644041776
+        _result = 139751150610192
     if _mode:
         goto ._end_choice2
     if _farthest_pos2 < _pos:
         _farthest_pos2 = _pos
-        _farthest_expr2 = 139689644041776
+        _farthest_expr2 = 139751150610192
     _pos = _backtrack2
     _result = _farthest_expr2
     _pos = _farthest_pos2
@@ -588,7 +600,7 @@ def _parse_RegexLiteral1(_text, _pos):
         _result = _match9.group(0)
     else:
         _mode = False
-        _result = 139689643741256
+        _result = 139751150901344
     if not _mode:
         goto ._end_apply2
     __item2 = _result
@@ -615,7 +627,7 @@ def _parse_PythonSection1(_text, _pos):
         _result = _match10.group(0)
     else:
         _mode = False
-        _result = 139689643741536
+        _result = 139751141843576
     if not _mode:
         goto ._end_apply3
     __item3 = _result
@@ -642,7 +654,7 @@ def _parse_PythonExpression1(_text, _pos):
         _result = _match11.group(0)
     else:
         _mode = False
-        _result = 139689643741816
+        _result = 139751151272008
     if not _mode:
         goto ._end_apply4
     __item4 = _result
@@ -667,7 +679,7 @@ def _parse_RuleDef1(_text, _pos):
     def _arg3(_text, _pos):
         _backtrack4 = _pos
         _farthest_pos3 = _pos
-        _farthest_expr3 = 139689643742544
+        _farthest_expr3 = 139751151272736
         _value5 = 'ignored'
         _end5 = _pos + 7
         if _text[_pos:_end5] == _value5:
@@ -677,12 +689,12 @@ def _parse_RuleDef1(_text, _pos):
             _result = _value5
         else:
             _mode = False
-            _result = 139689643742432
+            _result = 139751151272624
         if _mode:
             goto ._end_choice3
         if _farthest_pos3 < _pos:
             _farthest_pos3 = _pos
-            _farthest_expr3 = 139689643742432
+            _farthest_expr3 = 139751151272624
         _pos = _backtrack4
         _value6 = 'ignore'
         _end6 = _pos + 6
@@ -693,12 +705,12 @@ def _parse_RuleDef1(_text, _pos):
             _result = _value6
         else:
             _mode = False
-            _result = 139689643742488
+            _result = 139751151272680
         if _mode:
             goto ._end_choice3
         if _farthest_pos3 < _pos:
             _farthest_pos3 = _pos
-            _farthest_expr3 = 139689643742488
+            _farthest_expr3 = 139751151272680
         _pos = _backtrack4
         _result = _farthest_expr3
         _pos = _farthest_pos3
@@ -735,60 +747,67 @@ def _parse_RuleDef1(_text, _pos):
     if not _mode:
         goto ._end_discard5
     _staging5 = _result
-    _backtrack6 = _pos
-    _farthest_pos4 = _pos
-    _farthest_expr4 = 139689643743104
-    _value7 = '=>'
-    _end7 = _pos + 2
-    if _text[_pos:_end7] == _value7:
-        _pos = _end7
-        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-        _mode = True
-        _result = _value7
-    else:
-        _mode = False
-        _result = 139689643742712
-    if _mode:
-        goto ._end_choice4
-    if _farthest_pos4 < _pos:
+    
+    @with_goto
+    def _arg4(_text, _pos):
+        _backtrack6 = _pos
         _farthest_pos4 = _pos
-        _farthest_expr4 = 139689643742712
-    _pos = _backtrack6
-    _value8 = '='
-    _end8 = _pos + 1
-    if _text[_pos:_end8] == _value8:
-        _pos = _end8
-        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-        _mode = True
-        _result = _value8
-    else:
-        _mode = False
-        _result = 139689643742992
-    if _mode:
-        goto ._end_choice4
-    if _farthest_pos4 < _pos:
-        _farthest_pos4 = _pos
-        _farthest_expr4 = 139689643742992
-    _pos = _backtrack6
-    _value9 = ':'
-    _end9 = _pos + 1
-    if _text[_pos:_end9] == _value9:
-        _pos = _end9
-        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-        _mode = True
-        _result = _value9
-    else:
-        _mode = False
-        _result = 139689643742768
-    if _mode:
-        goto ._end_choice4
-    if _farthest_pos4 < _pos:
-        _farthest_pos4 = _pos
-        _farthest_expr4 = 139689643742768
-    _pos = _backtrack6
-    _result = _farthest_expr4
-    _pos = _farthest_pos4
-    label ._end_choice4
+        _farthest_expr4 = 139751151273520
+        _value7 = '=>'
+        _end7 = _pos + 2
+        if _text[_pos:_end7] == _value7:
+            _pos = _end7
+            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+            _mode = True
+            _result = _value7
+        else:
+            _mode = False
+            _result = 139751151273352
+        if _mode:
+            goto ._end_choice4
+        if _farthest_pos4 < _pos:
+            _farthest_pos4 = _pos
+            _farthest_expr4 = 139751151273352
+        _pos = _backtrack6
+        _value8 = '='
+        _end8 = _pos + 1
+        if _text[_pos:_end8] == _value8:
+            _pos = _end8
+            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+            _mode = True
+            _result = _value8
+        else:
+            _mode = False
+            _result = 139751151273408
+        if _mode:
+            goto ._end_choice4
+        if _farthest_pos4 < _pos:
+            _farthest_pos4 = _pos
+            _farthest_expr4 = 139751151273408
+        _pos = _backtrack6
+        _value9 = ':'
+        _end9 = _pos + 1
+        if _text[_pos:_end9] == _value9:
+            _pos = _end9
+            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+            _mode = True
+            _result = _value9
+        else:
+            _mode = False
+            _result = 139751151273296
+        if _mode:
+            goto ._end_choice4
+        if _farthest_pos4 < _pos:
+            _farthest_pos4 = _pos
+            _farthest_expr4 = 139751151273296
+        _pos = _backtrack6
+        _result = _farthest_expr4
+        _pos = _farthest_pos4
+        label ._end_choice4
+        yield (_mode, _result, _pos)
+
+    _closure5 = _RuleClosure(_parse_wrap1, (_arg4,), ())
+    _mode, _result, _pos = yield (3, _closure5, _pos)
     if _mode:
         _result = _staging5
     label ._end_discard5
@@ -808,7 +827,7 @@ def _parse_RuleDef1(_text, _pos):
 def _parse_ClassDef1(_text, _pos):
     
     @with_goto
-    def _arg4(_text, _pos):
+    def _arg5(_text, _pos):
         _value10 = 'class'
         _end10 = _pos + 5
         if _text[_pos:_end10] == _value10:
@@ -818,11 +837,11 @@ def _parse_ClassDef1(_text, _pos):
             _result = _value10
         else:
             _mode = False
-            _result = 139689643743552
+            _result = 139751151273856
         yield (_mode, _result, _pos)
 
-    _closure5 = _RuleClosure(_parse_kw1, (_arg4,), ())
-    _mode, _result, _pos = yield (3, _closure5, _pos)
+    _closure6 = _RuleClosure(_parse_kw1, (_arg5,), ())
+    _mode, _result, _pos = yield (3, _closure6, _pos)
     if not _mode:
         goto ._end_discard6
     _mode, _result, _pos = yield (3, _parse_Name1, _pos)
@@ -841,7 +860,7 @@ def _parse_ClassDef1(_text, _pos):
     params = _result
     
     @with_goto
-    def _arg5(_text, _pos):
+    def _arg6(_text, _pos):
         _value11 = '{'
         _end11 = _pos + 1
         if _text[_pos:_end11] == _value11:
@@ -851,11 +870,11 @@ def _parse_ClassDef1(_text, _pos):
             _result = _value11
         else:
             _mode = False
-            _result = 139689643744112
+            _result = 139751151274416
         yield (_mode, _result, _pos)
 
-    _closure6 = _RuleClosure(_parse_wrap1, (_arg5,), ())
-    _mode, _result, _pos = yield (3, _closure6, _pos)
+    _closure7 = _RuleClosure(_parse_wrap1, (_arg6,), ())
+    _mode, _result, _pos = yield (3, _closure7, _pos)
     if not _mode:
         goto ._end_discard7
     _staging6 = []
@@ -888,7 +907,7 @@ def _parse_ClassDef1(_text, _pos):
         _result = _value12
     else:
         _mode = False
-        _result = 139689643743608
+        _result = 139751151273912
     if _mode:
         _result = _staging7
     label ._end_discard8
@@ -904,34 +923,34 @@ def _parse_ClassDef1(_text, _pos):
 def _parse_Stmt1(_text, _pos):
     _backtrack8 = _pos
     _farthest_pos5 = _pos
-    _farthest_expr5 = 139689643744336
+    _farthest_expr5 = 139751151274640
     _mode, _result, _pos = yield (3, _parse_ClassDef1, _pos)
     if _mode:
         goto ._end_choice5
     if _farthest_pos5 < _pos:
         _farthest_pos5 = _pos
-        _farthest_expr5 = 139689643744448
+        _farthest_expr5 = 139751151274752
     _pos = _backtrack8
     _mode, _result, _pos = yield (3, _parse_RuleDef1, _pos)
     if _mode:
         goto ._end_choice5
     if _farthest_pos5 < _pos:
         _farthest_pos5 = _pos
-        _farthest_expr5 = 139689643744504
+        _farthest_expr5 = 139751151274808
     _pos = _backtrack8
     _mode, _result, _pos = yield (3, _parse_PythonSection1, _pos)
     if _mode:
         goto ._end_choice5
     if _farthest_pos5 < _pos:
         _farthest_pos5 = _pos
-        _farthest_expr5 = 139689643744392
+        _farthest_expr5 = 139751151274696
     _pos = _backtrack8
     _mode, _result, _pos = yield (3, _parse_PythonExpression1, _pos)
     if _mode:
         goto ._end_choice5
     if _farthest_pos5 < _pos:
         _farthest_pos5 = _pos
-        _farthest_expr5 = 139689643744560
+        _farthest_expr5 = 139751151274864
     _pos = _backtrack8
     _result = _farthest_expr5
     _pos = _farthest_pos5
@@ -940,97 +959,111 @@ def _parse_Stmt1(_text, _pos):
     
 
 @with_goto
-def _parse_Ref1(_text, _pos):
+def _parse_LetExpression1(_text, _pos):
+    
+    @with_goto
+    def _arg7(_text, _pos):
+        _value13 = 'let'
+        _end13 = _pos + 3
+        if _text[_pos:_end13] == _value13:
+            _pos = _end13
+            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+            _mode = True
+            _result = _value13
+        else:
+            _mode = False
+            _result = 139751151275368
+        yield (_mode, _result, _pos)
+
+    _closure8 = _RuleClosure(_parse_kw1, (_arg7,), ())
+    _mode, _result, _pos = yield (3, _closure8, _pos)
+    if not _mode:
+        goto ._end_discard9
     _mode, _result, _pos = yield (3, _parse_Name1, _pos)
+    label ._end_discard9
+    if not _mode:
+        goto ._end_discard10
+    _staging8 = _result
+    
+    @with_goto
+    def _arg8(_text, _pos):
+        _value14 = '='
+        _end14 = _pos + 1
+        if _text[_pos:_end14] == _value14:
+            _pos = _end14
+            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+            _mode = True
+            _result = _value14
+        else:
+            _mode = False
+            _result = 139751151275592
+        yield (_mode, _result, _pos)
+
+    _closure9 = _RuleClosure(_parse_wrap1, (_arg8,), ())
+    _mode, _result, _pos = yield (3, _closure9, _pos)
+    if _mode:
+        _result = _staging8
+    label ._end_discard10
     if not _mode:
         goto ._end_sequence7
-    value = _result
-    _result = Ref(value)
+    name = _result
+    _mode, _result, _pos = yield (3, _parse_Expr1, _pos)
+    if not _mode:
+        goto ._end_discard11
+    _staging9 = _result
+    
+    @with_goto
+    def _arg9(_text, _pos):
+        
+        @with_goto
+        def _arg10(_text, _pos):
+            _value15 = 'in'
+            _end15 = _pos + 2
+            if _text[_pos:_end15] == _value15:
+                _pos = _end15
+                _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+                _mode = True
+                _result = _value15
+            else:
+                _mode = False
+                _result = 139751151288504
+            yield (_mode, _result, _pos)
+
+        _closure10 = _RuleClosure(_parse_kw1, (_arg10,), ())
+        _mode, _result, _pos = yield (3, _closure10, _pos)
+        yield (_mode, _result, _pos)
+
+    _closure11 = _RuleClosure(_parse_wrap1, (_arg9,), ())
+    _mode, _result, _pos = yield (3, _closure11, _pos)
+    if _mode:
+        _result = _staging9
+    label ._end_discard11
+    if not _mode:
+        goto ._end_sequence7
+    expr = _result
+    _mode, _result, _pos = yield (3, _parse_Expr1, _pos)
+    if not _mode:
+        goto ._end_sequence7
+    body = _result
+    _result = LetExpression(name, expr, body)
     label ._end_sequence7
     yield (_mode, _result, _pos)
     
 
 @with_goto
-def _parse_ListLiteral1(_text, _pos):
-    _value13 = '['
-    _end13 = _pos + 1
-    if _text[_pos:_end13] == _value13:
-        _pos = _end13
-        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-        _mode = True
-        _result = _value13
-    else:
-        _mode = False
-        _result = 139689643745008
-    if not _mode:
-        goto ._end_discard9
-    _staging8 = []
-    _checkpoint6 = _pos
-    label ._loop_alt3
-    _closure7 = _RuleClosure(_parse_wrap1, (_parse_Expr1,), ())
-    _mode, _result, _pos = yield (3, _closure7, _pos)
-    if not _mode:
-        goto ._end_alt3
-    _staging8.append(_result)
-    _checkpoint6 = _pos
-    _mode, _result, _pos = yield (3, _parse_Comma1, _pos)
-    if not _mode:
-        goto ._end_alt3
-    _checkpoint6 = _pos
-    goto ._loop_alt3
-    label ._end_alt3
-    _mode = True
-    _result = _staging8
-    _pos = _checkpoint6
-    label ._end_discard9
-    if not _mode:
-        goto ._end_discard10
-    _staging9 = _result
-    _value14 = ']'
-    _end14 = _pos + 1
-    if _text[_pos:_end14] == _value14:
-        _pos = _end14
-        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-        _mode = True
-        _result = _value14
-    else:
-        _mode = False
-        _result = 139689643744952
-    if _mode:
-        _result = _staging9
-    label ._end_discard10
+def _parse_Ref1(_text, _pos):
+    _mode, _result, _pos = yield (3, _parse_Name1, _pos)
     if not _mode:
         goto ._end_sequence8
-    elements = _result
-    _result = ListLiteral(elements)
+    value = _result
+    _result = Ref(value)
     label ._end_sequence8
     yield (_mode, _result, _pos)
     
 
 @with_goto
-def _parse_Atom1(_text, _pos):
-    _backtrack9 = _pos
-    _farthest_pos6 = _pos
-    _farthest_expr6 = 139689643684080
-    _value15 = '('
-    _end15 = _pos + 1
-    if _text[_pos:_end15] == _value15:
-        _pos = _end15
-        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-        _mode = True
-        _result = _value15
-    else:
-        _mode = False
-        _result = 139689643684416
-    if not _mode:
-        goto ._end_discard11
-    _closure8 = _RuleClosure(_parse_wrap1, (_parse_Expr1,), ())
-    _mode, _result, _pos = yield (3, _closure8, _pos)
-    label ._end_discard11
-    if not _mode:
-        goto ._end_discard12
-    _staging10 = _result
-    _value16 = ')'
+def _parse_ListLiteral1(_text, _pos):
+    _value16 = '['
     _end16 = _pos + 1
     if _text[_pos:_end16] == _value16:
         _pos = _end16
@@ -1039,50 +1072,135 @@ def _parse_Atom1(_text, _pos):
         _result = _value16
     else:
         _mode = False
-        _result = 139689643684360
-    if _mode:
-        _result = _staging10
+        _result = 139751151288840
+    if not _mode:
+        goto ._end_discard12
+    _staging10 = []
+    _checkpoint6 = _pos
+    label ._loop_alt3
+    _closure12 = _RuleClosure(_parse_wrap1, (_parse_Expr1,), ())
+    _mode, _result, _pos = yield (3, _closure12, _pos)
+    if not _mode:
+        goto ._end_alt3
+    _staging10.append(_result)
+    _checkpoint6 = _pos
+    _mode, _result, _pos = yield (3, _parse_Comma1, _pos)
+    if not _mode:
+        goto ._end_alt3
+    _checkpoint6 = _pos
+    goto ._loop_alt3
+    label ._end_alt3
+    _mode = True
+    _result = _staging10
+    _pos = _checkpoint6
     label ._end_discard12
+    if not _mode:
+        goto ._end_discard13
+    _staging11 = _result
+    _value17 = ']'
+    _end17 = _pos + 1
+    if _text[_pos:_end17] == _value17:
+        _pos = _end17
+        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+        _mode = True
+        _result = _value17
+    else:
+        _mode = False
+        _result = 139751151288784
+    if _mode:
+        _result = _staging11
+    label ._end_discard13
+    if not _mode:
+        goto ._end_sequence9
+    elements = _result
+    _result = ListLiteral(elements)
+    label ._end_sequence9
+    yield (_mode, _result, _pos)
+    
+
+@with_goto
+def _parse_Atom1(_text, _pos):
+    _backtrack9 = _pos
+    _farthest_pos6 = _pos
+    _farthest_expr6 = 139751151289288
+    _value18 = '('
+    _end18 = _pos + 1
+    if _text[_pos:_end18] == _value18:
+        _pos = _end18
+        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+        _mode = True
+        _result = _value18
+    else:
+        _mode = False
+        _result = 139751151289680
+    if not _mode:
+        goto ._end_discard14
+    _closure13 = _RuleClosure(_parse_wrap1, (_parse_Expr1,), ())
+    _mode, _result, _pos = yield (3, _closure13, _pos)
+    label ._end_discard14
+    if not _mode:
+        goto ._end_discard15
+    _staging12 = _result
+    _value19 = ')'
+    _end19 = _pos + 1
+    if _text[_pos:_end19] == _value19:
+        _pos = _end19
+        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+        _mode = True
+        _result = _value19
+    else:
+        _mode = False
+        _result = 139751151289624
+    if _mode:
+        _result = _staging12
+    label ._end_discard15
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 139689643684472
+        _farthest_expr6 = 139751151289736
+    _pos = _backtrack9
+    _mode, _result, _pos = yield (3, _parse_LetExpression1, _pos)
+    if _mode:
+        goto ._end_choice6
+    if _farthest_pos6 < _pos:
+        _farthest_pos6 = _pos
+        _farthest_expr6 = 139751151289568
     _pos = _backtrack9
     _mode, _result, _pos = yield (3, _parse_Ref1, _pos)
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 139689643684304
+        _farthest_expr6 = 139751151289512
     _pos = _backtrack9
     _mode, _result, _pos = yield (3, _parse_StringLiteral1, _pos)
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 139689643684248
+        _farthest_expr6 = 139751151290016
     _pos = _backtrack9
     _mode, _result, _pos = yield (3, _parse_RegexLiteral1, _pos)
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 139689643684752
+        _farthest_expr6 = 139751151290072
     _pos = _backtrack9
     _mode, _result, _pos = yield (3, _parse_ListLiteral1, _pos)
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 139689643684808
+        _farthest_expr6 = 139751151289456
     _pos = _backtrack9
     _mode, _result, _pos = yield (3, _parse_PythonExpression1, _pos)
     if _mode:
         goto ._end_choice6
     if _farthest_pos6 < _pos:
         _farthest_pos6 = _pos
-        _farthest_expr6 = 139689643684192
+        _farthest_expr6 = 139751151290128
     _pos = _backtrack9
     _result = _farthest_expr6
     _pos = _farthest_pos6
@@ -1094,123 +1212,12 @@ def _parse_Atom1(_text, _pos):
 def _parse_KeywordArg1(_text, _pos):
     _mode, _result, _pos = yield (3, _parse_Name1, _pos)
     if not _mode:
-        goto ._end_discard13
-    _staging11 = _result
+        goto ._end_discard16
+    _staging13 = _result
     _backtrack10 = _pos
     _farthest_pos7 = _pos
-    _farthest_expr7 = 139689643685200
-    _value17 = '='
-    _end17 = _pos + 1
-    if _text[_pos:_end17] == _value17:
-        _pos = _end17
-        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-        _mode = True
-        _result = _value17
-    else:
-        _mode = False
-        _result = 139689643685088
-    if _mode:
-        goto ._end_choice7
-    if _farthest_pos7 < _pos:
-        _farthest_pos7 = _pos
-        _farthest_expr7 = 139689643685088
-    _pos = _backtrack10
-    _value18 = ':'
-    _end18 = _pos + 1
-    if _text[_pos:_end18] == _value18:
-        _pos = _end18
-        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-        _mode = True
-        _result = _value18
-    else:
-        _mode = False
-        _result = 139689643685144
-    if _mode:
-        goto ._end_choice7
-    if _farthest_pos7 < _pos:
-        _farthest_pos7 = _pos
-        _farthest_expr7 = 139689643685144
-    _pos = _backtrack10
-    _result = _farthest_expr7
-    _pos = _farthest_pos7
-    label ._end_choice7
-    if _mode:
-        _result = _staging11
-    label ._end_discard13
-    if not _mode:
-        goto ._end_sequence9
-    name = _result
-    _mode, _result, _pos = yield (3, _parse_Expr1, _pos)
-    if not _mode:
-        goto ._end_sequence9
-    expr = _result
-    _result = KeywordArg(name, expr)
-    label ._end_sequence9
-    yield (_mode, _result, _pos)
-    
-
-@with_goto
-def _parse_ArgList1(_text, _pos):
-    _value19 = '('
-    _end19 = _pos + 1
-    if _text[_pos:_end19] == _value19:
-        _pos = _end19
-        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-        _mode = True
-        _result = _value19
-    else:
-        _mode = False
-        _result = 139689643685536
-    if not _mode:
-        goto ._end_discard14
-    _staging12 = []
-    _checkpoint7 = _pos
-    label ._loop_alt4
-    
-    @with_goto
-    def _arg6(_text, _pos):
-        _backtrack11 = _pos
-        _farthest_pos8 = _pos
-        _farthest_expr8 = 139689643686040
-        _mode, _result, _pos = yield (3, _parse_KeywordArg1, _pos)
-        if _mode:
-            goto ._end_choice8
-        if _farthest_pos8 < _pos:
-            _farthest_pos8 = _pos
-            _farthest_expr8 = 139689643685928
-        _pos = _backtrack11
-        _mode, _result, _pos = yield (3, _parse_Expr1, _pos)
-        if _mode:
-            goto ._end_choice8
-        if _farthest_pos8 < _pos:
-            _farthest_pos8 = _pos
-            _farthest_expr8 = 139689643685984
-        _pos = _backtrack11
-        _result = _farthest_expr8
-        _pos = _farthest_pos8
-        label ._end_choice8
-        yield (_mode, _result, _pos)
-
-    _closure9 = _RuleClosure(_parse_wrap1, (_arg6,), ())
-    _mode, _result, _pos = yield (3, _closure9, _pos)
-    if not _mode:
-        goto ._end_alt4
-    _staging12.append(_result)
-    _checkpoint7 = _pos
-    _mode, _result, _pos = yield (3, _parse_Comma1, _pos)
-    if not _mode:
-        goto ._end_alt4
-    _checkpoint7 = _pos
-    goto ._loop_alt4
-    label ._end_alt4
-    _mode = True
-    _result = _staging12
-    _pos = _checkpoint7
-    label ._end_discard14
-    if not _mode:
-        goto ._end_discard15
-    _staging13 = _result
-    _value20 = ')'
+    _farthest_expr7 = 139751151290464
+    _value20 = '='
     _end20 = _pos + 1
     if _text[_pos:_end20] == _value20:
         _pos = _end20
@@ -1219,91 +1226,141 @@ def _parse_ArgList1(_text, _pos):
         _result = _value20
     else:
         _mode = False
-        _result = 139689643685480
+        _result = 139751151290352
+    if _mode:
+        goto ._end_choice7
+    if _farthest_pos7 < _pos:
+        _farthest_pos7 = _pos
+        _farthest_expr7 = 139751151290352
+    _pos = _backtrack10
+    _value21 = ':'
+    _end21 = _pos + 1
+    if _text[_pos:_end21] == _value21:
+        _pos = _end21
+        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+        _mode = True
+        _result = _value21
+    else:
+        _mode = False
+        _result = 139751151290408
+    if _mode:
+        goto ._end_choice7
+    if _farthest_pos7 < _pos:
+        _farthest_pos7 = _pos
+        _farthest_expr7 = 139751151290408
+    _pos = _backtrack10
+    _result = _farthest_expr7
+    _pos = _farthest_pos7
+    label ._end_choice7
     if _mode:
         _result = _staging13
-    label ._end_discard15
+    label ._end_discard16
     if not _mode:
         goto ._end_sequence10
-    args = _result
-    _result = ArgList(args)
+    name = _result
+    _mode, _result, _pos = yield (3, _parse_Expr1, _pos)
+    if not _mode:
+        goto ._end_sequence10
+    expr = _result
+    _result = KeywordArg(name, expr)
     label ._end_sequence10
     yield (_mode, _result, _pos)
     
 
 @with_goto
+def _parse_ArgList1(_text, _pos):
+    _value22 = '('
+    _end22 = _pos + 1
+    if _text[_pos:_end22] == _value22:
+        _pos = _end22
+        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+        _mode = True
+        _result = _value22
+    else:
+        _mode = False
+        _result = 139751151290800
+    if not _mode:
+        goto ._end_discard17
+    _staging14 = []
+    _checkpoint7 = _pos
+    label ._loop_alt4
+    
+    @with_goto
+    def _arg11(_text, _pos):
+        _backtrack11 = _pos
+        _farthest_pos8 = _pos
+        _farthest_expr8 = 139751151291304
+        _mode, _result, _pos = yield (3, _parse_KeywordArg1, _pos)
+        if _mode:
+            goto ._end_choice8
+        if _farthest_pos8 < _pos:
+            _farthest_pos8 = _pos
+            _farthest_expr8 = 139751151291192
+        _pos = _backtrack11
+        _mode, _result, _pos = yield (3, _parse_Expr1, _pos)
+        if _mode:
+            goto ._end_choice8
+        if _farthest_pos8 < _pos:
+            _farthest_pos8 = _pos
+            _farthest_expr8 = 139751151291248
+        _pos = _backtrack11
+        _result = _farthest_expr8
+        _pos = _farthest_pos8
+        label ._end_choice8
+        yield (_mode, _result, _pos)
+
+    _closure14 = _RuleClosure(_parse_wrap1, (_arg11,), ())
+    _mode, _result, _pos = yield (3, _closure14, _pos)
+    if not _mode:
+        goto ._end_alt4
+    _staging14.append(_result)
+    _checkpoint7 = _pos
+    _mode, _result, _pos = yield (3, _parse_Comma1, _pos)
+    if not _mode:
+        goto ._end_alt4
+    _checkpoint7 = _pos
+    goto ._loop_alt4
+    label ._end_alt4
+    _mode = True
+    _result = _staging14
+    _pos = _checkpoint7
+    label ._end_discard17
+    if not _mode:
+        goto ._end_discard18
+    _staging15 = _result
+    _value23 = ')'
+    _end23 = _pos + 1
+    if _text[_pos:_end23] == _value23:
+        _pos = _end23
+        _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+        _mode = True
+        _result = _value23
+    else:
+        _mode = False
+        _result = 139751151290744
+    if _mode:
+        _result = _staging15
+    label ._end_discard18
+    if not _mode:
+        goto ._end_sequence11
+    args = _result
+    _result = ArgList(args)
+    label ._end_sequence11
+    yield (_mode, _result, _pos)
+    
+
+@with_goto
 def _parse_Expr1(_text, _pos):
-    _staging14 = None
+    _staging16 = None
     _checkpoint8 = _pos
     _is_first1 = True
     goto ._left_assoc_operand1
     label ._loop_left_assoc1
     
     @with_goto
-    def _arg7(_text, _pos):
-        _value21 = '|'
-        _end21 = _pos + 1
-        if _text[_pos:_end21] == _value21:
-            _pos = _end21
-            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-            _mode = True
-            _result = _value21
-        else:
-            _mode = False
-            _result = 139689643716960
-        yield (_mode, _result, _pos)
-
-    _closure10 = _RuleClosure(_parse_wrap1, (_arg7,), ())
-    _mode, _result, _pos = yield (3, _closure10, _pos)
-    if not _mode:
-        goto ._suceed_left_assoc1
-    _operator1 = _result
-    label ._left_assoc_operand1
-    _staging15 = None
-    _checkpoint9 = _pos
-    _is_first2 = True
-    goto ._left_assoc_operand2
-    label ._loop_left_assoc2
-    
-    @with_goto
-    def _arg8(_text, _pos):
-        _backtrack12 = _pos
-        _farthest_pos9 = _pos
-        _farthest_expr9 = 139689643716848
-        _value22 = '<|'
-        _end22 = _pos + 2
-        if _text[_pos:_end22] == _value22:
-            _pos = _end22
-            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-            _mode = True
-            _result = _value22
-        else:
-            _mode = False
-            _result = 139689643716680
-        if _mode:
-            goto ._end_choice9
-        if _farthest_pos9 < _pos:
-            _farthest_pos9 = _pos
-            _farthest_expr9 = 139689643716680
-        _pos = _backtrack12
-        _value23 = '|>'
-        _end23 = _pos + 2
-        if _text[_pos:_end23] == _value23:
-            _pos = _end23
-            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
-            _mode = True
-            _result = _value23
-        else:
-            _mode = False
-            _result = 139689643716736
-        if _mode:
-            goto ._end_choice9
-        if _farthest_pos9 < _pos:
-            _farthest_pos9 = _pos
-            _farthest_expr9 = 139689643716736
-        _pos = _backtrack12
-        _value24 = 'where'
-        _end24 = _pos + 5
+    def _arg12(_text, _pos):
+        _value24 = '|'
+        _end24 = _pos + 1
         if _text[_pos:_end24] == _value24:
             _pos = _end24
             _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
@@ -1311,36 +1368,27 @@ def _parse_Expr1(_text, _pos):
             _result = _value24
         else:
             _mode = False
-            _result = 139689643687888
-        if _mode:
-            goto ._end_choice9
-        if _farthest_pos9 < _pos:
-            _farthest_pos9 = _pos
-            _farthest_expr9 = 139689643687888
-        _pos = _backtrack12
-        _result = _farthest_expr9
-        _pos = _farthest_pos9
-        label ._end_choice9
+            _result = 139751151277168
         yield (_mode, _result, _pos)
 
-    _closure11 = _RuleClosure(_parse_wrap1, (_arg8,), ())
-    _mode, _result, _pos = yield (3, _closure11, _pos)
+    _closure15 = _RuleClosure(_parse_wrap1, (_arg12,), ())
+    _mode, _result, _pos = yield (3, _closure15, _pos)
     if not _mode:
-        goto ._suceed_left_assoc2
-    _operator2 = _result
-    label ._left_assoc_operand2
-    _staging16 = None
-    _checkpoint10 = _pos
-    _is_first3 = True
-    goto ._left_assoc_operand3
-    label ._loop_left_assoc3
+        goto ._suceed_left_assoc1
+    _operator1 = _result
+    label ._left_assoc_operand1
+    _staging17 = None
+    _checkpoint9 = _pos
+    _is_first2 = True
+    goto ._left_assoc_operand2
+    label ._loop_left_assoc2
     
     @with_goto
-    def _arg9(_text, _pos):
-        _backtrack13 = _pos
-        _farthest_pos10 = _pos
-        _farthest_expr10 = 139689643687664
-        _value25 = '<<'
+    def _arg13(_text, _pos):
+        _backtrack12 = _pos
+        _farthest_pos9 = _pos
+        _farthest_expr9 = 139751151277056
+        _value25 = '<|'
         _end25 = _pos + 2
         if _text[_pos:_end25] == _value25:
             _pos = _end25
@@ -1349,14 +1397,14 @@ def _parse_Expr1(_text, _pos):
             _result = _value25
         else:
             _mode = False
-            _result = 139689643687552
+            _result = 139751151276888
         if _mode:
-            goto ._end_choice10
-        if _farthest_pos10 < _pos:
-            _farthest_pos10 = _pos
-            _farthest_expr10 = 139689643687552
-        _pos = _backtrack13
-        _value26 = '>>'
+            goto ._end_choice9
+        if _farthest_pos9 < _pos:
+            _farthest_pos9 = _pos
+            _farthest_expr9 = 139751151276888
+        _pos = _backtrack12
+        _value26 = '|>'
         _end26 = _pos + 2
         if _text[_pos:_end26] == _value26:
             _pos = _end26
@@ -1365,37 +1413,15 @@ def _parse_Expr1(_text, _pos):
             _result = _value26
         else:
             _mode = False
-            _result = 139689643687608
+            _result = 139751151276944
         if _mode:
-            goto ._end_choice10
-        if _farthest_pos10 < _pos:
-            _farthest_pos10 = _pos
-            _farthest_expr10 = 139689643687608
-        _pos = _backtrack13
-        _result = _farthest_expr10
-        _pos = _farthest_pos10
-        label ._end_choice10
-        yield (_mode, _result, _pos)
-
-    _closure12 = _RuleClosure(_parse_wrap1, (_arg9,), ())
-    _mode, _result, _pos = yield (3, _closure12, _pos)
-    if not _mode:
-        goto ._suceed_left_assoc3
-    _operator3 = _result
-    label ._left_assoc_operand3
-    _staging17 = None
-    _checkpoint11 = _pos
-    _is_first4 = True
-    goto ._left_assoc_operand4
-    label ._loop_left_assoc4
-    
-    @with_goto
-    def _arg10(_text, _pos):
-        _backtrack14 = _pos
-        _farthest_pos11 = _pos
-        _farthest_expr11 = 139689643687328
-        _value27 = '//'
-        _end27 = _pos + 2
+            goto ._end_choice9
+        if _farthest_pos9 < _pos:
+            _farthest_pos9 = _pos
+            _farthest_expr9 = 139751151276944
+        _pos = _backtrack12
+        _value27 = 'where'
+        _end27 = _pos + 5
         if _text[_pos:_end27] == _value27:
             _pos = _end27
             _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
@@ -1403,15 +1429,37 @@ def _parse_Expr1(_text, _pos):
             _result = _value27
         else:
             _mode = False
-            _result = 139689643687216
+            _result = 139751151276832
         if _mode:
-            goto ._end_choice11
-        if _farthest_pos11 < _pos:
-            _farthest_pos11 = _pos
-            _farthest_expr11 = 139689643687216
-        _pos = _backtrack14
-        _value28 = '/'
-        _end28 = _pos + 1
+            goto ._end_choice9
+        if _farthest_pos9 < _pos:
+            _farthest_pos9 = _pos
+            _farthest_expr9 = 139751151276832
+        _pos = _backtrack12
+        _result = _farthest_expr9
+        _pos = _farthest_pos9
+        label ._end_choice9
+        yield (_mode, _result, _pos)
+
+    _closure16 = _RuleClosure(_parse_wrap1, (_arg13,), ())
+    _mode, _result, _pos = yield (3, _closure16, _pos)
+    if not _mode:
+        goto ._suceed_left_assoc2
+    _operator2 = _result
+    label ._left_assoc_operand2
+    _staging18 = None
+    _checkpoint10 = _pos
+    _is_first3 = True
+    goto ._left_assoc_operand3
+    label ._loop_left_assoc3
+    
+    @with_goto
+    def _arg14(_text, _pos):
+        _backtrack13 = _pos
+        _farthest_pos10 = _pos
+        _farthest_expr10 = 139751151276608
+        _value28 = '<<'
+        _end28 = _pos + 2
         if _text[_pos:_end28] == _value28:
             _pos = _end28
             _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
@@ -1419,20 +1467,90 @@ def _parse_Expr1(_text, _pos):
             _result = _value28
         else:
             _mode = False
-            _result = 139689643687272
+            _result = 139751151276496
+        if _mode:
+            goto ._end_choice10
+        if _farthest_pos10 < _pos:
+            _farthest_pos10 = _pos
+            _farthest_expr10 = 139751151276496
+        _pos = _backtrack13
+        _value29 = '>>'
+        _end29 = _pos + 2
+        if _text[_pos:_end29] == _value29:
+            _pos = _end29
+            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+            _mode = True
+            _result = _value29
+        else:
+            _mode = False
+            _result = 139751151276552
+        if _mode:
+            goto ._end_choice10
+        if _farthest_pos10 < _pos:
+            _farthest_pos10 = _pos
+            _farthest_expr10 = 139751151276552
+        _pos = _backtrack13
+        _result = _farthest_expr10
+        _pos = _farthest_pos10
+        label ._end_choice10
+        yield (_mode, _result, _pos)
+
+    _closure17 = _RuleClosure(_parse_wrap1, (_arg14,), ())
+    _mode, _result, _pos = yield (3, _closure17, _pos)
+    if not _mode:
+        goto ._suceed_left_assoc3
+    _operator3 = _result
+    label ._left_assoc_operand3
+    _staging19 = None
+    _checkpoint11 = _pos
+    _is_first4 = True
+    goto ._left_assoc_operand4
+    label ._loop_left_assoc4
+    
+    @with_goto
+    def _arg15(_text, _pos):
+        _backtrack14 = _pos
+        _farthest_pos11 = _pos
+        _farthest_expr11 = 139751151276272
+        _value30 = '//'
+        _end30 = _pos + 2
+        if _text[_pos:_end30] == _value30:
+            _pos = _end30
+            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+            _mode = True
+            _result = _value30
+        else:
+            _mode = False
+            _result = 139751151276160
         if _mode:
             goto ._end_choice11
         if _farthest_pos11 < _pos:
             _farthest_pos11 = _pos
-            _farthest_expr11 = 139689643687272
+            _farthest_expr11 = 139751151276160
+        _pos = _backtrack14
+        _value31 = '/'
+        _end31 = _pos + 1
+        if _text[_pos:_end31] == _value31:
+            _pos = _end31
+            _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
+            _mode = True
+            _result = _value31
+        else:
+            _mode = False
+            _result = 139751151276216
+        if _mode:
+            goto ._end_choice11
+        if _farthest_pos11 < _pos:
+            _farthest_pos11 = _pos
+            _farthest_expr11 = 139751151276216
         _pos = _backtrack14
         _result = _farthest_expr11
         _pos = _farthest_pos11
         label ._end_choice11
         yield (_mode, _result, _pos)
 
-    _closure13 = _RuleClosure(_parse_wrap1, (_arg10,), ())
-    _mode, _result, _pos = yield (3, _closure13, _pos)
+    _closure18 = _RuleClosure(_parse_wrap1, (_arg15,), ())
+    _mode, _result, _pos = yield (3, _closure18, _pos)
     if not _mode:
         goto ._suceed_left_assoc4
     _operator4 = _result
@@ -1440,85 +1558,85 @@ def _parse_Expr1(_text, _pos):
     _mode, _result, _pos = yield (3, _parse_Atom1, _pos)
     if not _mode:
         goto ._end_postfix1
-    _staging18 = _result
+    _staging20 = _result
     _checkpoint12 = _pos
     label ._loop_postfix1
     _mode, _result, _pos = yield (3, _parse_ArgList1, _pos)
     if _mode:
-        _staging18 = Postfix(_staging18, _result)
+        _staging20 = Postfix(_staging20, _result)
         _checkpoint12 = _pos
         goto ._loop_postfix1
     else:
         _mode = True
-        _result = _staging18
+        _result = _staging20
         _pos = _checkpoint12
     label ._end_postfix1
     if not _mode:
         goto ._end_postfix2
-    _staging19 = _result
+    _staging21 = _result
     _checkpoint13 = _pos
     label ._loop_postfix2
     _backtrack15 = _pos
     _farthest_pos12 = _pos
-    _farthest_expr12 = 139689643686936
-    _value29 = '?'
-    _end29 = _pos + 1
-    if _text[_pos:_end29] == _value29:
-        _pos = _end29
+    _farthest_expr12 = 139751151292200
+    _value32 = '?'
+    _end32 = _pos + 1
+    if _text[_pos:_end32] == _value32:
+        _pos = _end32
         _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
         _mode = True
-        _result = _value29
+        _result = _value32
     else:
         _mode = False
-        _result = 139689643686768
+        _result = 139751151292032
     if _mode:
         goto ._end_choice12
     if _farthest_pos12 < _pos:
         _farthest_pos12 = _pos
-        _farthest_expr12 = 139689643686768
+        _farthest_expr12 = 139751151292032
     _pos = _backtrack15
-    _value30 = '*'
-    _end30 = _pos + 1
-    if _text[_pos:_end30] == _value30:
-        _pos = _end30
+    _value33 = '*'
+    _end33 = _pos + 1
+    if _text[_pos:_end33] == _value33:
+        _pos = _end33
         _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
         _mode = True
-        _result = _value30
+        _result = _value33
     else:
         _mode = False
-        _result = 139689643686824
+        _result = 139751151292088
     if _mode:
         goto ._end_choice12
     if _farthest_pos12 < _pos:
         _farthest_pos12 = _pos
-        _farthest_expr12 = 139689643686824
+        _farthest_expr12 = 139751151292088
     _pos = _backtrack15
-    _value31 = '+'
-    _end31 = _pos + 1
-    if _text[_pos:_end31] == _value31:
-        _pos = _end31
+    _value34 = '+'
+    _end34 = _pos + 1
+    if _text[_pos:_end34] == _value34:
+        _pos = _end34
         _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
         _mode = True
-        _result = _value31
+        _result = _value34
     else:
         _mode = False
-        _result = 139689643686712
+        _result = 139751151291976
     if _mode:
         goto ._end_choice12
     if _farthest_pos12 < _pos:
         _farthest_pos12 = _pos
-        _farthest_expr12 = 139689643686712
+        _farthest_expr12 = 139751151291976
     _pos = _backtrack15
     _result = _farthest_expr12
     _pos = _farthest_pos12
     label ._end_choice12
     if _mode:
-        _staging19 = Postfix(_staging19, _result)
+        _staging21 = Postfix(_staging21, _result)
         _checkpoint13 = _pos
         goto ._loop_postfix2
     else:
         _mode = True
-        _result = _staging19
+        _result = _staging21
         _pos = _checkpoint13
     label ._end_postfix2
     if not _mode:
@@ -1529,13 +1647,13 @@ def _parse_Expr1(_text, _pos):
     _checkpoint11 = _pos
     if _is_first4:
         _is_first4 = False
-        _staging17 = _result
+        _staging19 = _result
     else:
-        _staging17 = Infix(_staging17, _operator4, _result)
+        _staging19 = Infix(_staging19, _operator4, _result)
     goto ._loop_left_assoc4
     label ._suceed_left_assoc4
     _mode = True
-    _result = _staging17
+    _result = _staging19
     _pos = _checkpoint11
     label ._end_left_assoc4
     if not _mode:
@@ -1546,13 +1664,13 @@ def _parse_Expr1(_text, _pos):
     _checkpoint10 = _pos
     if _is_first3:
         _is_first3 = False
-        _staging16 = _result
+        _staging18 = _result
     else:
-        _staging16 = Infix(_staging16, _operator3, _result)
+        _staging18 = Infix(_staging18, _operator3, _result)
     goto ._loop_left_assoc3
     label ._suceed_left_assoc3
     _mode = True
-    _result = _staging16
+    _result = _staging18
     _pos = _checkpoint10
     label ._end_left_assoc3
     if not _mode:
@@ -1563,13 +1681,13 @@ def _parse_Expr1(_text, _pos):
     _checkpoint9 = _pos
     if _is_first2:
         _is_first2 = False
-        _staging15 = _result
+        _staging17 = _result
     else:
-        _staging15 = Infix(_staging15, _operator2, _result)
+        _staging17 = Infix(_staging17, _operator2, _result)
     goto ._loop_left_assoc2
     label ._suceed_left_assoc2
     _mode = True
-    _result = _staging15
+    _result = _staging17
     _pos = _checkpoint9
     label ._end_left_assoc2
     if not _mode:
@@ -1580,13 +1698,13 @@ def _parse_Expr1(_text, _pos):
     _checkpoint8 = _pos
     if _is_first1:
         _is_first1 = False
-        _staging14 = _result
+        _staging16 = _result
     else:
-        _staging14 = Infix(_staging14, _operator1, _result)
+        _staging16 = Infix(_staging16, _operator1, _result)
     goto ._loop_left_assoc1
     label ._suceed_left_assoc1
     _mode = True
-    _result = _staging14
+    _result = _staging16
     _pos = _checkpoint8
     label ._end_left_assoc1
     yield (_mode, _result, _pos)
@@ -1604,14 +1722,14 @@ def _parse_start1(_text, _pos):
     _result = None
     _pos = _checkpoint14
     if not _mode:
-        goto ._end_discard16
-    _staging20 = []
+        goto ._end_discard19
+    _staging22 = []
     _checkpoint15 = _pos
     label ._loop_alt5
     _mode, _result, _pos = yield (3, _parse_Stmt1, _pos)
     if not _mode:
         goto ._end_alt5
-    _staging20.append(_result)
+    _staging22.append(_result)
     _checkpoint15 = _pos
     _mode, _result, _pos = yield (3, _parse_Sep1, _pos)
     if not _mode:
@@ -1620,9 +1738,9 @@ def _parse_start1(_text, _pos):
     goto ._loop_alt5
     label ._end_alt5
     _mode = True
-    _result = _staging20
+    _result = _staging22
     _pos = _checkpoint15
-    label ._end_discard16
+    label ._end_discard19
     yield (_mode, _result, _pos)
     
 
@@ -1638,7 +1756,7 @@ def _parse__ignored1(_text, _pos):
         _result = _match12.group(0)
     else:
         _mode = False
-        _result = 139689635547344
+        _result = 139751142065544
     if _mode:
         _checkpoint16 = _pos
         goto ._loop_skip4
@@ -1650,7 +1768,7 @@ def _parse__ignored1(_text, _pos):
         _result = _match13.group(0)
     else:
         _mode = False
-        _result = 139689635972936
+        _result = 139751142470992
     if _mode:
         _checkpoint16 = _pos
         goto ._loop_skip4
@@ -1664,8 +1782,8 @@ def _parse__ignored1(_text, _pos):
 def _skip_then_start(_text, _pos):
     _mode, _result, _pos = yield (3, _parse__ignored1, _pos)
     if not _mode:
-        goto ._end_discard17
+        goto ._end_discard20
     _mode, _result, _pos = yield (3, _parse_start1, _pos)
-    label ._end_discard17
+    label ._end_discard20
     yield (_mode, _result, _pos)
     

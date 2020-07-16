@@ -47,6 +47,9 @@ def _conv(node):
     if isinstance(node, meta.Ref):
         return Ref(node.value)
 
+    if isinstance(node, meta.LetExpression):
+        return LetExpression(node.name, node.expr, node.body)
+
     if isinstance(node, meta.ListLiteral):
         return Seq(*node.elements)
 
