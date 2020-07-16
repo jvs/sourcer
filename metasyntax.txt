@@ -13,8 +13,10 @@ Comma = wrap(",")
 
 wrap(x) => Skip(Newline) >> x << Skip(Newline)
 
-# TODO: Make sure we don't match the first part of a longer word.
-kw(x) => x
+# Parse a full word, then see if it matches our keyword. The point is to make
+# sure that we don't simply match the first part of a word. (For example, if
+# the input string is "classify", we wouldn't want to match the keyword "class".)
+kw(word) => Name where `lambda x: x == word`
 
 Params = wrap("(") >> (wrap(Name) / Comma) << ")"
 
@@ -43,7 +45,7 @@ class PythonExpression {
 }
 
 class RuleDef {
-    is_ignored: kw("ignored" | "ignore")? |> `bool`
+    is_ignored: Opt(kw("ignored") | kw("ignore")) |> `bool`
     name: Name
     params: Opt(Params) << wrap("=>" | "=" | ":")
     expr: Expr

@@ -98,6 +98,11 @@ class Call:
                     out.compile(expr)
                     out('yield (_mode, _result, _pos)\n')
 
+                if isinstance(expr, StringLiteral):
+                    wrapper = out.define('wrapper', f'_StringLiteral({expr.value!r})')
+                    out.set(f'{wrapper}._parse_function', value)
+                    value = wrapper
+
             if is_kw:
                 kwargs.append(f'({arg.name!r}, {value})')
             else:

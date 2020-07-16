@@ -292,7 +292,6 @@ class ParseError(Exception):
         self.pos = pos
 
 
-
 class Infix(Node):
     _fields = ('left', 'operator', 'right')
 
@@ -336,6 +335,11 @@ from collections import namedtuple as _nt
 class _RuleClosure(_nt('_RuleClosure', 'rule, args, kwargs')):
     def __call__(self, _text, _pos):
         return self.rule(_text, _pos, *self.args, **dict(self.kwargs))
+
+
+class _StringLiteral(str):
+    def __call__(self, _text, _pos):
+        return self._parse_function(_text, _pos)
 
 
 def _run(text, pos, start):
