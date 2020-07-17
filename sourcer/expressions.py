@@ -85,11 +85,11 @@ class Call:
             expr = arg.expr if is_kw else arg
 
             if isinstance(expr, Ref):
-                # TODO: Allow parameters to shadow rules.
                 value = out.rule_map.get(expr.name, expr.name)
             elif isinstance(expr, PythonExpression):
                 value = expr.source_code
             else:
+                # TODO: Hoist functions that don't need to be nested.
                 value = out.reserve('arg')
                 out('')
                 out('@_with_goto')
@@ -315,7 +315,6 @@ class Ref:
         self.name = name
 
     def _compile(self, out):
-        # TODO: Allow parameters to shadow rules.
         rule = out.rule_map.get(self.name, self.name)
         out(f'_mode, _result, _pos = yield ({out.CONTINUE}, {rule}, _pos)')
 

@@ -184,6 +184,14 @@ class ProgramBuilder:
         else:
             self('\n')
 
+        # Raise an exception if a parameter would shadow a rule.
+        for param in expr.params or []:
+            if param in self.rule_map:
+                raise Exception(
+                    f'The parameter {param!r} shadows a rule by the same name.'
+                    ' ( https://en.wikipedia.org/wiki/Variable_shadowing )'
+                )
+
         extra = (', ' + ', '.join(expr.params)) if expr.params else ''
 
         self(f'def {name}(_text, _pos{extra}):')
