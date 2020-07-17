@@ -299,7 +299,7 @@ def test_simplified_indentation():
         Name = @/[a-zA-Z]+/
         Newline = @/[\r\n]+/
 
-        Start = Opt(Newline) >> (Statement(`''`) // Newline)
+        Start = Opt(Newline) >> (Statement('') // Newline)
     ''')
 
     result = g.parse('print ok\nprint bye')
