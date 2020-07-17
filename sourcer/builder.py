@@ -177,27 +177,27 @@ class ProgramBuilder:
             self.compile(self.ignored_expr)
             self.is_ignoring = False
 
-    def write_rule_function(self, name, expr):
-        # TODO: Ask the expr if it needs to use goto.
-        if not isinstance(expr, (RegexLiteral, StringLiteral)):
-            self('\n@_with_goto')
-        else:
-            self('\n')
+    def write_rule_function(self, rule):
+        self.current_rule = rule
+        name = self.rule_map[rule.name]
+
+        # TODO: Ask the rule uses goto.
+        self('\n@_with_goto')
 
         # Raise an exception if a parameter would shadow a rule.
-        for param in expr.params or []:
+        for param in rule.params or []:
             if param in self.rule_map:
                 raise Exception(
                     f'The parameter {param!r} shadows a rule by the same name.'
                     ' ( https://en.wikipedia.org/wiki/Variable_shadowing )'
                 )
 
-        extra = (', ' + ', '.join(expr.params)) if expr.params else ''
+        extra = (', ' + ', '.join(rule.params)) if rule.params else ''
 
         self(f'def {name}(_text, _pos{extra}):')
 
         with self.indented():
-            result = self.compile(expr)
+            result = self.compile(rule)
             self('yield (_mode, _result, _pos)')
             self('')
 
@@ -234,6 +234,7 @@ class ProgramBuilder:
         self.indent = 0
         self.names = defaultdict(int)
         self.rule_map = {x.name: self.reserve(f'parse_{x.name}') for x in rules}
+        self.current_rule = None
 
         if self.ignored_expr is not None:
             real_name = '_skip_then_start'
@@ -243,7 +244,7 @@ class ProgramBuilder:
             start = real_name
 
         for rule in rules:
-            self.write_rule_function(self.rule_map[rule.name], rule)
+            self.write_rule_function(rule)
 
         result = io.StringIO()
         result.write('from goto import with_goto as _with_goto\n')
