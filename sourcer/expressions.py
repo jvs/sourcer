@@ -8,6 +8,9 @@ class Alt:
         self.allow_trailer = allow_trailer
         self.allow_empty = allow_empty
 
+    def matches_empty_string(self, ctx):
+        return self.allow_empty
+
     def _compile(self, out):
         staging = out.define('staging', '[]')
         checkpoint = out.define('checkpoint', '_pos')
@@ -50,6 +53,9 @@ class Apply:
         self.expr2 = expr2
         self.apply_left = apply_left
 
+    def matches_empty_string(self, ctx):
+        return False
+
     def _compile(self, out):
         out.compile(self.expr1)
         end = out.reserve('end_apply')
@@ -71,6 +77,9 @@ class Call:
     def __init__(self, func, args):
         self.func = func
         self.args = args
+
+    def matches_empty_string(self, ctx):
+        return False
 
     def _compile(self, out):
         if not isinstance(self.func, Ref) or self.func.name not in out.rule_map:
@@ -121,6 +130,9 @@ class Choice:
     def __init__(self, *exprs):
         self.exprs = exprs
 
+    def matches_empty_string(self, ctx):
+        return any(x.matches_empty_string(ctx) for x in self.exprs)
+
     def _compile(self, out):
         backtrack = out.define('backtrack', '_pos')
         farthest_pos = out.define('farthest_pos', '_pos')
@@ -147,6 +159,9 @@ class Class:
         self.params = params
         self.fields = fields
         self.is_ignored = is_ignored
+
+    def matches_empty_string(self, ctx):
+        return all(x.expr.matches_empty_string(ctx) for x in self.fields)
 
     def _compile(self, out):
         write = out.global_defs.write
@@ -175,6 +190,10 @@ class Discard:
         self.expr2 = expr2
         self.discard_left = discard_left
 
+    def matches_empty_string(self, ctx):
+        return (self.expr1.matches_empty_string(ctx)
+            and self.expr2.matches_empty_string(ctx))
+
     def _compile(self, out):
         out.compile(self.expr1)
         end = out.reserve('end_discard')
@@ -197,6 +216,9 @@ class Expect:
     def __init__(self, expr):
         self.expr = expr
 
+    def matches_empty_string(self, ctx):
+        return self.expr.matches_empty_string(ctx)
+
     def _compile(self, out):
         backtrack = out.define('backtrack', '_pos')
         out.compile(self.expr)
@@ -206,6 +228,9 @@ class Expect:
 class ExpectNot:
     def __init__(self, expr):
         self.expr = expr
+
+    def matches_empty_string(self, ctx):
+        return True
 
     def _compile(self, out):
         backtrack = out.define('backtrack', '_pos')
@@ -222,6 +247,9 @@ class ExpectNot:
 class Fail:
     def __init__(self, message):
         self.message = None
+
+    def matches_empty_string(self, ctx):
+        return False
 
     def _compile(self, out):
         out.set('_mode', False)
@@ -244,6 +272,10 @@ class LetExpression:
         self.expr = expr
         self.body = body
 
+    def matches_empty_string(self, ctx):
+        return (self.expr.matches_empty_string(ctx)
+            and self.body.matches_empty_string(ctx))
+
     def _compile(self, out):
         out.compile(self.expr)
         end = out.reserve('end_let')
@@ -260,6 +292,9 @@ class List:
     def __init__(self, expr, allow_empty=True):
         self.expr = expr
         self.allow_empty = allow_empty
+
+    def matches_empty_string(self, ctx):
+        return self.allow_empty
 
     def _compile(self, out):
         staging = out.define('staging', '[]')
@@ -292,6 +327,9 @@ class Opt:
     def __init__(self, expr):
         self.expr = expr
 
+    def matches_empty_string(self, ctx):
+        return True
+
     def _compile(self, out):
         backtrack = out.define('backtrack', '_pos')
         out.compile(self.expr)
@@ -304,6 +342,9 @@ class Opt:
 class Pass:
     def __init__(self, value):
         self.value = value
+
+    def matches_empty_string(self, ctx):
+        return True
 
     def _compile(self, out):
         out.set('_mode', True)
