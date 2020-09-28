@@ -49,6 +49,7 @@ Example 1: Hello, World!
 Let's parse the string "Hello, World!" (just to make sure the basics work):
 
 .. code:: python
+
     from sourcer import Grammar
 
     g = Grammar(r'''
@@ -85,6 +86,7 @@ You can use this as a starting point, if you ever need to parse something
 similar to JSON.
 
 .. code:: python
+
     from sourcer import Grammar
 
     g = Grammar(r'''
@@ -134,6 +136,7 @@ Example 3: Parsing Arithmetic Expressions
 Here's a quick example showing how to use operator precedence parsing:
 
 .. code:: python
+
     from sourcer import Grammar
 
     g = Grammar(r'''
@@ -195,6 +198,7 @@ If you ever need to parse something with significant indentation, you can start
 with this example.
 
 .. code:: python
+
     from sourcer import Grammar
 
     g = Grammar(r'''

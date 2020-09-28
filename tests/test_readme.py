@@ -26,7 +26,7 @@ def test_readme():
         re.IGNORECASE | re.VERBOSE
     )
     for i, m in enumerate(pattern.finditer(content)):
-        example = m.group(1).strip()
+        example = m.group(1)
         code = example.replace('\n    ', '\n')
         preview = code.strip()[0:70]
         print(f'  Running example {i + 1}')
