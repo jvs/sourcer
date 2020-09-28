@@ -9,14 +9,18 @@ def long_description():
     except:
         return ''
 
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+
 setup(
     name = 'sourcer',
-    version = '0.1.3',
+    version = '0.2.0',
     author = 'John K. Von Seggern',
-    author_email = 'vonseg@gmail.com',
+    author_email = 'vonseg@protonmail.com',
     url = 'https://github.com/jvs/sourcer',
     description = 'simple parsing library',
     long_description = long_description(),
+    install_requires = requirements,
     packages = ['sourcer'],
     classifiers = [
         'Development Status :: 2 - Pre-Alpha',

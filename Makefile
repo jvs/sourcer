@@ -23,7 +23,7 @@ clean:
 
 # Run the tests in a docker container.
 test: clean image
-	$(RUN) python -m pytest tests
+	$(RUN) python -m pytest -v -s tests
 
 # Run the tests, compute test coverage, and open the coverage report.
 coverage: clean image
