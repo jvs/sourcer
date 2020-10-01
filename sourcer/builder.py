@@ -178,7 +178,7 @@ class ProgramBuilder:
             self.is_ignoring = False
 
     def write_rule_function(self, rule):
-        self.current_rule = rule
+        # self.current_rule = rule
         name = self.rule_map[rule.name]
 
         # TODO: Ask the rule uses goto.
@@ -234,7 +234,7 @@ class ProgramBuilder:
         self.indent = 0
         self.names = defaultdict(int)
         self.rule_map = {x.name: self.reserve(f'parse_{x.name}') for x in rules}
-        self.current_rule = None
+        # self.current_rule = None
 
         if self.ignored_expr is not None:
             real_name = '_skip_then_start'
@@ -346,6 +346,7 @@ class _RuleClosure(_nt('_RuleClosure', 'rule, args, kwargs')):
         return self.rule(_text, _pos, *self.args, **dict(self.kwargs))
 
 
+# This wants to be a string literal and a parsing expression at the same time.
 class _StringLiteral(str):
     def __call__(self, _text, _pos):
         return self._parse_function(_text, _pos)
