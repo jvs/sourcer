@@ -1,4 +1,4 @@
-import io
+from collections import defaultdict
 import typing
 from string import Template
 
@@ -39,15 +39,19 @@ class Expr:
             pb(Tup(STATUS, RESULT, POS) << func(TEXT, POS))
 
 
-def visit(callback, expr):
+def visit(previsit, expr, postvisit=None):
     if isinstance(expr, Expr):
-        callback(expr)
+        previsit(expr)
+
         for child in expr.__dict__.values():
-            visit(callback, child)
+            visit(previsit, child, postvisit)
+
+        if postvisit:
+            postvisit(expr)
 
     elif isinstance(expr, (list, tuple)):
         for child in expr:
-            visit(callback, child)
+            visit(previsit, child, postvisit)
 
 
 class Alt(Expr):
@@ -125,7 +129,7 @@ class Call(Expr):
             expr = arg.expr if is_kw else arg
 
             if isinstance(expr, Ref):
-                value = Raw(f'_parse_{expr.name}')
+                value = Raw(expr.name)
 
 
 class Choice(Expr):
@@ -174,28 +178,38 @@ class Class(Expr):
         self.is_ignored = is_ignored
 
     def _compile(self, pb):
-        buf = io.StringIO()
-        write = buf.write
-        write(f'\nclass {self.name}(Node):\n')
+        field_names = [x.name for x in self.fields]
 
-        names = tuple(x.name for x in self.fields)
-        write(f'    _fields = {names!r}\n\n')
+        with pb.global_class(self.name, 'Node'):
+            pb(Raw('_fields') << Tup(*[Val(x) for x in field_names]))
 
-        init_params = ', '.join(x.name for x in self.fields)
-        write(f'    def __init__(self, {init_params}):\n')
-        for field in self.fields:
-            write(f'        self.{field.name} = {field.name}\n')
-        write('\n')
+            with pb.local_function('__init__', ['self'] + field_names):
+                for name in field_names:
+                    pb(Raw(f'self.{name} = {name}'))
 
-        write(f'    def __repr__(self):\n')
-        inits = ', '.join(f'{x.name}={{self.{x.name}!r}}' for x in self.fields)
-        write(f'        return f\'{self.name}({inits})\'\n\n')
+            with pb.local_function('__repr__', ['self']):
+                values = ', '.join(f'{x}={{self.{x}!r}}' for x in field_names)
+                pb(Return(Raw(f"f'{self.name}({values})'")))
 
-        pb._globals.append(Raw(buf.getvalue()))
+            parse_func = Raw(f'_parse_{self.name}')
 
-        exprs = (x.expr for x in self.fields)
-        seq = Seq(*exprs, names=names, constructor=self.name)
-        seq.compile(pb)
+            pb(Raw('@staticmethod'))
+            if self.params:
+                with pb.local_function('parse', self.params):
+                    args = Tup(*self.params)
+                    kwargs = Raw('{}')
+                    pb(Raw('closure') << Raw('_RuleClosure')(parse_func, args, kwargs))
+                    pb(Return(Raw('lambda text, pos=0: _run(text, pos, closure')))
+            else:
+                with pb.local_function('parse', ['text', 'pos=0']):
+                    pb(Return(Raw(f'_run(text, pos, {parse_func})')))
+
+        params = [str(TEXT), str(POS)] + (self.params or [])
+        with pb.global_function(parse_func, params):
+            exprs = (x.expr for x in self.fields)
+            seq = Seq(*exprs, names=field_names, constructor=self.name)
+            seq.compile(pb)
+            pb(Yield(Tup(STATUS, RESULT, POS)))
 
 
 class Discard(Expr):
@@ -381,8 +395,7 @@ class Ref(Expr):
         self.name = name
 
     def _compile(self, pb):
-        func_name = f'_parse_{self.name}'
-        pb(Tup(STATUS, RESULT, POS) << Yield(Tup(CONTINUE, Raw(func_name), POS)))
+        pb(Tup(STATUS, RESULT, POS) << Yield(Tup(CONTINUE, Raw(self.name), POS)))
 
 
 class RegexLiteral(Expr):
@@ -431,12 +444,17 @@ class Rule(Expr):
         self.is_ignored = is_ignored
 
     def _compile(self, pb):
-        name = f'_parse_{self.name}'
         params = [str(TEXT), str(POS)] + (self.params or [])
 
-        with pb.global_function(name, params):
+        with pb.global_function(f'_parse_{self.name}', params):
             self.expr.compile(pb)
             pb(Yield(Tup(STATUS, RESULT, POS)))
+
+        with pb.global_function(f'_wrapper_{self.name}', ['text', 'pos=0']):
+            pb(Return(Raw(f'_run(text, pos, _parse_{self.name})')))
+
+        with pb.global_section():
+            pb(Raw(f'{self.name} = Rule({self.name!r}, _wrapper_{self.name})'))
 
 
 class Seq(Expr):
@@ -652,12 +670,6 @@ def generate_source_code(nodes):
             )
         visited_names.add(rule.name)
 
-    default_rule = start_rule or rules[0]
-    pb(Raw(Template(_main_template).substitute(
-        CONTINUE=CONTINUE,
-        start=f'_parse_{start_rule.name}',
-    )))
-
     if ignored:
         # Create a rule called "_ignored" that skips all the ignored rules.
         refs = [Ref(x.name) for x in ignored]
@@ -672,7 +684,7 @@ def generate_source_code(nodes):
 
         if first_rule:
             assert isinstance(first_rule, Rule)
-            first_rule.expr = Right(Ref('_ignored'), first_rule.expr)
+            first_rule.expr = Right(Ref('_parse__ignored'), first_rule.expr)
 
         # Update the "skip_ignored" flag of each StringLiteral and RegexLiteral.
         def _set_skip_ignored(expr):
@@ -683,10 +695,51 @@ def generate_source_code(nodes):
             if not rule.is_ignored:
                 visit(_set_skip_ignored, rule)
 
+    _update_rule_references(rules)
+
+    default_rule = start_rule or rules[0]
+
+    pb(Raw(Template(_main_template).substitute(
+        CONTINUE=CONTINUE,
+        start=f'_parse_{default_rule.name}',
+    )))
+
     for rule in rules:
         rule.compile(pb)
 
     return pb.generate_source_code()
+
+
+def _update_rule_references(rules):
+    rule_names = set()
+    for rule in rules:
+        if isinstance(rule, (Class, Rule)):
+            rule_names.add(rule.name)
+
+    shadowing = defaultdict(int)
+    def previsit(node):
+        if isinstance(node, (Class, Rule)) and node.params:
+            for param in node.params:
+                if param in rule_names:
+                    shadowing[param] += 1
+
+        elif isinstance(node, LetExpression) and node.name in rule_names:
+            # Ideally, the shadow would only apply to the body of the let-expression.
+            # But this is probably fine for now.
+            shadowing[node.name] += 1
+
+        elif isinstance(node, Ref) and node.name in rule_names and not shadowing[node.name]:
+            node.name = f'_parse_{node.name}'
+
+    def postvisit(node):
+        if isinstance(node, (Class, Rule)) and node.params:
+            for param in node.params:
+                if param in rule_names:
+                    shadowing[param] -= 1
+        elif isinstance(node, LetExpression) and node.name in rule_names:
+            shadowing[node.name] -= 1
+
+    visit(previsit, rules, postvisit)
 
 
 _program_setup = r'''
@@ -709,6 +762,15 @@ class Node:
             if field not in kw:
                 kw[field] = getattr(self, field)
         return self.__class__(**kw)
+
+
+class Rule:
+    def __init__(self, name, parse):
+        self.name = name
+        self.parse = parse
+
+    def __repr__(self):
+        return f'Rule(name={self.name!r}, parse={self.parse.__name__})'
 '''
 
 

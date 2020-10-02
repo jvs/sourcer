@@ -8,7 +8,7 @@ class ProgramBuilder:
         self._imports = set()
         self._globals = []
         self._global_map = {}
-        self._global_functions = []
+        self._global_sections = []
         self._buffer = []
         self._num_blocks = 1
         self._max_num_blocks = 19
@@ -35,8 +35,9 @@ class ProgramBuilder:
 
         writer.write_str('\n\n')
 
-        for stmt in self._global_functions:
-            writer.write_stmt(stmt)
+        for section in self._global_sections:
+            for stmt in section:
+                writer.write_stmt(stmt)
             writer.write_str('\n')
 
         return writer._out.getvalue()
@@ -118,14 +119,33 @@ class ProgramBuilder:
 
     @contextmanager
     def global_function(self, name, params):
+        with self.global_section():
+            with self.local_function(name, params):
+                yield
+
+    @contextmanager
+    def local_function(self, name, params):
         with self._sandbox() as func_body:
+            yield
+        self._buffer.append(FuncStmt(name, params, func_body))
+
+    @contextmanager
+    def global_class(self, name, superclass):
+        with self.global_section():
+            with self._sandbox() as class_body:
+                yield
+            self._buffer.append(ClassStmt(name, superclass, class_body))
+
+    @contextmanager
+    def global_section(self):
+        with self._sandbox() as section:
             prev = self._num_blocks
             self._num_blocks = 1
             try:
                 yield
             finally:
                 self._num_blocks = prev
-        self._global_functions.append(FuncStmt(name, params, func_body))
+        self._global_sections.append(section)
 
 
 class Expr:
