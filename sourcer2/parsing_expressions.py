@@ -179,6 +179,7 @@ class Class(Expr):
 
     def _compile(self, pb):
         field_names = [x.name for x in self.fields]
+        parse_func = Raw(f'{_cont_name(self.name)}')
 
         with pb.global_class(self.name, 'Node'):
             pb(Raw('_fields') << Tup(*[Val(x) for x in field_names]))
@@ -190,8 +191,6 @@ class Class(Expr):
             with pb.local_function('__repr__', ['self']):
                 values = ', '.join(f'{x}={{self.{x}!r}}' for x in field_names)
                 pb(Return(Raw(f"f'{self.name}({values})'")))
-
-            parse_func = Raw(f'_parse_{self.name}')
 
             pb(Raw('@staticmethod'))
             if self.params:
@@ -446,15 +445,18 @@ class Rule(Expr):
     def _compile(self, pb):
         params = [str(TEXT), str(POS)] + (self.params or [])
 
-        with pb.global_function(f'_parse_{self.name}', params):
+        cont_name = _cont_name(self.name)
+        entry_name = _entry_name(self.name)
+
+        with pb.global_function(cont_name, params):
             self.expr.compile(pb)
             pb(Yield(Tup(STATUS, RESULT, POS)))
 
-        with pb.global_function(f'_wrapper_{self.name}', ['text', 'pos=0']):
-            pb(Return(Raw(f'_run(text, pos, _parse_{self.name})')))
+        with pb.global_function(entry_name, ['text', 'pos=0']):
+            pb(Return(Raw(f'_run(text, pos, {cont_name})')))
 
         with pb.global_section():
-            pb(Raw(f'{self.name} = Rule({self.name!r}, _wrapper_{self.name})'))
+            pb(Raw(f'{self.name} = Rule({self.name!r}, {entry_name})'))
 
 
 class Seq(Expr):
@@ -622,7 +624,15 @@ class Where(Expr):
 
 
 def _skip_ignored(pos):
-    return Yield(Tup(CONTINUE, Raw('_parse__ignored'), pos))[2]
+    return Yield(Tup(CONTINUE, Raw(_cont_name('_ignored')), pos))[2]
+
+
+def _cont_name(name):
+    return f'_cont_{name}'
+
+
+def _entry_name(name):
+    return f'_parse_{name}'
 
 
 def generate_source_code(nodes):
@@ -684,7 +694,7 @@ def generate_source_code(nodes):
 
         if first_rule:
             assert isinstance(first_rule, Rule)
-            first_rule.expr = Right(Ref('_parse__ignored'), first_rule.expr)
+            first_rule.expr = Right(Ref(_cont_name('_ignored')), first_rule.expr)
 
         # Update the "skip_ignored" flag of each StringLiteral and RegexLiteral.
         def _set_skip_ignored(expr):
@@ -701,7 +711,7 @@ def generate_source_code(nodes):
 
     pb(Raw(Template(_main_template).substitute(
         CONTINUE=CONTINUE,
-        start=f'_parse_{default_rule.name}',
+        start=_cont_name(default_rule.name),
     )))
 
     for rule in rules:
@@ -729,7 +739,7 @@ def _update_rule_references(rules):
             shadowing[node.name] += 1
 
         elif isinstance(node, Ref) and node.name in rule_names and not shadowing[node.name]:
-            node.name = f'_parse_{node.name}'
+            node.name = _cont_name(node.name)
 
     def postvisit(node):
         if isinstance(node, (Class, Rule)) and node.params:
