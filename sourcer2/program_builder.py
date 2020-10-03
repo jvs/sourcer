@@ -324,7 +324,7 @@ class IfStmt:
                     writer.write_stmt(stmt)
 
 
-class List(Expr):
+class LIST(Expr):
     def __init__(self, *items):
         self._items = items
 

@@ -2,8 +2,9 @@ from collections import defaultdict
 import typing
 from string import Template
 
-from .program_builder import ProgramBuilder, Raw, Return, Tup, Val, Var, Yield
-from .program_builder import List as LIST
+from .program_builder import (
+    Binop, LIST, ProgramBuilder, Raw, Return, Tup, Val, Var, Yield,
+)
 
 
 class _RawBuilder:
@@ -609,6 +610,7 @@ class LeftAssoc(OperatorPrecedenceRule):
     def _compile(self, pb):
         is_first = pb.var('is_first', Val(True))
         staging = pb.var('staging', Val(None))
+        operator = Var('operator')
 
         with pb.loop():
             self.operand.compile(pb)
@@ -632,7 +634,7 @@ class LeftAssoc(OperatorPrecedenceRule):
             with pb.IF_NOT(STATUS):
                 pb(BREAK)
 
-            operator = pb.var('operator', RESULT)
+            pb(operator << RESULT)
 
         with pb.IF_NOT(is_first):
             pb(
@@ -647,11 +649,14 @@ class NonAssoc(LeftAssoc):
 
 
 class RightAssoc(OperatorPrecedenceRule):
+    num_blocks = 4
+
     def _compile(self, pb):
         backup = pb.var('backup', Val(None))
         prev = pb.var('prev', Val(None))
 
         staging = Var('staging')
+        checkpoint = Var('checkpoint')
 
         with pb.loop():
             self.operand.compile(pb)
@@ -665,7 +670,7 @@ class RightAssoc(OperatorPrecedenceRule):
                     pb(STATUS << Val(True), POS << checkpoint)
                 pb(BREAK)
 
-            checkpoint = pb.var('checkpoint', POS)
+            pb(checkpoint << POS)
             operand = pb.var('operand', RESULT)
             self.operators.compile(pb)
 
@@ -687,12 +692,59 @@ class RightAssoc(OperatorPrecedenceRule):
                 pb(staging << prev << step)
 
 
-# class Postfix(OperatorPrecedenceRule):
-#     pass
+class Postfix(OperatorPrecedenceRule):
+    num_blocks = 3
+
+    def _compile(self, pb):
+        self.operand.compile(pb)
+
+        with pb.IF(STATUS):
+            staging = pb.var('staging', RESULT)
+            checkpoint = pb.var('checkpoint', POS)
+
+            with pb.loop():
+                self.operators.compile(pb)
+
+                with pb.IF(STATUS):
+                    pb(staging << raw.Postfix(staging, RESULT))
+                    pb(checkpoint << POS)
+
+                with pb.ELSE():
+                    pb(
+                        STATUS << Val(True),
+                        RESULT << staging,
+                        POS << checkpoint,
+                        BREAK,
+                    )
 
 
-# class Prefix(OperatorPrecedenceRule):
-#     pass
+class Prefix(OperatorPrecedenceRule):
+    num_blocks = 2
+
+    def _compile(self, pb):
+        prev = pb.var('prev', Val(None))
+        checkpoint = pb.var('checkpoint', POS)
+        staging = Var('staging')
+
+        with pb.loop():
+            self.operators.compile(pb)
+
+            with pb.IF_NOT(STATUS):
+                pb(POS << checkpoint, BREAK)
+
+            pb(checkpoint << POS)
+            step = pb.var('step', raw.Prefix(RESULT, Val(None)))
+
+            with pb.IF(Binop(prev, 'is', Val(None))):
+                pb(prev << staging << step)
+
+            with pb.ELSE():
+                pb(prev.right << step, prev << step)
+
+        self.operand.compile(pb)
+
+        with pb.IF(Binop(STATUS, 'and', prev)):
+            pb(prev.right << RESULT, RESULT << staging)
 
 
 class PythonExpression(Expr):
