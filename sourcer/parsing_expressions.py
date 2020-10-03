@@ -310,8 +310,8 @@ class ExpectNot(Expr):
 class Fail(Expr):
     num_blocks = 0
 
-    def __init__(self, message):
-        self.message = None
+    def __init__(self, message=None):
+        self.message = message
 
     def _compile(self, pb):
         pb(
