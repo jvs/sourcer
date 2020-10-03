@@ -328,13 +328,3 @@ def test_simplified_indentation():
         ]),
         g.Print('zim'),
     ]
-
-
-def test_that_shadowing_is_not_allowed():
-    with pytest.raises(Exception):
-        Grammar(r'''
-            Foo(Bar) => List(Bar)
-            Bar = @/[a-z]+/
-            Bar = @/\d+/
-            Start = Foo(Baz) | Bar
-        ''')
