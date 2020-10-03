@@ -34,7 +34,7 @@ class Expr:
         if pb.has_available_blocks(self.num_blocks):
             self._compile(pb)
         else:
-            func, params = _functionalize(self, is_generator=False)
+            func, params = _functionalize(pb, self, is_generator=False)
             pb(Tup(STATUS, RESULT, POS) << func(*params))
 
 

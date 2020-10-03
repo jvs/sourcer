@@ -328,3 +328,25 @@ def test_simplified_indentation():
         ]),
         g.Print('zim'),
     ]
+
+
+def test_passing_pythons_max_block_depth():
+    buf = ['start = ']
+    depth = 100
+
+    for i in range(depth):
+        buf.append(f'[Opt("S{depth - i - 1}"), ')
+
+    buf.append('"T"')
+    buf.append(']' * depth)
+
+    g = Grammar(''.join(buf))
+
+    result = g.parse('T')
+
+    count = 0
+    while isinstance(result, list) and len(result) == 2:
+        count += 1
+        result = result[-1]
+
+    assert result == 'T' and count == 100
