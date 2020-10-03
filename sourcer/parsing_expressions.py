@@ -156,7 +156,7 @@ class Call(Expr):
                     value = pb.var('arg', value)
 
             if is_kw:
-                kwargs.append(Tup(Val(arg.name, value)))
+                kwargs.append(Tup(Val(arg.name), value))
             else:
                 args.append(value)
 

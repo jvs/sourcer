@@ -1,1 +1,1 @@
-from .builder import Grammar
+from .grammar import Grammar
