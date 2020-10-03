@@ -27,7 +27,7 @@ CALL = 3
 
 
 class Expr:
-    def matches_atomically(self):
+    def backtracks_on_failure(self):
         return False
 
     def compile(self, pb):
@@ -171,8 +171,8 @@ class Choice(Expr):
     def __init__(self, *exprs):
         self.exprs = exprs
 
-    def matches_atomically(self):
-        return all(x.matches_atomically() for x in self.exprs)
+    def backtracks_on_failure(self):
+        return all(x.backtracks_on_failure() for x in self.exprs)
 
     def _compile(self, pb):
         backtrack = Var('backtrack')
@@ -189,7 +189,7 @@ class Choice(Expr):
                 with pb.IF(STATUS):
                     pb(BREAK)
 
-                if not expr.matches_atomically():
+                if not expr.backtracks_on_failure():
                     with pb.IF(farthest_pos < POS):
                         pb(farthest_pos << POS)
                         pb(farthest_expr << Val(expr.program_id))
@@ -275,13 +275,15 @@ class Expect(Expr):
     def __init__(self, expr):
         self.expr = expr
 
-    def matches_atomically(self):
-        return self.expr.matches_atomically()
+    def backtracks_on_failure(self):
+        return self.expr.backtracks_on_failure()
 
     def _compile(self, pb):
         backtrack = pb.var('backtrack', POS)
         self.expr.compile(pb)
-        pb(POS << backtrack)
+
+        with pb.IF(STATUS):
+            pb(POS << backtrack)
 
 
 class ExpectNot(Expr):
@@ -290,8 +292,8 @@ class ExpectNot(Expr):
     def __init__(self, expr):
         self.expr = expr
 
-    def matches_atomically(self):
-        return self.expr.matches_atomically()
+    def backtracks_on_failure(self):
+        return True
 
     def _compile(self, pb):
         backtrack = pb.var('backtrack', POS)
@@ -384,7 +386,7 @@ class Opt(Expr):
     def __init__(self, expr):
         self.expr = expr
 
-    def matches_atomically(self):
+    def backtracks_on_failure(self):
         return True
 
     def _compile(self, pb):
@@ -404,7 +406,7 @@ class Pass(Expr):
     def __init__(self, value):
         self.value = value
 
-    def matches_atomically(self):
+    def backtracks_on_failure(self):
         return True
 
     def _compile(self, pb):
@@ -436,7 +438,7 @@ class RegexLiteral(Expr):
         self.pattern = pattern
         self.skip_ignored = False
 
-    def matches_atomically(self):
+    def backtracks_on_failure(self):
         return True
 
     def _compile(self, pb):
@@ -559,7 +561,7 @@ class StringLiteral(Expr):
         self.skip_ignored = False
         self.num_blocks = 0 if self.value == '' else 1
 
-    def matches_atomically(self):
+    def backtracks_on_failure(self):
         return True
 
     def _compile(self, pb):
