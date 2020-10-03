@@ -72,9 +72,20 @@ class Alt(Expr):
         self.allow_trailer = allow_trailer
         self.allow_empty = allow_empty
 
+    def backtracks_on_failure(self):
+        return self.allow_empty or self.expr.backtracks_on_failure()
+
     def _compile(self, pb):
         staging = pb.var('staging', Raw('[]'))
-        checkpoint = pb.var('checkpoint', POS)
+
+        needs_checkpoint = (
+            not self.allow_trailer
+            or not self.expr.backtracks_on_failure()
+            or not self.separator.backtracks_on_failure()
+        )
+
+        if needs_checkpoint:
+            checkpoint = pb.var('checkpoint', POS)
 
         with pb.loop():
             self.expr.compile(pb)
@@ -83,20 +94,22 @@ class Alt(Expr):
                 pb(BREAK)
 
             pb(staging.append(RESULT))
-            pb(checkpoint << POS)
+
+            if needs_checkpoint:
+                pb(checkpoint << POS)
+
             self.separator.compile(pb)
 
             with pb.IF_NOT(STATUS):
                 pb(BREAK)
 
-            if self.allow_trailer:
+            if self.allow_trailer and needs_checkpoint:
                 pb(checkpoint << POS)
 
-        success = [
-            RESULT << staging,
-            STATUS << True,
-            POS << checkpoint,
-        ]
+        success = [RESULT << staging, STATUS << True]
+
+        if needs_checkpoint:
+            success.append(POS << checkpoint)
 
         if self.allow_empty:
             pb(*success)
