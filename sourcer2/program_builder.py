@@ -324,6 +324,19 @@ class IfStmt:
                     writer.write_stmt(stmt)
 
 
+class List(Expr):
+    def __init__(self, *items):
+        self._items = items
+
+    def write(self, writer):
+        writer.write_str('[')
+        for i, item in enumerate(self._items):
+            if i > 0:
+                writer.write_str(', ')
+            writer.write_expr(item)
+        writer.write_str(']')
+
+
 class Not(Expr):
     def __init__(self, right):
         self._right = right

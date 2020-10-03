@@ -3,6 +3,7 @@ import typing
 from string import Template
 
 from .program_builder import ProgramBuilder, Raw, Return, Tup, Val, Var, Yield
+from .program_builder import List as LIST
 
 
 class _RawBuilder:
@@ -229,7 +230,7 @@ class Class(Expr):
                     args = Tup(*self.params)
                     kwargs = Raw('{}')
                     pb(raw.closure << raw._ParseFunction(parse_func, args, kwargs))
-                    pb(Return(Raw('lambda text, pos=0: _run(text, pos, closure')))
+                    pb(Return(Raw('lambda text, pos=0: _run(text, pos, closure)')))
             else:
                 with pb.local_function('parse', ['text', 'pos=0']):
                     pb(Return(Raw(f'_run(text, pos, {parse_func})')))
@@ -515,7 +516,7 @@ class Seq(Expr):
                 pb(item << RESULT)
                 items.append(item)
 
-            ctor = Tup if self.constructor is None else Raw(self.constructor)
+            ctor = LIST if self.constructor is None else Raw(self.constructor)
             pb(RESULT << ctor(*items))
 
 
