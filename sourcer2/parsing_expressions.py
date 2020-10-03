@@ -5,38 +5,45 @@ from string import Template
 from .program_builder import ProgramBuilder, Raw, Return, Tup, Val, Var, Yield
 
 
+class _RawBuilder:
+    def __getattr__(self, name):
+        return Raw(name)
+
+
+raw = _RawBuilder()
+
+
 POS = Raw('_pos')
 RESULT = Raw('_result')
 STATUS = Raw('_status')
 TEXT = Raw('_text')
 
-CONTINUE = 3
+BREAK = Raw('break')
+CONTINUE = Raw('continue')
+
+CALL = 3
 
 
 class Expr:
-    program_id = None
-
     def matches_atomically(self):
         return False
 
     def compile(self, pb):
-        if self.program_id is None:
-            self.program_id = pb.reserve_id()
-
         if pb.has_available_blocks(self.num_blocks):
             self._compile(pb)
         else:
-            # TODO: Check if the call stack and see if there's room for a call here.
-            # If not, then use the "yield" setup.
-            name = f'_parsing_expression_{self.program_id}'
-            # TODO: See if the expression uses any of the current rule's parameters.
-            # Use "visit()" to find all the free variables...
-            with pb.global_function(name, (str(TEXT), str(POS))):
-                self._compile(pb)
-                pb(Return(Tup(STATUS, RESULT, POS)))
+            func, params = _functionalize(self, is_generator=False)
+            pb(Tup(STATUS, RESULT, POS) << func(*params))
 
-            func = Raw(name)
-            pb(Tup(STATUS, RESULT, POS) << func(TEXT, POS))
+
+def _functionalize(pb, expr, is_generator=False):
+    name = f'_parse_function_{expr.program_id}'
+    params = [str(TEXT), str(POS)] + list(sorted(_freevars(expr)))
+    with pb.global_function(name, params):
+        expr._compile(pb)
+        cls = Yield if is_generator else Return
+        pb(cls(Tup(STATUS, RESULT, POS)))
+    return Raw(name), [Raw(x) for x in params]
 
 
 def visit(previsit, expr, postvisit=None):
@@ -64,21 +71,21 @@ class Alt(Expr):
         self.allow_empty = allow_empty
 
     def _compile(self, pb):
-        staging = pb.var('staging', Val([]))
+        staging = pb.var('staging', Raw('[]'))
         checkpoint = pb.var('checkpoint', POS)
 
         with pb.loop():
             self.expr.compile(pb)
 
             with pb.IF_NOT(STATUS):
-                pb(Raw('break'))
+                pb(BREAK)
 
-            staging.append(RESULT)
+            pb(staging.append(RESULT))
             pb(checkpoint << POS)
             self.separator.compile(pb)
 
             with pb.IF_NOT(STATUS):
-                pb(Raw('break'))
+                pb(BREAK)
 
             if self.allow_trailer:
                 pb(checkpoint << POS)
@@ -117,6 +124,8 @@ class Apply(Expr):
 
 
 class Call(Expr):
+    num_blocks = 0
+
     def __init__(self, func, args):
         self.func = func
         self.args = args
@@ -130,6 +139,28 @@ class Call(Expr):
 
             if isinstance(expr, Ref):
                 value = Raw(expr.name)
+            elif isinstance(expr, PythonExpression):
+                value = Raw(expr.source_code)
+            else:
+                func, params = _functionalize(pb, expr, is_generator=True)
+                if len(params) > 2:
+                    value = raw._ParseFunction(func, Tup(*params[-2]), Tup())
+                    value = pb.var('arg', value)
+                else:
+                    value = func
+
+                if isinstance(expr, StringLiteral):
+                    value = raw._wrap_string_literal(Val(expr.value), value)
+                    value = pb.var('arg', value)
+
+            if is_kw:
+                kwargs.append(Tup(Val(arg.name, value)))
+            else:
+                args.append(value)
+
+        func = raw._ParseFunction(Raw(self.func.name), Tup(*args), Tup(*kwargs))
+        func = pb.var('func', func)
+        pb(Tup(STATUS, RESULT, POS) << Yield(Tup(CALL, func, POS)))
 
 
 class Choice(Expr):
@@ -154,7 +185,7 @@ class Choice(Expr):
                 expr.compile(pb)
 
                 with pb.IF(STATUS):
-                    pb(Raw('break'))
+                    pb(BREAK)
 
                 if not expr.matches_atomically():
                     with pb.IF(farthest_pos < POS):
@@ -182,7 +213,7 @@ class Class(Expr):
         parse_func = Raw(f'{_cont_name(self.name)}')
 
         with pb.global_class(self.name, 'Node'):
-            pb(Raw('_fields') << Tup(*[Val(x) for x in field_names]))
+            pb(raw._fields << Tup(*[Val(x) for x in field_names]))
 
             with pb.local_function('__init__', ['self'] + field_names):
                 for name in field_names:
@@ -197,7 +228,7 @@ class Class(Expr):
                 with pb.local_function('parse', self.params):
                     args = Tup(*self.params)
                     kwargs = Raw('{}')
-                    pb(Raw('closure') << Raw('_RuleClosure')(parse_func, args, kwargs))
+                    pb(raw.closure << raw._ParseFunction(parse_func, args, kwargs))
                     pb(Return(Raw('lambda text, pos=0: _run(text, pos, closure')))
             else:
                 with pb.local_function('parse', ['text', 'pos=0']):
@@ -224,7 +255,7 @@ class Discard(Expr):
             self.expr1.compile(pb)
 
             with pb.IF_NOT(STATUS):
-                pb(Raw('break'))
+                pb(BREAK)
 
             if self.discard_left:
                 self.expr2.compile(pb)
@@ -266,11 +297,11 @@ class ExpectNot(Expr):
         pb(POS << backtrack)
 
         with pb.IF(STATUS):
-            pb(STATUS << False)
+            pb(STATUS << Val(False))
             pb(RESULT << Val(self.program_id))
 
         with pb.ELSE():
-            pb(STATUS << True)
+            pb(STATUS << Val(True))
             pb(RESULT << Val(None))
 
 
@@ -328,16 +359,10 @@ class List(Expr):
             self.expr.compile(pb)
 
             with pb.IF(STATUS):
-                pb(
-                    staging.append(RESULT),
-                    Raw('continue'),
-                )
+                pb(staging.append(RESULT), CONTINUE)
 
             with pb.ELSE():
-                pb(
-                    POS << checkpoint,
-                    Raw('break'),
-                )
+                pb(POS << checkpoint, BREAK)
 
         success = [
             RESULT << staging,
@@ -364,10 +389,10 @@ class Opt(Expr):
         backtrack = pb.var('backtrack', POS)
         self.expr.compile(pb)
         with pb.IF_NOT(STATUS):
-            out(
-                STATUS << True,
+            pb(
+                STATUS << Val(True),
                 POS << backtrack,
-                RESULT << None,
+                RESULT << Val(None),
             )
 
 
@@ -392,9 +417,10 @@ class Ref(Expr):
 
     def __init__(self, name):
         self.name = name
+        self.is_local = False
 
     def _compile(self, pb):
-        pb(Tup(STATUS, RESULT, POS) << Yield(Tup(CONTINUE, Raw(self.name), POS)))
+        pb(Tup(STATUS, RESULT, POS) << Yield(Tup(CALL, Raw(self.name), POS)))
 
 
 class RegexLiteral(Expr):
@@ -483,7 +509,7 @@ class Seq(Expr):
                 expr.compile(pb)
 
                 with pb.IF_NOT(STATUS):
-                    pb(Raw('break'))
+                    pb(BREAK)
 
                 item = Var('item') if name is None else Raw(name)
                 pb(item << RESULT)
@@ -508,7 +534,7 @@ class Skip(Expr):
                 expr.compile(pb)
 
                 with pb.IF(STATUS):
-                    pb(Raw('continue'))
+                    pb(CONTINUE)
 
                 with pb.ELSE():
                     pb(POS << checkpoint)
@@ -553,25 +579,111 @@ class StringLiteral(Expr):
             )
 
         with pb.ELSE():
-            pb(STATUS << False)
+            pb(STATUS << False, RESULT << Val(self.program_id))
 
 
 class OperatorPrecedence(Expr):
     def __init__(self, atom, *rules):
         self.atom = atom
         self.rules = rules
+        self.num_blocks = (rules[-1] if rules else atom).num_blocks
+
+    def _compile(self, pb):
+        prev = self.atom
+        for rule in self.rules:
+            rule.operand = prev
+            prev = rule
+        prev.compile(pb)
 
 
-# class LeftAssoc(OperatorPrecedenceRule):
-#     pass
+class OperatorPrecedenceRule(Expr):
+    def __init__(self, *operators):
+        self.operators = operators[0] if len(operators) == 1 else Choice(*operators)
+        self.operand = None
 
 
-# class NonAssoc(LeftAssoc):
-#     pass
+class LeftAssoc(OperatorPrecedenceRule):
+    num_blocks = 2
+
+    def _compile(self, pb):
+        is_first = pb.var('is_first', Val(True))
+        staging = pb.var('staging', Val(None))
+
+        with pb.loop():
+            self.operand.compile(pb)
+
+            with pb.IF_NOT(STATUS):
+                pb(BREAK)
+
+            checkpoint = pb.var('checkpoint', POS)
+
+            with pb.IF(is_first):
+                pb(is_first << Val(False))
+                pb(staging << RESULT)
+
+            with pb.ELSE():
+                pb(staging << raw.Infix(staging, operator, RESULT))
+                if isinstance(self, NonAssoc):
+                    pb(BREAK)
+
+            self.operators.compile(pb)
+
+            with pb.IF_NOT(STATUS):
+                pb(BREAK)
+
+            operator = pb.var('operator', RESULT)
+
+        with pb.IF_NOT(is_first):
+            pb(
+                STATUS << Val(True),
+                RESULT << staging,
+                POS << checkpoint,
+            )
 
 
-# class RightAssoc(OperatorPrecedenceRule):
-#     pass
+class NonAssoc(LeftAssoc):
+    pass
+
+
+class RightAssoc(OperatorPrecedenceRule):
+    def _compile(self, pb):
+        backup = pb.var('backup', Val(None))
+        prev = pb.var('prev', Val(None))
+
+        staging = Var('staging')
+
+        with pb.loop():
+            self.operand.compile(pb)
+
+            with pb.IF_NOT(STATUS):
+                with pb.IF(prev):
+                    with pb.IF(backup):
+                        pb(backup.right << prev.left, RESULT << staging)
+                    with pb.ELSE():
+                        pb(RESULT << prev.left)
+                    pb(STATUS << Val(True), POS << checkpoint)
+                pb(BREAK)
+
+            checkpoint = pb.var('checkpoint', POS)
+            operand = pb.var('operand', RESULT)
+            self.operators.compile(pb)
+
+            with pb.IF_NOT(STATUS):
+                with pb.IF(prev):
+                    pb(prev.right << operand, RESULT << staging)
+
+                with pb.ELSE():
+                    pb(RESULT << operand)
+
+                pb(STATUS << Val(True), POS << checkpoint, BREAK)
+
+            step = raw.Infix(operand, RESULT, Val(None))
+
+            with pb.IF(prev):
+                pb(backup << prev, backup.right << prev << step)
+
+            with pb.ELSE():
+                pb(staging << prev << step)
 
 
 # class Postfix(OperatorPrecedenceRule):
@@ -624,7 +736,7 @@ class Where(Expr):
 
 
 def _skip_ignored(pos):
-    return Yield(Tup(CONTINUE, Raw(_cont_name('_ignored')), pos))[2]
+    return Yield(Tup(CALL, Raw(_cont_name('_ignored')), pos))[2]
 
 
 def _cont_name(name):
@@ -705,12 +817,14 @@ def generate_source_code(nodes):
             if not rule.is_ignored:
                 visit(_set_skip_ignored, rule)
 
+    _assign_ids(rules)
+    _update_local_references(rules)
     _update_rule_references(rules)
 
     default_rule = start_rule or rules[0]
 
     pb(Raw(Template(_main_template).substitute(
-        CONTINUE=CONTINUE,
+        CALL=CALL,
         start=_cont_name(default_rule.name),
     )))
 
@@ -720,36 +834,73 @@ def generate_source_code(nodes):
     return pb.generate_source_code()
 
 
+def _assign_ids(rules):
+    next_id = 1
+    def assign_id(node):
+        nonlocal next_id
+        node.program_id = next_id
+        next_id += 1
+    visit(assign_id, rules)
+
+
+class _SymbolCounter:
+    def __init__(self):
+        self._symbol_counts = defaultdict(int)
+
+    def previsit(self, node):
+        if isinstance(node, (Class, Rule)) and node.params:
+            for param in node.params:
+                self._symbol_counts[param] += 1
+        elif isinstance(node, LetExpression):
+            # Ideally, the binding would only apply to the body of the let-expression.
+            # But this is probably fine for now.
+            self._symbol_counts[node.name] += 1
+
+    def postvisit(self, node):
+        if isinstance(node, (Class, Rule)) and node.params:
+            for param in node.params:
+                self._symbol_counts[param] -= 1
+        elif isinstance(node, LetExpression):
+            self._symbol_counts[node.name] -= 1
+
+    def is_bound(self, ref):
+        return self._symbol_counts[ref.name] > 0
+
+
+def _update_local_references(rules):
+    counter = _SymbolCounter()
+    def previsit(node):
+        counter.previsit(node)
+        if isinstance(node, Ref) and counter.is_bound(node):
+            node.is_local = True
+
+    visit(previsit, rules, counter.postvisit)
+
+
 def _update_rule_references(rules):
     rule_names = set()
     for rule in rules:
         if isinstance(rule, (Class, Rule)):
             rule_names.add(rule.name)
 
-    shadowing = defaultdict(int)
-    def previsit(node):
-        if isinstance(node, (Class, Rule)) and node.params:
-            for param in node.params:
-                if param in rule_names:
-                    shadowing[param] += 1
-
-        elif isinstance(node, LetExpression) and node.name in rule_names:
-            # Ideally, the shadow would only apply to the body of the let-expression.
-            # But this is probably fine for now.
-            shadowing[node.name] += 1
-
-        elif isinstance(node, Ref) and node.name in rule_names and not shadowing[node.name]:
+    def check_refs(node):
+        if isinstance(node, Ref) and node.name in rule_names and not node.is_local:
             node.name = _cont_name(node.name)
 
-    def postvisit(node):
-        if isinstance(node, (Class, Rule)) and node.params:
-            for param in node.params:
-                if param in rule_names:
-                    shadowing[param] -= 1
-        elif isinstance(node, LetExpression) and node.name in rule_names:
-            shadowing[node.name] -= 1
+    visit(check_refs, rules)
 
-    visit(previsit, rules, postvisit)
+
+def _freevars(expr):
+    result = set()
+    counter = _SymbolCounter()
+
+    def previsit(node):
+        counter.previsit(node)
+        if isinstance(node, Ref) and not counter.is_bound(node) and node.is_local:
+            result.add(node.name)
+
+    visit(previsit, expr, counter.postvisit)
+    return result
 
 
 _program_setup = r'''
@@ -829,9 +980,9 @@ def parse(text, pos=0):
     return _run(text, pos, $start)
 
 
-class _RuleClosure(_nt('_RuleClosure', 'rule, args, kwargs')):
+class _ParseFunction(_nt('_ParseFunction', 'func, args, kwargs')):
     def __call__(self, _text, _pos):
-        return self.rule(_text, _pos, *self.args, **dict(self.kwargs))
+        return self.func(_text, _pos, *self.args, **dict(self.kwargs))
 
 
 class _StringLiteral(str):
@@ -839,11 +990,17 @@ class _StringLiteral(str):
         return self._parse_function(_text, _pos)
 
 
+def _wrap_string_literal(string_value, parse_function):
+    result = _StringLiteral(string_value)
+    result._parse_function = parse_function
+    return result
+
+
 def _run(text, pos, start):
     memo = {}
     result = None
 
-    key = ($CONTINUE, start, pos)
+    key = ($CALL, start, pos)
     gtor = start(text, pos)
     stack = [(key, gtor)]
 
@@ -851,7 +1008,7 @@ def _run(text, pos, start):
         key, gtor = stack[-1]
         result = gtor.send(result)
 
-        if result[0] != $CONTINUE:
+        if result[0] != $CALL:
             stack.pop()
             memo[key] = result
         elif result in memo:

@@ -52,8 +52,8 @@ def _create_parsing_expression(node):
 
     if isinstance(node, meta.Postfix) and isinstance(node.operator, meta.ArgList):
         left = node.left
-        if isinstance(left, Ref) and hasattr(expressions, left.name):
-            return getattr(expressions, left.name)(*node.operator.args)
+        if isinstance(left, Ref) and hasattr(parsing_expressions, left.name):
+            return getattr(parsing_expressions, left.name)(*node.operator.args)
         else:
             return Call(left, node.operator.args)
 
