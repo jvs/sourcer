@@ -27,9 +27,6 @@ CALL = 3
 
 
 class Expr:
-    def backtracks_on_failure(self):
-        return False
-
     def compile(self, pb):
         if pb.has_available_blocks(self.num_blocks):
             self._compile(pb)
@@ -72,20 +69,9 @@ class Alt(Expr):
         self.allow_trailer = allow_trailer
         self.allow_empty = allow_empty
 
-    def backtracks_on_failure(self):
-        return self.allow_empty or self.expr.backtracks_on_failure()
-
     def _compile(self, pb):
         staging = pb.var('staging', Raw('[]'))
-
-        needs_checkpoint = (
-            not self.allow_trailer
-            or not self.expr.backtracks_on_failure()
-            or not self.separator.backtracks_on_failure()
-        )
-
-        if needs_checkpoint:
-            checkpoint = pb.var('checkpoint', POS)
+        checkpoint = pb.var('checkpoint', POS)
 
         with pb.loop():
             self.expr.compile(pb)
@@ -94,22 +80,17 @@ class Alt(Expr):
                 pb(BREAK)
 
             pb(staging.append(RESULT))
-
-            if needs_checkpoint:
-                pb(checkpoint << POS)
+            pb(checkpoint << POS)
 
             self.separator.compile(pb)
 
             with pb.IF_NOT(STATUS):
                 pb(BREAK)
 
-            if self.allow_trailer and needs_checkpoint:
+            if self.allow_trailer:
                 pb(checkpoint << POS)
 
-        success = [RESULT << staging, STATUS << True]
-
-        if needs_checkpoint:
-            success.append(POS << checkpoint)
+        success = [RESULT << staging, STATUS << True, POS << checkpoint]
 
         if self.allow_empty:
             pb(*success)
@@ -184,9 +165,6 @@ class Choice(Expr):
     def __init__(self, *exprs):
         self.exprs = exprs
 
-    def backtracks_on_failure(self):
-        return all(x.backtracks_on_failure() for x in self.exprs)
-
     def _compile(self, pb):
         backtrack = Var('backtrack')
         farthest_pos = Var('farthest_pos')
@@ -202,13 +180,12 @@ class Choice(Expr):
                 with pb.IF(STATUS):
                     pb(BREAK)
 
-                if not expr.backtracks_on_failure():
-                    with pb.IF(farthest_pos < POS):
-                        pb(farthest_pos << POS)
-                        pb(farthest_err << RESULT)
+                with pb.IF(farthest_pos < POS):
+                    pb(farthest_pos << POS)
+                    pb(farthest_err << RESULT)
 
-                    if i + 1 < len(self.exprs):
-                        pb(POS << backtrack)
+                if i + 1 < len(self.exprs):
+                    pb(POS << backtrack)
 
             pb(POS << farthest_pos)
             pb(RESULT << farthest_err)
@@ -290,9 +267,6 @@ class Expect(Expr):
     def __init__(self, expr):
         self.expr = expr
 
-    def backtracks_on_failure(self):
-        return self.expr.backtracks_on_failure()
-
     def _compile(self, pb):
         backtrack = pb.var('backtrack', POS)
         self.expr.compile(pb)
@@ -306,9 +280,6 @@ class ExpectNot(Expr):
 
     def __init__(self, expr):
         self.expr = expr
-
-    def backtracks_on_failure(self):
-        return True
 
     def _compile(self, pb):
         backtrack = pb.var('backtrack', POS)
@@ -401,9 +372,6 @@ class Opt(Expr):
     def __init__(self, expr):
         self.expr = expr
 
-    def backtracks_on_failure(self):
-        return True
-
     def _compile(self, pb):
         backtrack = pb.var('backtrack', POS)
         self.expr.compile(pb)
@@ -420,9 +388,6 @@ class Pass(Expr):
 
     def __init__(self, value):
         self.value = value
-
-    def backtracks_on_failure(self):
-        return True
 
     def _compile(self, pb):
         pb(
@@ -452,9 +417,6 @@ class RegexLiteral(Expr):
             raise TypeError('Expected str')
         self.pattern = pattern
         self.skip_ignored = False
-
-    def backtracks_on_failure(self):
-        return True
 
     def _compile(self, pb):
         pb.add_import('from re import compile as compile_re')
@@ -575,9 +537,6 @@ class StringLiteral(Expr):
         self.value = value
         self.skip_ignored = False
         self.num_blocks = 0 if self.value == '' else 1
-
-    def backtracks_on_failure(self):
-        return True
 
     def _compile(self, pb):
         if self.value == '':
