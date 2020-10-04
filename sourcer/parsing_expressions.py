@@ -205,7 +205,7 @@ class Choice(Expr):
                 if not expr.backtracks_on_failure():
                     with pb.IF(farthest_pos < POS):
                         pb(farthest_pos << POS)
-                        pb(farthest_err << Val(expr.program_id))
+                        pb(farthest_err << RESULT)
 
                     if i + 1 < len(self.exprs):
                         pb(POS << backtrack)
