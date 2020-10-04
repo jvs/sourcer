@@ -193,7 +193,7 @@ class Choice(Expr):
 
         pb(backtrack << farthest_pos << POS)
 
-        farthest_expr = pb.var('farthest_expr', Val(self.program_id))
+        farthest_err = pb.var('farthest_err', Val(self.program_id))
 
         with pb.breakable():
             for i, expr in enumerate(self.exprs):
@@ -205,13 +205,13 @@ class Choice(Expr):
                 if not expr.backtracks_on_failure():
                     with pb.IF(farthest_pos < POS):
                         pb(farthest_pos << POS)
-                        pb(farthest_expr << Val(expr.program_id))
+                        pb(farthest_err << Val(expr.program_id))
 
                     if i + 1 < len(self.exprs):
                         pb(POS << backtrack)
 
             pb(POS << farthest_pos)
-            pb(RESULT << Val(self.program_id))
+            pb(RESULT << farthest_err)
 
 
 class Class(Expr):
@@ -222,6 +222,7 @@ class Class(Expr):
         self.params = params
         self.fields = fields
         self.is_ignored = is_ignored
+        self.extra_id = None
 
     def _compile(self, pb):
         field_names = [x.name for x in self.fields]
@@ -253,6 +254,7 @@ class Class(Expr):
         with pb.global_function(parse_func, params):
             exprs = (x.expr for x in self.fields)
             seq = Seq(*exprs, names=field_names, constructor=self.name)
+            seq.program_id = self.extra_id
             seq.compile(pb)
             pb(Yield(Tup(STATUS, RESULT, POS)))
 
@@ -908,6 +910,9 @@ def _assign_ids(rules):
         nonlocal next_id
         node.program_id = next_id
         next_id += 1
+        if isinstance(node, Class):
+            node.extra_id = next_id
+            next_id += 1
     visit(assign_id, rules)
 
 
