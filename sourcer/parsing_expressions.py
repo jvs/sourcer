@@ -777,7 +777,7 @@ class PythonExpression(Expr):
         )
 
 
-class PythonSection(Expr):
+class PythonSection:
     def __init__(self, source_code):
         self.source_code = source_code
 
