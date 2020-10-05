@@ -292,7 +292,7 @@ class Class(Expr):
             with pb.local_function('__init__', ['self'] + field_names):
                 for name in field_names:
                     pb(Raw(f'self.{name} = {name}'))
-                pb(Raw('self._parse_info = None'))
+                pb(Raw('self._position_info = None'))
 
             with pb.local_function('__repr__', ['self']):
                 values = ', '.join(f'{x}={{self.{x}!r}}' for x in field_names)
@@ -635,12 +635,17 @@ class Seq(Expr):
             self.names = [None] * len(exprs)
 
         self.constructor = constructor
+        self.needs_parse_info = constructor is not None
 
     def __str__(self):
         return f'[{", ".join(str(x) for x in self.exprs)}]'
 
     def _compile(self, pb):
         pb(Raw(f'# <{self.__class__.__name__}>'))
+
+        if self.needs_parse_info:
+            start_pos = pb.var('start_pos', POS)
+
         with pb.breakable():
             items = []
             for name, expr in zip(self.names, self.exprs):
@@ -654,6 +659,10 @@ class Seq(Expr):
 
             ctor = LIST if self.constructor is None else Raw(self.constructor)
             pb(RESULT << ctor(*items))
+
+            if self.needs_parse_info:
+                pb(RESULT._position_info << Tup(start_pos, POS))
+
         pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
@@ -1234,6 +1243,11 @@ def parse(text, pos=0):
     return _run(text, pos, $start)
 
 
+_PositionInfo = _nt('_PositionInfo', 'start, end')
+
+_Position = _nt('_Position', 'index, line, column')
+
+
 class _ParseFunction(_nt('_ParseFunction', 'func, args, kwargs')):
     def __call__(self, _text, _pos):
         return self.func(_text, _pos, *self.args, **dict(self.kwargs))
@@ -1273,7 +1287,7 @@ def _run(text, pos, start):
             result = None
 
     if result[0]:
-        return result[1]
+        return _finalize_parse_info(text, result[1])
     else:
         pos = result[2]
         message = result[1](text, pos)
@@ -1326,4 +1340,31 @@ def _transform(node, callback):
 
     return callback(node)
 
+
+def _finalize_parse_info(text, nodes):
+    line_numbers = []
+    col_numbers = []
+    line_number = 1
+    col_number = 0
+
+    for c in text:
+        if c == '\n':
+            line_number += 1
+            col_number = 0
+        else:
+            col_number += 1
+        line_numbers.append(line_number)
+        col_numbers.append(col_number)
+
+    for node in visit(nodes):
+        parse_info = getattr(node, '_position_info', None)
+        if parse_info:
+            start, end = parse_info
+            end -= 1
+            node._position_info = _PositionInfo(
+                start=_Position(start, line_numbers[start], col_numbers[start]),
+                end=_Position(end, line_numbers[end], col_numbers[end]),
+            )
+
+    return nodes
 '''
