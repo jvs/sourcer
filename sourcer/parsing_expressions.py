@@ -461,8 +461,9 @@ class List(Expr):
         self.allow_empty = allow_empty
 
     def __str__(self):
+        x = f'({self.expr})' if isinstance(self.expr, BinaryOp) else self.expr
         op = '*' if self.allow_empty else '+'
-        return str(self.expr) + op
+        return f'{x}{op}'
 
     def _compile(self, pb):
         pb(Raw(f'# <{self.__class__.__name__}>'))
