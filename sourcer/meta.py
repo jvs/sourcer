@@ -26,12 +26,14 @@ class Node:
 
 
 class Rule:
-    def __init__(self, name, parse):
+    def __init__(self, name, parse, definition):
         self.name = name
         self.parse = parse
+        self.definition = definition
 
     def __repr__(self):
-        return f'Rule(name={self.name!r}, parse={self.parse.__name__})'
+        return (f'Rule(name={self.name!r}, parse={self.parse.__name__},'
+            f' definition={self.definition!r})')
 
 
 
@@ -41,8 +43,8 @@ import textwrap
 
 
 class ParseError(Exception):
-    def __init__(self, expr_code, pos):
-        self.expr_code = expr_code
+    def __init__(self, message, pos):
+        self.message = message
         self.pos = pos
 
 
@@ -125,7 +127,9 @@ def _run(text, pos, start):
     if result[0]:
         return result[1]
     else:
-        raise ParseError(result[1], result[2])
+        pos = result[2]
+        message = result[1](text, pos)
+        raise ParseError(message, pos)
 
 
 def visit(node):
@@ -191,1567 +195,2459 @@ matcher11 = compile_re('`.*?`').match
 
 
 def _cont_Space(_text, _pos):
-     match1 = matcher1(_text, _pos)
-     if match1:
-          _pos = match1.end()
-          _status = True
-          _result = match1.group(0)
-     else:
-          _status = False
-          _result = 2
-     (yield (_status, _result, _pos,))
+    # Rule 'Space'
+    # <Regex pattern='[ \\t]+'>
+    match1 = matcher1(_text, _pos)
+    if match1:
+        _pos = match1.end()
+        _status = True
+        _result = match1.group(0)
+    else:
+        _status = False
+        _result = _generate_error_message2
+    # </Regex>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_Space(text, pos=0):
-     return _run(text, pos, _cont_Space)
+    return _run(text, pos, _cont_Space)
 
 
-Space = Rule('Space', _parse_Space)
+Space = Rule('Space', _parse_Space, """
+    Space = @/[ \\t]+/
+""")
+
+def _generate_error_message2(_text, _pos):
+    return
+
 
 def _cont_Comment(_text, _pos):
-     match2 = matcher2(_text, _pos)
-     if match2:
-          _pos = match2.end()
-          _status = True
-          _result = match2.group(0)
-     else:
-          _status = False
-          _result = 4
-     (yield (_status, _result, _pos,))
+    # Rule 'Comment'
+    # <Regex pattern='#[^\\r\\n]*'>
+    match2 = matcher2(_text, _pos)
+    if match2:
+        _pos = match2.end()
+        _status = True
+        _result = match2.group(0)
+    else:
+        _status = False
+        _result = _generate_error_message4
+    # </Regex>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_Comment(text, pos=0):
-     return _run(text, pos, _cont_Comment)
+    return _run(text, pos, _cont_Comment)
 
 
-Comment = Rule('Comment', _parse_Comment)
+Comment = Rule('Comment', _parse_Comment, """
+    Comment = @/#[^\\r\\n]*/
+""")
+
+def _generate_error_message4(_text, _pos):
+    return
+
 
 def _cont_Newline(_text, _pos):
-     match3 = matcher3(_text, _pos)
-     if match3:
-          _pos = (yield (3, _cont__ignored, match3.end(),))[2]
-          _status = True
-          _result = match3.group(0)
-     else:
-          _status = False
-          _result = 6
-     (yield (_status, _result, _pos,))
+    # Rule 'Newline'
+    # <Regex pattern='[\\r\\n][\\s]*'>
+    match3 = matcher3(_text, _pos)
+    if match3:
+        _pos = (yield (3, _cont__ignored, match3.end(),))[2]
+        _status = True
+        _result = match3.group(0)
+    else:
+        _status = False
+        _result = _generate_error_message6
+    # </Regex>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_Newline(text, pos=0):
-     return _run(text, pos, _cont_Newline)
+    return _run(text, pos, _cont_Newline)
 
 
-Newline = Rule('Newline', _parse_Newline)
+Newline = Rule('Newline', _parse_Newline, """
+    Newline = @/[\\r\\n][\\s]*/
+""")
+
+def _generate_error_message6(_text, _pos):
+    return
+
 
 def _cont_Sep(_text, _pos):
-     staging1 = []
-     while True:
-          checkpoint1 = _pos
-          backtrack1 = farthest_pos1 = _pos
-          farthest_expr1 = 9
-          while True:
-               (_status, _result, _pos,) = (yield (3, _cont_Newline, _pos,))
-               if _status:
-                    break
-               if (farthest_pos1 < _pos):
-                    farthest_pos1 = _pos
-                    farthest_expr1 = 10
-               _pos = backtrack1
-               value1 = ';'
-               end1 = (_pos + 1)
-               if (_text[_pos : end1] == value1):
-                    _pos = (yield (3, _cont__ignored, end1,))[2]
-                    _status = True
-                    _result = value1
-               else:
-                    _status = False
-                    _result = 11
-               if _status:
-                    break
-               _pos = farthest_pos1
-               _result = 9
-               break
-          if _status:
-               staging1.append(_result)
-               continue
-          else:
-               _pos = checkpoint1
-               break
-     if staging1:
-          _result = staging1
-          _status = True
-     (yield (_status, _result, _pos,))
+    # Rule 'Sep'
+    # <List>
+    # (Newline | ';')+
+    staging1 = []
+    while True:
+        checkpoint1 = _pos
+        # <Choice>
+        backtrack1 = farthest_pos1 = _pos
+        farthest_err1 = 9
+        farthest_err2 = _generate_error_message9
+        while True:
+            # Option 1:
+            # <Ref name='Newline'>
+            (_status, _result, _pos,) = (yield (3, _cont_Newline, _pos,))
+            # </Ref>
+            if _status:
+                break
+            if (farthest_pos1 < _pos):
+                farthest_pos1 = _pos
+                farthest_err2 = _result
+            _pos = backtrack1
+            # Option 2:
+            # <String value=';'>
+            value1 = ';'
+            end1 = (_pos + 1)
+            if (_text[_pos : end1] == value1):
+                _pos = (yield (3, _cont__ignored, end1,))[2]
+                _status = True
+                _result = value1
+            else:
+                _status = False
+                _result = _generate_error_message11
+            # </String>
+            if _status:
+                break
+            if (farthest_pos1 < _pos):
+                farthest_pos1 = _pos
+                farthest_err2 = _result
+            _pos = farthest_pos1
+            _result = farthest_err2
+            break
+        # </Choice>
+        if (not _status):
+            _pos = checkpoint1
+            break
+        staging1.append(_result)
+    if staging1:
+        _result = staging1
+        _status = True
+    # </List>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_Sep(text, pos=0):
-     return _run(text, pos, _cont_Sep)
+    return _run(text, pos, _cont_Sep)
 
 
-Sep = Rule('Sep', _parse_Sep)
+Sep = Rule('Sep', _parse_Sep, """
+    Sep = (Newline | ';')+
+""")
+
+def _generate_error_message9(_text, _pos):
+    return
+
+
+def _generate_error_message11(_text, _pos):
+    return "Expected ';'."
+
 
 def _cont_Name(_text, _pos):
-     match4 = matcher4(_text, _pos)
-     if match4:
-          _pos = (yield (3, _cont__ignored, match4.end(),))[2]
-          _status = True
-          _result = match4.group(0)
-     else:
-          _status = False
-          _result = 13
-     (yield (_status, _result, _pos,))
+    # Rule 'Name'
+    # <Regex pattern='[_a-zA-Z][_a-zA-Z0-9]*'>
+    match4 = matcher4(_text, _pos)
+    if match4:
+        _pos = (yield (3, _cont__ignored, match4.end(),))[2]
+        _status = True
+        _result = match4.group(0)
+    else:
+        _status = False
+        _result = _generate_error_message13
+    # </Regex>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_Name(text, pos=0):
-     return _run(text, pos, _cont_Name)
+    return _run(text, pos, _cont_Name)
 
 
-Name = Rule('Name', _parse_Name)
+Name = Rule('Name', _parse_Name, """
+    Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+""")
+
+def _generate_error_message13(_text, _pos):
+    return
+
 
 def _parse_function_17(_text, _pos):
-     value2 = ','
-     end2 = (_pos + 1)
-     if (_text[_pos : end2] == value2):
-          _pos = (yield (3, _cont__ignored, end2,))[2]
-          _status = True
-          _result = value2
-     else:
-          _status = False
-          _result = 17
-     (yield (_status, _result, _pos,))
+    # <String value=','>
+    value2 = ','
+    end2 = (_pos + 1)
+    if (_text[_pos : end2] == value2):
+        _pos = (yield (3, _cont__ignored, end2,))[2]
+        _status = True
+        _result = value2
+    else:
+        _status = False
+        _result = _generate_error_message17
+    # </String>
+    (yield (_status, _result, _pos,))
 
 
 def _cont_Comma(_text, _pos):
-     arg1 = _wrap_string_literal(',', _parse_function_17)
-     func1 = _ParseFunction(_cont_wrap, (arg1,), ())
-     (_status, _result, _pos,) = (yield (3, func1, _pos,))
-     (yield (_status, _result, _pos,))
+    # Rule 'Comma'
+    # <Call>
+    # wrap(',')
+    arg1 = _wrap_string_literal(',', _parse_function_17)
+    func1 = _ParseFunction(_cont_wrap, (arg1,), ())
+    (_status, _result, _pos,) = (yield (3, func1, _pos,))
+    # </Call>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_Comma(text, pos=0):
-     return _run(text, pos, _cont_Comma)
+    return _run(text, pos, _cont_Comma)
 
 
-Comma = Rule('Comma', _parse_Comma)
+Comma = Rule('Comma', _parse_Comma, """
+    Comma = wrap(',')
+""")
+
+def _generate_error_message17(_text, _pos):
+    return "Expected ','."
+
 
 def _cont_wrap(_text, _pos, x):
-     while True:
-          while True:
-               while True:
-                    checkpoint2 = _pos
-                    (_status, _result, _pos,) = (yield (3, _cont_Newline, _pos,))
-                    if _status:
-                         continue
-                    else:
-                         _pos = checkpoint2
-                    break
-               _status = True
-               _result = None
-               if (not _status):
-                    break
-               (_status, _result, _pos,) = (yield (3, x, _pos,))
-               break
-          if (not _status):
-               break
-          staging2 = _result
-          while True:
-               checkpoint3 = _pos
-               (_status, _result, _pos,) = (yield (3, _cont_Newline, _pos,))
-               if _status:
+    # Rule 'wrap'
+    # <Discard>
+    # (Skip(Newline) >> x) << Skip(Newline)
+    while True:
+        # <Discard>
+        # Skip(Newline) >> x
+        while True:
+            # <Skip>
+            # Skip(Newline)
+            while True:
+                checkpoint2 = _pos
+                # <Ref name='Newline'>
+                (_status, _result, _pos,) = (yield (3, _cont_Newline, _pos,))
+                # </Ref>
+                if _status:
                     continue
-               else:
-                    _pos = checkpoint3
-               break
-          _status = True
-          _result = None
-          if _status:
-               _result = staging2
-          break
-     (yield (_status, _result, _pos,))
+                else:
+                    _pos = checkpoint2
+                break
+            _status = True
+            _result = None
+            # </Skip>
+            # <Ref name='x'>
+            (_status, _result, _pos,) = (yield (3, x, _pos,))
+            # </Ref>
+            break
+        # </Discard>
+        if (not _status):
+            break
+        staging2 = _result
+        # <Skip>
+        # Skip(Newline)
+        while True:
+            checkpoint3 = _pos
+            # <Ref name='Newline'>
+            (_status, _result, _pos,) = (yield (3, _cont_Newline, _pos,))
+            # </Ref>
+            if _status:
+                continue
+            else:
+                _pos = checkpoint3
+            break
+        _status = True
+        _result = None
+        # </Skip>
+        _result = staging2
+        break
+    # </Discard>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_wrap(text, pos=0):
-     return _run(text, pos, _cont_wrap)
+    return _run(text, pos, _cont_wrap)
 
 
-wrap = Rule('wrap', _parse_wrap)
+wrap = Rule('wrap', _parse_wrap, """
+    wrap(x) = (Skip(Newline) >> x) << Skip(Newline)
+""")
 
 def _cont_kw(_text, _pos, word):
-     (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
-     if _status:
-          arg2 = _result
-          _result = lambda x: x == word
-          _status = True
-          if _status:
-               if _result(arg2):
-                    _result = arg2
-               else:
-                    _status = False
-                    _result = 27
-     (yield (_status, _result, _pos,))
+    # Rule 'kw'
+    # <Where>
+    # Name where `lambda x: x == word`
+    # <Ref name='Name'>
+    (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
+    # </Ref>
+    if _status:
+        arg2 = _result
+        _result = lambda x: x == word
+        _status = True
+        if _result(arg2):
+            _result = arg2
+        else:
+            _status = False
+            _result = _generate_error_message27
+    # </Where>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_kw(text, pos=0):
-     return _run(text, pos, _cont_kw)
+    return _run(text, pos, _cont_kw)
 
 
-kw = Rule('kw', _parse_kw)
+kw = Rule('kw', _parse_kw, """
+    kw(word) = Name where `lambda x: x == word`
+""")
+
+def _generate_error_message27(_text, _pos):
+    return
+
 
 def _parse_function_35(_text, _pos):
-     value3 = '('
-     end3 = (_pos + 1)
-     if (_text[_pos : end3] == value3):
-          _pos = (yield (3, _cont__ignored, end3,))[2]
-          _status = True
-          _result = value3
-     else:
-          _status = False
-          _result = 35
-     (yield (_status, _result, _pos,))
+    # <String value='('>
+    value3 = '('
+    end3 = (_pos + 1)
+    if (_text[_pos : end3] == value3):
+        _pos = (yield (3, _cont__ignored, end3,))[2]
+        _status = True
+        _result = value3
+    else:
+        _status = False
+        _result = _generate_error_message35
+    # </String>
+    (yield (_status, _result, _pos,))
 
 
 def _cont_Params(_text, _pos):
-     while True:
-          while True:
-               arg3 = _wrap_string_literal('(', _parse_function_35)
-               func2 = _ParseFunction(_cont_wrap, (arg3,), ())
-               (_status, _result, _pos,) = (yield (3, func2, _pos,))
-               if (not _status):
+    # Rule 'Params'
+    # <Discard>
+    # (wrap('(') >> (wrap(Name) / Comma)) << ')'
+    while True:
+        # <Discard>
+        # wrap('(') >> (wrap(Name) / Comma)
+        while True:
+            # <Call>
+            # wrap('(')
+            arg3 = _wrap_string_literal('(', _parse_function_35)
+            func2 = _ParseFunction(_cont_wrap, (arg3,), ())
+            (_status, _result, _pos,) = (yield (3, func2, _pos,))
+            # </Call>
+            if (not _status):
+                break
+            # <Alt>
+            # wrap(Name) / Comma
+            staging3 = []
+            checkpoint4 = _pos
+            while True:
+                # <Call>
+                # wrap(Name)
+                func3 = _ParseFunction(_cont_wrap, (_cont_Name,), ())
+                (_status, _result, _pos,) = (yield (3, func3, _pos,))
+                # </Call>
+                if (not _status):
                     break
-               staging3 = []
-               checkpoint4 = _pos
-               while True:
-                    func3 = _ParseFunction(_cont_wrap, (_cont_Name,), ())
-                    (_status, _result, _pos,) = (yield (3, func3, _pos,))
-                    if (not _status):
-                         break
-                    staging3.append(_result)
-                    checkpoint4 = _pos
-                    (_status, _result, _pos,) = (yield (3, _cont_Comma, _pos,))
-                    if (not _status):
-                         break
-                    checkpoint4 = _pos
-               _result = staging3
-               _status = True
-               _pos = checkpoint4
-               break
-          if (not _status):
-               break
-          staging4 = _result
-          value4 = ')'
-          end4 = (_pos + 1)
-          if (_text[_pos : end4] == value4):
-               _pos = (yield (3, _cont__ignored, end4,))[2]
-               _status = True
-               _result = value4
-          else:
-               _status = False
-               _result = 41
-          if _status:
-               _result = staging4
-          break
-     (yield (_status, _result, _pos,))
+                staging3.append(_result)
+                checkpoint4 = _pos
+                # <Ref name='Comma'>
+                (_status, _result, _pos,) = (yield (3, _cont_Comma, _pos,))
+                # </Ref>
+                if (not _status):
+                    break
+                checkpoint4 = _pos
+            _result = staging3
+            _status = True
+            _pos = checkpoint4
+            # </Alt>
+            break
+        # </Discard>
+        if (not _status):
+            break
+        staging4 = _result
+        # <String value=')'>
+        value4 = ')'
+        end4 = (_pos + 1)
+        if (_text[_pos : end4] == value4):
+            _pos = (yield (3, _cont__ignored, end4,))[2]
+            _status = True
+            _result = value4
+        else:
+            _status = False
+            _result = _generate_error_message41
+        # </String>
+        if _status:
+            _result = staging4
+        break
+    # </Discard>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_Params(text, pos=0):
-     return _run(text, pos, _cont_Params)
+    return _run(text, pos, _cont_Params)
 
 
-Params = Rule('Params', _parse_Params)
+Params = Rule('Params', _parse_Params, """
+    Params = (wrap('(') >> (wrap(Name) / Comma)) << ')'
+""")
+
+def _generate_error_message35(_text, _pos):
+    return "Expected '('."
+
+
+def _generate_error_message41(_text, _pos):
+    return "Expected ')'."
+
 
 class StringLiteral(Node):
-     _fields = ('value',)
-     def __init__(self, value):
-          self.value = value
+    """
+    class StringLiteral {
+        value: (@/(?s)("\""([^\\\\]|\\\\.)*?"\"")/ | @/(?s)('''([^\\\\]|\\\\.)*?''')/ | @/("([^"\\\\]|\\\\.)*")/ | @/('([^'\\\\]|\\\\.)*')/) |> `ast.literal_eval`
+    }
+    """
+    _fields = ('value',)
 
-     def __repr__(self):
-          return f'StringLiteral(value={self.value!r})'
+    def __init__(self, value):
+        self.value = value
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_StringLiteral)
+    def __repr__(self):
+        return f'StringLiteral(value={self.value!r})'
+
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_StringLiteral)
 
 
 
 def _cont_StringLiteral(_text, _pos):
-     while True:
-          backtrack2 = farthest_pos2 = _pos
-          farthest_expr2 = 45
-          while True:
-               match5 = matcher5(_text, _pos)
-               if match5:
-                    _pos = (yield (3, _cont__ignored, match5.end(),))[2]
-                    _status = True
-                    _result = match5.group(0)
-               else:
-                    _status = False
-                    _result = 46
-               if _status:
-                    break
-               match6 = matcher6(_text, _pos)
-               if match6:
-                    _pos = (yield (3, _cont__ignored, match6.end(),))[2]
-                    _status = True
-                    _result = match6.group(0)
-               else:
-                    _status = False
-                    _result = 47
-               if _status:
-                    break
-               match7 = matcher7(_text, _pos)
-               if match7:
-                    _pos = (yield (3, _cont__ignored, match7.end(),))[2]
-                    _status = True
-                    _result = match7.group(0)
-               else:
-                    _status = False
-                    _result = 48
-               if _status:
-                    break
-               match8 = matcher8(_text, _pos)
-               if match8:
-                    _pos = (yield (3, _cont__ignored, match8.end(),))[2]
-                    _status = True
-                    _result = match8.group(0)
-               else:
-                    _status = False
-                    _result = 49
-               if _status:
-                    break
-               _pos = farthest_pos2
-               _result = 45
-               break
-          if _status:
-               arg4 = _result
-               _result = ast.literal_eval
-               _status = True
-               if _status:
-                    _result = _result(arg4)
-          if (not _status):
-               break
-          value = _result
-          _result = StringLiteral(value)
-          break
-     (yield (_status, _result, _pos,))
+    # <Seq>
+    while True:
+        # <Apply>
+        # (@/(?s)("""([^\\\\]|\\\\.)*?""")/ | @/(?s)('''([^\\\\]|\\\\.)*?''')/ | @/("([^"\\\\]|\\\\.)*")/ | @/('([^'\\\\]|\\\\.)*')/) |> `ast.literal_eval`
+        # <Choice>
+        backtrack2 = farthest_pos2 = _pos
+        farthest_err3 = 46
+        farthest_err4 = _generate_error_message46
+        while True:
+            # Option 1:
+            # <Regex pattern='(?s)("""([^\\\\]|\\\\.)*?""")'>
+            match5 = matcher5(_text, _pos)
+            if match5:
+                _pos = (yield (3, _cont__ignored, match5.end(),))[2]
+                _status = True
+                _result = match5.group(0)
+            else:
+                _status = False
+                _result = _generate_error_message47
+            # </Regex>
+            if _status:
+                break
+            if (farthest_pos2 < _pos):
+                farthest_pos2 = _pos
+                farthest_err4 = _result
+            _pos = backtrack2
+            # Option 2:
+            # <Regex pattern="(?s)('''([^\\\\]|\\\\.)*?''')">
+            match6 = matcher6(_text, _pos)
+            if match6:
+                _pos = (yield (3, _cont__ignored, match6.end(),))[2]
+                _status = True
+                _result = match6.group(0)
+            else:
+                _status = False
+                _result = _generate_error_message48
+            # </Regex>
+            if _status:
+                break
+            if (farthest_pos2 < _pos):
+                farthest_pos2 = _pos
+                farthest_err4 = _result
+            _pos = backtrack2
+            # Option 3:
+            # <Regex pattern='("([^"\\\\]|\\\\.)*")'>
+            match7 = matcher7(_text, _pos)
+            if match7:
+                _pos = (yield (3, _cont__ignored, match7.end(),))[2]
+                _status = True
+                _result = match7.group(0)
+            else:
+                _status = False
+                _result = _generate_error_message49
+            # </Regex>
+            if _status:
+                break
+            if (farthest_pos2 < _pos):
+                farthest_pos2 = _pos
+                farthest_err4 = _result
+            _pos = backtrack2
+            # Option 4:
+            # <Regex pattern="('([^'\\\\]|\\\\.)*')">
+            match8 = matcher8(_text, _pos)
+            if match8:
+                _pos = (yield (3, _cont__ignored, match8.end(),))[2]
+                _status = True
+                _result = match8.group(0)
+            else:
+                _status = False
+                _result = _generate_error_message50
+            # </Regex>
+            if _status:
+                break
+            if (farthest_pos2 < _pos):
+                farthest_pos2 = _pos
+                farthest_err4 = _result
+            _pos = farthest_pos2
+            _result = farthest_err4
+            break
+        # </Choice>
+        if _status:
+            arg4 = _result
+            _result = ast.literal_eval
+            _status = True
+            _result = _result(arg4)
+        # </Apply>
+        if (not _status):
+            break
+        value = _result
+        _result = StringLiteral(value)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
+
+
+def _generate_error_message46(_text, _pos):
+    return
+
+
+def _generate_error_message47(_text, _pos):
+    return
+
+
+def _generate_error_message48(_text, _pos):
+    return
+
+
+def _generate_error_message49(_text, _pos):
+    return
+
+
+def _generate_error_message50(_text, _pos):
+    return
 
 
 class RegexLiteral(Node):
-     _fields = ('value',)
-     def __init__(self, value):
-          self.value = value
+    """
+    class RegexLiteral {
+        value: @/\\@\\/([^\\/\\\\]|\\\\.)*\\// |> `lambda x: x[2:-1]`
+    }
+    """
+    _fields = ('value',)
 
-     def __repr__(self):
-          return f'RegexLiteral(value={self.value!r})'
+    def __init__(self, value):
+        self.value = value
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_RegexLiteral)
+    def __repr__(self):
+        return f'RegexLiteral(value={self.value!r})'
+
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_RegexLiteral)
 
 
 
 def _cont_RegexLiteral(_text, _pos):
-     while True:
-          match9 = matcher9(_text, _pos)
-          if match9:
-               _pos = (yield (3, _cont__ignored, match9.end(),))[2]
-               _status = True
-               _result = match9.group(0)
-          else:
-               _status = False
-               _result = 54
-          if _status:
-               arg5 = _result
-               _result = lambda x: x[2:-1]
-               _status = True
-               if _status:
-                    _result = _result(arg5)
-          if (not _status):
-               break
-          value = _result
-          _result = RegexLiteral(value)
-          break
-     (yield (_status, _result, _pos,))
+    # <Seq>
+    while True:
+        # <Apply>
+        # @/\\@\\/([^\\/\\\\]|\\\\.)*\\// |> `lambda x: x[2:-1]`
+        # <Regex pattern='\\@\\/([^\\/\\\\]|\\\\.)*\\/'>
+        match9 = matcher9(_text, _pos)
+        if match9:
+            _pos = (yield (3, _cont__ignored, match9.end(),))[2]
+            _status = True
+            _result = match9.group(0)
+        else:
+            _status = False
+            _result = _generate_error_message56
+        # </Regex>
+        if _status:
+            arg5 = _result
+            _result = lambda x: x[2:-1]
+            _status = True
+            _result = _result(arg5)
+        # </Apply>
+        if (not _status):
+            break
+        value = _result
+        _result = RegexLiteral(value)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
+
+
+def _generate_error_message56(_text, _pos):
+    return
 
 
 class PythonSection(Node):
-     _fields = ('value',)
-     def __init__(self, value):
-          self.value = value
+    """
+    class PythonSection {
+        value: @/(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
+    }
+    """
+    _fields = ('value',)
 
-     def __repr__(self):
-          return f'PythonSection(value={self.value!r})'
+    def __init__(self, value):
+        self.value = value
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_PythonSection)
+    def __repr__(self):
+        return f'PythonSection(value={self.value!r})'
+
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_PythonSection)
 
 
 
 def _cont_PythonSection(_text, _pos):
-     while True:
-          match10 = matcher10(_text, _pos)
-          if match10:
-               _pos = (yield (3, _cont__ignored, match10.end(),))[2]
-               _status = True
-               _result = match10.group(0)
-          else:
-               _status = False
-               _result = 59
-          if _status:
-               arg6 = _result
-               _result = lambda x: textwrap.dedent(x[3:-3])
-               _status = True
-               if _status:
-                    _result = _result(arg6)
-          if (not _status):
-               break
-          value = _result
-          _result = PythonSection(value)
-          break
-     (yield (_status, _result, _pos,))
+    # <Seq>
+    while True:
+        # <Apply>
+        # @/(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
+        # <Regex pattern='(?s)```.*?```'>
+        match10 = matcher10(_text, _pos)
+        if match10:
+            _pos = (yield (3, _cont__ignored, match10.end(),))[2]
+            _status = True
+            _result = match10.group(0)
+        else:
+            _status = False
+            _result = _generate_error_message62
+        # </Regex>
+        if _status:
+            arg6 = _result
+            _result = lambda x: textwrap.dedent(x[3:-3])
+            _status = True
+            _result = _result(arg6)
+        # </Apply>
+        if (not _status):
+            break
+        value = _result
+        _result = PythonSection(value)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
+
+
+def _generate_error_message62(_text, _pos):
+    return
 
 
 class PythonExpression(Node):
-     _fields = ('value',)
-     def __init__(self, value):
-          self.value = value
+    """
+    class PythonExpression {
+        value: @/`.*?`/ |> `lambda x: x[1:-1]`
+    }
+    """
+    _fields = ('value',)
 
-     def __repr__(self):
-          return f'PythonExpression(value={self.value!r})'
+    def __init__(self, value):
+        self.value = value
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_PythonExpression)
+    def __repr__(self):
+        return f'PythonExpression(value={self.value!r})'
+
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_PythonExpression)
 
 
 
 def _cont_PythonExpression(_text, _pos):
-     while True:
-          match11 = matcher11(_text, _pos)
-          if match11:
-               _pos = (yield (3, _cont__ignored, match11.end(),))[2]
-               _status = True
-               _result = match11.group(0)
-          else:
-               _status = False
-               _result = 64
-          if _status:
-               arg7 = _result
-               _result = lambda x: x[1:-1]
-               _status = True
-               if _status:
-                    _result = _result(arg7)
-          if (not _status):
-               break
-          value = _result
-          _result = PythonExpression(value)
-          break
-     (yield (_status, _result, _pos,))
+    # <Seq>
+    while True:
+        # <Apply>
+        # @/`.*?`/ |> `lambda x: x[1:-1]`
+        # <Regex pattern='`.*?`'>
+        match11 = matcher11(_text, _pos)
+        if match11:
+            _pos = (yield (3, _cont__ignored, match11.end(),))[2]
+            _status = True
+            _result = match11.group(0)
+        else:
+            _status = False
+            _result = _generate_error_message68
+        # </Regex>
+        if _status:
+            arg7 = _result
+            _result = lambda x: x[1:-1]
+            _status = True
+            _result = _result(arg7)
+        # </Apply>
+        if (not _status):
+            break
+        value = _result
+        _result = PythonExpression(value)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
+
+
+def _generate_error_message68(_text, _pos):
+    return
 
 
 class RuleDef(Node):
-     _fields = ('is_ignored', 'name', 'params', 'expr',)
-     def __init__(self, is_ignored, name, params, expr):
-          self.is_ignored = is_ignored
-          self.name = name
-          self.params = params
-          self.expr = expr
+    """
+    class RuleDef {
+        is_ignored: Opt(kw('ignored') | kw('ignore')) |> `bool`
+        name: Name
+        params: Opt(Params) << wrap('=>' | '=' | ':')
+        expr: Expr
+    }
+    """
+    _fields = ('is_ignored', 'name', 'params', 'expr',)
 
-     def __repr__(self):
-          return f'RuleDef(is_ignored={self.is_ignored!r}, name={self.name!r}, params={self.params!r}, expr={self.expr!r})'
+    def __init__(self, is_ignored, name, params, expr):
+        self.is_ignored = is_ignored
+        self.name = name
+        self.params = params
+        self.expr = expr
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_RuleDef)
+    def __repr__(self):
+        return f'RuleDef(is_ignored={self.is_ignored!r}, name={self.name!r}, params={self.params!r}, expr={self.expr!r})'
 
-
-
-def _parse_function_73(_text, _pos):
-     value5 = 'ignored'
-     end5 = (_pos + 7)
-     if (_text[_pos : end5] == value5):
-          _pos = (yield (3, _cont__ignored, end5,))[2]
-          _status = True
-          _result = value5
-     else:
-          _status = False
-          _result = 73
-     (yield (_status, _result, _pos,))
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_RuleDef)
 
 
-def _parse_function_76(_text, _pos):
-     value6 = 'ignore'
-     end6 = (_pos + 6)
-     if (_text[_pos : end6] == value6):
-          _pos = (yield (3, _cont__ignored, end6,))[2]
-          _status = True
-          _result = value6
-     else:
-          _status = False
-          _result = 76
-     (yield (_status, _result, _pos,))
+
+def _parse_function_78(_text, _pos):
+    # <String value='ignored'>
+    value5 = 'ignored'
+    end5 = (_pos + 7)
+    if (_text[_pos : end5] == value5):
+        _pos = (yield (3, _cont__ignored, end5,))[2]
+        _status = True
+        _result = value5
+    else:
+        _status = False
+        _result = _generate_error_message78
+    # </String>
+    (yield (_status, _result, _pos,))
 
 
-def _parse_function_86(_text, _pos):
-     backtrack3 = farthest_pos3 = _pos
-     farthest_expr3 = 86
-     while True:
-          value7 = '=>'
-          end7 = (_pos + 2)
-          if (_text[_pos : end7] == value7):
-               _pos = (yield (3, _cont__ignored, end7,))[2]
-               _status = True
-               _result = value7
-          else:
-               _status = False
-               _result = 87
-          if _status:
-               break
-          value8 = '='
-          end8 = (_pos + 1)
-          if (_text[_pos : end8] == value8):
-               _pos = (yield (3, _cont__ignored, end8,))[2]
-               _status = True
-               _result = value8
-          else:
-               _status = False
-               _result = 88
-          if _status:
-               break
-          value9 = ':'
-          end9 = (_pos + 1)
-          if (_text[_pos : end9] == value9):
-               _pos = (yield (3, _cont__ignored, end9,))[2]
-               _status = True
-               _result = value9
-          else:
-               _status = False
-               _result = 89
-          if _status:
-               break
-          _pos = farthest_pos3
-          _result = 86
-          break
-     (yield (_status, _result, _pos,))
+def _parse_function_81(_text, _pos):
+    # <String value='ignore'>
+    value6 = 'ignore'
+    end6 = (_pos + 6)
+    if (_text[_pos : end6] == value6):
+        _pos = (yield (3, _cont__ignored, end6,))[2]
+        _status = True
+        _result = value6
+    else:
+        _status = False
+        _result = _generate_error_message81
+    # </String>
+    (yield (_status, _result, _pos,))
+
+
+def _parse_function_91(_text, _pos):
+    # <Choice>
+    backtrack3 = farthest_pos3 = _pos
+    farthest_err5 = 91
+    farthest_err6 = _generate_error_message91
+    while True:
+        # Option 1:
+        # <String value='=>'>
+        value7 = '=>'
+        end7 = (_pos + 2)
+        if (_text[_pos : end7] == value7):
+            _pos = (yield (3, _cont__ignored, end7,))[2]
+            _status = True
+            _result = value7
+        else:
+            _status = False
+            _result = _generate_error_message92
+        # </String>
+        if _status:
+            break
+        if (farthest_pos3 < _pos):
+            farthest_pos3 = _pos
+            farthest_err6 = _result
+        _pos = backtrack3
+        # Option 2:
+        # <String value='='>
+        value8 = '='
+        end8 = (_pos + 1)
+        if (_text[_pos : end8] == value8):
+            _pos = (yield (3, _cont__ignored, end8,))[2]
+            _status = True
+            _result = value8
+        else:
+            _status = False
+            _result = _generate_error_message93
+        # </String>
+        if _status:
+            break
+        if (farthest_pos3 < _pos):
+            farthest_pos3 = _pos
+            farthest_err6 = _result
+        _pos = backtrack3
+        # Option 3:
+        # <String value=':'>
+        value9 = ':'
+        end9 = (_pos + 1)
+        if (_text[_pos : end9] == value9):
+            _pos = (yield (3, _cont__ignored, end9,))[2]
+            _status = True
+            _result = value9
+        else:
+            _status = False
+            _result = _generate_error_message94
+        # </String>
+        if _status:
+            break
+        if (farthest_pos3 < _pos):
+            farthest_pos3 = _pos
+            farthest_err6 = _result
+        _pos = farthest_pos3
+        _result = farthest_err6
+        break
+    # </Choice>
+    (yield (_status, _result, _pos,))
 
 
 def _cont_RuleDef(_text, _pos):
-     while True:
-          backtrack4 = _pos
-          backtrack5 = farthest_pos4 = _pos
-          farthest_expr4 = 70
-          while True:
-               arg8 = _wrap_string_literal('ignored', _parse_function_73)
-               func4 = _ParseFunction(_cont_kw, (arg8,), ())
-               (_status, _result, _pos,) = (yield (3, func4, _pos,))
-               if _status:
-                    break
-               if (farthest_pos4 < _pos):
-                    farthest_pos4 = _pos
-                    farthest_expr4 = 71
-               _pos = backtrack5
-               arg9 = _wrap_string_literal('ignore', _parse_function_76)
-               func5 = _ParseFunction(_cont_kw, (arg9,), ())
-               (_status, _result, _pos,) = (yield (3, func5, _pos,))
-               if _status:
-                    break
-               if (farthest_pos4 < _pos):
-                    farthest_pos4 = _pos
-                    farthest_expr4 = 74
-               _pos = farthest_pos4
-               _result = 70
-               break
-          if (not _status):
-               _status = True
-               _pos = backtrack4
-               _result = None
-          if _status:
-               arg10 = _result
-               _result = bool
-               _status = True
-               if _status:
-                    _result = _result(arg10)
-          if (not _status):
-               break
-          is_ignored = _result
-          (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
-          if (not _status):
-               break
-          name = _result
-          while True:
-               backtrack6 = _pos
-               (_status, _result, _pos,) = (yield (3, _cont_Params, _pos,))
-               if (not _status):
-                    _status = True
-                    _pos = backtrack6
-                    _result = None
-               if (not _status):
-                    break
-               staging5 = _result
-               func6 = _ParseFunction(_cont_wrap, (_parse_function_86,), ())
-               (_status, _result, _pos,) = (yield (3, func6, _pos,))
-               if _status:
-                    _result = staging5
-               break
-          if (not _status):
-               break
-          params = _result
-          (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
-          if (not _status):
-               break
-          expr = _result
-          _result = RuleDef(is_ignored, name, params, expr)
-          break
-     (yield (_status, _result, _pos,))
+    # <Seq>
+    while True:
+        # <Apply>
+        # Opt(kw('ignored') | kw('ignore')) |> `bool`
+        # <Opt>
+        # Opt(kw('ignored') | kw('ignore'))
+        backtrack4 = _pos
+        # <Choice>
+        backtrack5 = farthest_pos4 = _pos
+        farthest_err7 = 75
+        farthest_err8 = _generate_error_message75
+        while True:
+            # Option 1:
+            # <Call>
+            # kw('ignored')
+            arg8 = _wrap_string_literal('ignored', _parse_function_78)
+            func4 = _ParseFunction(_cont_kw, (arg8,), ())
+            (_status, _result, _pos,) = (yield (3, func4, _pos,))
+            # </Call>
+            if _status:
+                break
+            if (farthest_pos4 < _pos):
+                farthest_pos4 = _pos
+                farthest_err8 = _result
+            _pos = backtrack5
+            # Option 2:
+            # <Call>
+            # kw('ignore')
+            arg9 = _wrap_string_literal('ignore', _parse_function_81)
+            func5 = _ParseFunction(_cont_kw, (arg9,), ())
+            (_status, _result, _pos,) = (yield (3, func5, _pos,))
+            # </Call>
+            if _status:
+                break
+            if (farthest_pos4 < _pos):
+                farthest_pos4 = _pos
+                farthest_err8 = _result
+            _pos = farthest_pos4
+            _result = farthest_err8
+            break
+        # </Choice>
+        if (not _status):
+            _status = True
+            _pos = backtrack4
+            _result = None
+        # </Opt>
+        arg10 = _result
+        _result = bool
+        _status = True
+        _result = _result(arg10)
+        # </Apply>
+        if (not _status):
+            break
+        is_ignored = _result
+        # <Ref name='Name'>
+        (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
+        # </Ref>
+        if (not _status):
+            break
+        name = _result
+        # <Discard>
+        # Opt(Params) << wrap('=>' | '=' | ':')
+        while True:
+            # <Opt>
+            # Opt(Params)
+            backtrack6 = _pos
+            # <Ref name='Params'>
+            (_status, _result, _pos,) = (yield (3, _cont_Params, _pos,))
+            # </Ref>
+            if (not _status):
+                _status = True
+                _pos = backtrack6
+                _result = None
+            # </Opt>
+            staging5 = _result
+            # <Call>
+            # wrap('=>' | '=' | ':')
+            func6 = _ParseFunction(_cont_wrap, (_parse_function_91,), ())
+            (_status, _result, _pos,) = (yield (3, func6, _pos,))
+            # </Call>
+            if _status:
+                _result = staging5
+            break
+        # </Discard>
+        if (not _status):
+            break
+        params = _result
+        # <Ref name='Expr'>
+        (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
+        # </Ref>
+        if (not _status):
+            break
+        expr = _result
+        _result = RuleDef(is_ignored, name, params, expr)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
+
+
+def _generate_error_message75(_text, _pos):
+    return
+
+
+def _generate_error_message78(_text, _pos):
+    return "Expected 'ignored'."
+
+
+def _generate_error_message81(_text, _pos):
+    return "Expected 'ignore'."
+
+
+def _generate_error_message91(_text, _pos):
+    return
+
+
+def _generate_error_message92(_text, _pos):
+    return "Expected '=>'."
+
+
+def _generate_error_message93(_text, _pos):
+    return "Expected '='."
+
+
+def _generate_error_message94(_text, _pos):
+    return "Expected ':'."
 
 
 class ClassDef(Node):
-     _fields = ('name', 'params', 'fields',)
-     def __init__(self, name, params, fields):
-          self.name = name
-          self.params = params
-          self.fields = fields
+    """
+    class ClassDef {
+        name: kw('class') >> Name
+        params: Opt(Params)
+        fields: (wrap('{') >> (RuleDef / Sep)) << '}'
+    }
+    """
+    _fields = ('name', 'params', 'fields',)
 
-     def __repr__(self):
-          return f'ClassDef(name={self.name!r}, params={self.params!r}, fields={self.fields!r})'
+    def __init__(self, name, params, fields):
+        self.name = name
+        self.params = params
+        self.fields = fields
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_ClassDef)
+    def __repr__(self):
+        return f'ClassDef(name={self.name!r}, params={self.params!r}, fields={self.fields!r})'
 
-
-
-def _parse_function_97(_text, _pos):
-     value10 = 'class'
-     end10 = (_pos + 5)
-     if (_text[_pos : end10] == value10):
-          _pos = (yield (3, _cont__ignored, end10,))[2]
-          _status = True
-          _result = value10
-     else:
-          _status = False
-          _result = 97
-     (yield (_status, _result, _pos,))
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_ClassDef)
 
 
-def _parse_function_107(_text, _pos):
-     value11 = '{'
-     end11 = (_pos + 1)
-     if (_text[_pos : end11] == value11):
-          _pos = (yield (3, _cont__ignored, end11,))[2]
-          _status = True
-          _result = value11
-     else:
-          _status = False
-          _result = 107
-     (yield (_status, _result, _pos,))
+
+def _parse_function_103(_text, _pos):
+    # <String value='class'>
+    value10 = 'class'
+    end10 = (_pos + 5)
+    if (_text[_pos : end10] == value10):
+        _pos = (yield (3, _cont__ignored, end10,))[2]
+        _status = True
+        _result = value10
+    else:
+        _status = False
+        _result = _generate_error_message103
+    # </String>
+    (yield (_status, _result, _pos,))
+
+
+def _parse_function_113(_text, _pos):
+    # <String value='{'>
+    value11 = '{'
+    end11 = (_pos + 1)
+    if (_text[_pos : end11] == value11):
+        _pos = (yield (3, _cont__ignored, end11,))[2]
+        _status = True
+        _result = value11
+    else:
+        _status = False
+        _result = _generate_error_message113
+    # </String>
+    (yield (_status, _result, _pos,))
 
 
 def _cont_ClassDef(_text, _pos):
-     while True:
-          while True:
-               arg11 = _wrap_string_literal('class', _parse_function_97)
-               func7 = _ParseFunction(_cont_kw, (arg11,), ())
-               (_status, _result, _pos,) = (yield (3, func7, _pos,))
-               if (not _status):
+    # <Seq>
+    while True:
+        # <Discard>
+        # kw('class') >> Name
+        while True:
+            # <Call>
+            # kw('class')
+            arg11 = _wrap_string_literal('class', _parse_function_103)
+            func7 = _ParseFunction(_cont_kw, (arg11,), ())
+            (_status, _result, _pos,) = (yield (3, func7, _pos,))
+            # </Call>
+            if (not _status):
+                break
+            # <Ref name='Name'>
+            (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
+            # </Ref>
+            break
+        # </Discard>
+        if (not _status):
+            break
+        name = _result
+        # <Opt>
+        # Opt(Params)
+        backtrack7 = _pos
+        # <Ref name='Params'>
+        (_status, _result, _pos,) = (yield (3, _cont_Params, _pos,))
+        # </Ref>
+        if (not _status):
+            _status = True
+            _pos = backtrack7
+            _result = None
+        # </Opt>
+        params = _result
+        # <Discard>
+        # (wrap('{') >> (RuleDef / Sep)) << '}'
+        while True:
+            # <Discard>
+            # wrap('{') >> (RuleDef / Sep)
+            while True:
+                # <Call>
+                # wrap('{')
+                arg12 = _wrap_string_literal('{', _parse_function_113)
+                func8 = _ParseFunction(_cont_wrap, (arg12,), ())
+                (_status, _result, _pos,) = (yield (3, func8, _pos,))
+                # </Call>
+                if (not _status):
                     break
-               (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
-               break
-          if (not _status):
-               break
-          name = _result
-          backtrack7 = _pos
-          (_status, _result, _pos,) = (yield (3, _cont_Params, _pos,))
-          if (not _status):
-               _status = True
-               _pos = backtrack7
-               _result = None
-          if (not _status):
-               break
-          params = _result
-          while True:
-               while True:
-                    arg12 = _wrap_string_literal('{', _parse_function_107)
-                    func8 = _ParseFunction(_cont_wrap, (arg12,), ())
-                    (_status, _result, _pos,) = (yield (3, func8, _pos,))
+                # <Alt>
+                # RuleDef / Sep
+                staging6 = []
+                checkpoint5 = _pos
+                while True:
+                    # <Ref name='RuleDef'>
+                    (_status, _result, _pos,) = (yield (3, _cont_RuleDef, _pos,))
+                    # </Ref>
                     if (not _status):
-                         break
-                    staging6 = []
+                        break
+                    staging6.append(_result)
                     checkpoint5 = _pos
-                    while True:
-                         (_status, _result, _pos,) = (yield (3, _cont_RuleDef, _pos,))
-                         if (not _status):
-                              break
-                         staging6.append(_result)
-                         checkpoint5 = _pos
-                         (_status, _result, _pos,) = (yield (3, _cont_Sep, _pos,))
-                         if (not _status):
-                              break
-                         checkpoint5 = _pos
-                    _result = staging6
-                    _status = True
-                    _pos = checkpoint5
-                    break
-               if (not _status):
-                    break
-               staging7 = _result
-               value12 = '}'
-               end12 = (_pos + 1)
-               if (_text[_pos : end12] == value12):
-                    _pos = (yield (3, _cont__ignored, end12,))[2]
-                    _status = True
-                    _result = value12
-               else:
-                    _status = False
-                    _result = 111
-               if _status:
-                    _result = staging7
-               break
-          if (not _status):
-               break
-          fields = _result
-          _result = ClassDef(name, params, fields)
-          break
-     (yield (_status, _result, _pos,))
+                    # <Ref name='Sep'>
+                    (_status, _result, _pos,) = (yield (3, _cont_Sep, _pos,))
+                    # </Ref>
+                    if (not _status):
+                        break
+                    checkpoint5 = _pos
+                _result = staging6
+                _status = True
+                _pos = checkpoint5
+                # </Alt>
+                break
+            # </Discard>
+            if (not _status):
+                break
+            staging7 = _result
+            # <String value='}'>
+            value12 = '}'
+            end12 = (_pos + 1)
+            if (_text[_pos : end12] == value12):
+                _pos = (yield (3, _cont__ignored, end12,))[2]
+                _status = True
+                _result = value12
+            else:
+                _status = False
+                _result = _generate_error_message117
+            # </String>
+            if _status:
+                _result = staging7
+            break
+        # </Discard>
+        if (not _status):
+            break
+        fields = _result
+        _result = ClassDef(name, params, fields)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
+
+
+def _generate_error_message103(_text, _pos):
+    return "Expected 'class'."
+
+
+def _generate_error_message113(_text, _pos):
+    return "Expected '{'."
+
+
+def _generate_error_message117(_text, _pos):
+    return "Expected '}'."
 
 
 def _cont_Stmt(_text, _pos):
-     backtrack8 = farthest_pos5 = _pos
-     farthest_expr5 = 113
-     while True:
-          (_status, _result, _pos,) = (yield (3, _cont_ClassDef, _pos,))
-          if _status:
-               break
-          if (farthest_pos5 < _pos):
-               farthest_pos5 = _pos
-               farthest_expr5 = 114
-          _pos = backtrack8
-          (_status, _result, _pos,) = (yield (3, _cont_RuleDef, _pos,))
-          if _status:
-               break
-          if (farthest_pos5 < _pos):
-               farthest_pos5 = _pos
-               farthest_expr5 = 115
-          _pos = backtrack8
-          (_status, _result, _pos,) = (yield (3, _cont_PythonSection, _pos,))
-          if _status:
-               break
-          if (farthest_pos5 < _pos):
-               farthest_pos5 = _pos
-               farthest_expr5 = 116
-          _pos = backtrack8
-          (_status, _result, _pos,) = (yield (3, _cont_PythonExpression, _pos,))
-          if _status:
-               break
-          if (farthest_pos5 < _pos):
-               farthest_pos5 = _pos
-               farthest_expr5 = 117
-          _pos = farthest_pos5
-          _result = 113
-          break
-     (yield (_status, _result, _pos,))
+    # Rule 'Stmt'
+    # <Choice>
+    backtrack8 = farthest_pos5 = _pos
+    farthest_err9 = 119
+    farthest_err10 = _generate_error_message119
+    while True:
+        # Option 1:
+        # <Ref name='ClassDef'>
+        (_status, _result, _pos,) = (yield (3, _cont_ClassDef, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos5 < _pos):
+            farthest_pos5 = _pos
+            farthest_err10 = _result
+        _pos = backtrack8
+        # Option 2:
+        # <Ref name='RuleDef'>
+        (_status, _result, _pos,) = (yield (3, _cont_RuleDef, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos5 < _pos):
+            farthest_pos5 = _pos
+            farthest_err10 = _result
+        _pos = backtrack8
+        # Option 3:
+        # <Ref name='PythonSection'>
+        (_status, _result, _pos,) = (yield (3, _cont_PythonSection, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos5 < _pos):
+            farthest_pos5 = _pos
+            farthest_err10 = _result
+        _pos = backtrack8
+        # Option 4:
+        # <Ref name='PythonExpression'>
+        (_status, _result, _pos,) = (yield (3, _cont_PythonExpression, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos5 < _pos):
+            farthest_pos5 = _pos
+            farthest_err10 = _result
+        _pos = farthest_pos5
+        _result = farthest_err10
+        break
+    # </Choice>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_Stmt(text, pos=0):
-     return _run(text, pos, _cont_Stmt)
+    return _run(text, pos, _cont_Stmt)
 
 
-Stmt = Rule('Stmt', _parse_Stmt)
+Stmt = Rule('Stmt', _parse_Stmt, """
+    Stmt = ClassDef | RuleDef | PythonSection | PythonExpression
+""")
+
+def _generate_error_message119(_text, _pos):
+    return
+
 
 class LetExpression(Node):
-     _fields = ('name', 'expr', 'body',)
-     def __init__(self, name, expr, body):
-          self.name = name
-          self.expr = expr
-          self.body = body
+    """
+    class LetExpression {
+        name: (kw('let') >> Name) << wrap('=')
+        expr: Expr << wrap(kw('in'))
+        body: Expr
+    }
+    """
+    _fields = ('name', 'expr', 'body',)
 
-     def __repr__(self):
-          return f'LetExpression(name={self.name!r}, expr={self.expr!r}, body={self.body!r})'
+    def __init__(self, name, expr, body):
+        self.name = name
+        self.expr = expr
+        self.body = body
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_LetExpression)
+    def __repr__(self):
+        return f'LetExpression(name={self.name!r}, expr={self.expr!r}, body={self.body!r})'
 
-
-
-def _parse_function_124(_text, _pos):
-     value13 = 'let'
-     end13 = (_pos + 3)
-     if (_text[_pos : end13] == value13):
-          _pos = (yield (3, _cont__ignored, end13,))[2]
-          _status = True
-          _result = value13
-     else:
-          _status = False
-          _result = 124
-     (yield (_status, _result, _pos,))
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_LetExpression)
 
 
-def _parse_function_128(_text, _pos):
-     value14 = '='
-     end14 = (_pos + 1)
-     if (_text[_pos : end14] == value14):
-          _pos = (yield (3, _cont__ignored, end14,))[2]
-          _status = True
-          _result = value14
-     else:
-          _status = False
-          _result = 128
-     (yield (_status, _result, _pos,))
+
+def _parse_function_131(_text, _pos):
+    # <String value='let'>
+    value13 = 'let'
+    end13 = (_pos + 3)
+    if (_text[_pos : end13] == value13):
+        _pos = (yield (3, _cont__ignored, end13,))[2]
+        _status = True
+        _result = value13
+    else:
+        _status = False
+        _result = _generate_error_message131
+    # </String>
+    (yield (_status, _result, _pos,))
 
 
-def _parse_function_136(_text, _pos):
-     value15 = 'in'
-     end15 = (_pos + 2)
-     if (_text[_pos : end15] == value15):
-          _pos = (yield (3, _cont__ignored, end15,))[2]
-          _status = True
-          _result = value15
-     else:
-          _status = False
-          _result = 136
-     (yield (_status, _result, _pos,))
+def _parse_function_135(_text, _pos):
+    # <String value='='>
+    value14 = '='
+    end14 = (_pos + 1)
+    if (_text[_pos : end14] == value14):
+        _pos = (yield (3, _cont__ignored, end14,))[2]
+        _status = True
+        _result = value14
+    else:
+        _status = False
+        _result = _generate_error_message135
+    # </String>
+    (yield (_status, _result, _pos,))
 
 
-def _parse_function_134(_text, _pos):
-     arg13 = _wrap_string_literal('in', _parse_function_136)
-     func9 = _ParseFunction(_cont_kw, (arg13,), ())
-     (_status, _result, _pos,) = (yield (3, func9, _pos,))
-     (yield (_status, _result, _pos,))
+def _parse_function_143(_text, _pos):
+    # <String value='in'>
+    value15 = 'in'
+    end15 = (_pos + 2)
+    if (_text[_pos : end15] == value15):
+        _pos = (yield (3, _cont__ignored, end15,))[2]
+        _status = True
+        _result = value15
+    else:
+        _status = False
+        _result = _generate_error_message143
+    # </String>
+    (yield (_status, _result, _pos,))
+
+
+def _parse_function_141(_text, _pos):
+    # <Call>
+    # kw('in')
+    arg13 = _wrap_string_literal('in', _parse_function_143)
+    func9 = _ParseFunction(_cont_kw, (arg13,), ())
+    (_status, _result, _pos,) = (yield (3, func9, _pos,))
+    # </Call>
+    (yield (_status, _result, _pos,))
 
 
 def _cont_LetExpression(_text, _pos):
-     while True:
-          while True:
-               while True:
-                    arg14 = _wrap_string_literal('let', _parse_function_124)
-                    func10 = _ParseFunction(_cont_kw, (arg14,), ())
-                    (_status, _result, _pos,) = (yield (3, func10, _pos,))
-                    if (not _status):
-                         break
-                    (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
+    # <Seq>
+    while True:
+        # <Discard>
+        # (kw('let') >> Name) << wrap('=')
+        while True:
+            # <Discard>
+            # kw('let') >> Name
+            while True:
+                # <Call>
+                # kw('let')
+                arg14 = _wrap_string_literal('let', _parse_function_131)
+                func10 = _ParseFunction(_cont_kw, (arg14,), ())
+                (_status, _result, _pos,) = (yield (3, func10, _pos,))
+                # </Call>
+                if (not _status):
                     break
-               if (not _status):
-                    break
-               staging8 = _result
-               arg15 = _wrap_string_literal('=', _parse_function_128)
-               func11 = _ParseFunction(_cont_wrap, (arg15,), ())
-               (_status, _result, _pos,) = (yield (3, func11, _pos,))
-               if _status:
-                    _result = staging8
-               break
-          if (not _status):
-               break
-          name = _result
-          while True:
-               (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
-               if (not _status):
-                    break
-               staging9 = _result
-               func12 = _ParseFunction(_cont_wrap, (_parse_function_134,), ())
-               (_status, _result, _pos,) = (yield (3, func12, _pos,))
-               if _status:
-                    _result = staging9
-               break
-          if (not _status):
-               break
-          expr = _result
-          (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
-          if (not _status):
-               break
-          body = _result
-          _result = LetExpression(name, expr, body)
-          break
-     (yield (_status, _result, _pos,))
+                # <Ref name='Name'>
+                (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
+                # </Ref>
+                break
+            # </Discard>
+            if (not _status):
+                break
+            staging8 = _result
+            # <Call>
+            # wrap('=')
+            arg15 = _wrap_string_literal('=', _parse_function_135)
+            func11 = _ParseFunction(_cont_wrap, (arg15,), ())
+            (_status, _result, _pos,) = (yield (3, func11, _pos,))
+            # </Call>
+            if _status:
+                _result = staging8
+            break
+        # </Discard>
+        if (not _status):
+            break
+        name = _result
+        # <Discard>
+        # Expr << wrap(kw('in'))
+        while True:
+            # <Ref name='Expr'>
+            (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
+            # </Ref>
+            if (not _status):
+                break
+            staging9 = _result
+            # <Call>
+            # wrap(kw('in'))
+            func12 = _ParseFunction(_cont_wrap, (_parse_function_141,), ())
+            (_status, _result, _pos,) = (yield (3, func12, _pos,))
+            # </Call>
+            if _status:
+                _result = staging9
+            break
+        # </Discard>
+        if (not _status):
+            break
+        expr = _result
+        # <Ref name='Expr'>
+        (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
+        # </Ref>
+        if (not _status):
+            break
+        body = _result
+        _result = LetExpression(name, expr, body)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
+
+
+def _generate_error_message131(_text, _pos):
+    return "Expected 'let'."
+
+
+def _generate_error_message135(_text, _pos):
+    return "Expected '='."
+
+
+def _generate_error_message143(_text, _pos):
+    return "Expected 'in'."
 
 
 class Ref(Node):
-     _fields = ('value',)
-     def __init__(self, value):
-          self.value = value
+    """
+    class Ref {
+        value: Name
+    }
+    """
+    _fields = ('value',)
 
-     def __repr__(self):
-          return f'Ref(value={self.value!r})'
+    def __init__(self, value):
+        self.value = value
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_Ref)
+    def __repr__(self):
+        return f'Ref(value={self.value!r})'
+
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_Ref)
 
 
 
 def _cont_Ref(_text, _pos):
-     while True:
-          (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
-          if (not _status):
-               break
-          value = _result
-          _result = Ref(value)
-          break
-     (yield (_status, _result, _pos,))
+    # <Seq>
+    while True:
+        # <Ref name='Name'>
+        (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
+        # </Ref>
+        if (not _status):
+            break
+        value = _result
+        _result = Ref(value)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
 
 
 class ListLiteral(Node):
-     _fields = ('elements',)
-     def __init__(self, elements):
-          self.elements = elements
+    """
+    class ListLiteral {
+        elements: ('[' >> (wrap(Expr) / Comma)) << ']'
+    }
+    """
+    _fields = ('elements',)
 
-     def __repr__(self):
-          return f'ListLiteral(elements={self.elements!r})'
+    def __init__(self, elements):
+        self.elements = elements
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_ListLiteral)
+    def __repr__(self):
+        return f'ListLiteral(elements={self.elements!r})'
+
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_ListLiteral)
 
 
 
 def _cont_ListLiteral(_text, _pos):
-     while True:
-          while True:
-               while True:
-                    value16 = '['
-                    end16 = (_pos + 1)
-                    if (_text[_pos : end16] == value16):
-                         _pos = (yield (3, _cont__ignored, end16,))[2]
-                         _status = True
-                         _result = value16
-                    else:
-                         _status = False
-                         _result = 146
-                    if (not _status):
-                         break
-                    staging10 = []
-                    checkpoint6 = _pos
-                    while True:
-                         func13 = _ParseFunction(_cont_wrap, (_cont_Expr,), ())
-                         (_status, _result, _pos,) = (yield (3, func13, _pos,))
-                         if (not _status):
-                              break
-                         staging10.append(_result)
-                         checkpoint6 = _pos
-                         (_status, _result, _pos,) = (yield (3, _cont_Comma, _pos,))
-                         if (not _status):
-                              break
-                         checkpoint6 = _pos
-                    _result = staging10
+    # <Seq>
+    while True:
+        # <Discard>
+        # ('[' >> (wrap(Expr) / Comma)) << ']'
+        while True:
+            # <Discard>
+            # '[' >> (wrap(Expr) / Comma)
+            while True:
+                # <String value='['>
+                value16 = '['
+                end16 = (_pos + 1)
+                if (_text[_pos : end16] == value16):
+                    _pos = (yield (3, _cont__ignored, end16,))[2]
                     _status = True
-                    _pos = checkpoint6
-                    break
-               if (not _status):
-                    break
-               staging11 = _result
-               value17 = ']'
-               end17 = (_pos + 1)
-               if (_text[_pos : end17] == value17):
-                    _pos = (yield (3, _cont__ignored, end17,))[2]
-                    _status = True
-                    _result = value17
-               else:
+                    _result = value16
+                else:
                     _status = False
-                    _result = 152
-               if _status:
-                    _result = staging11
-               break
-          if (not _status):
-               break
-          elements = _result
-          _result = ListLiteral(elements)
-          break
-     (yield (_status, _result, _pos,))
+                    _result = _generate_error_message155
+                # </String>
+                if (not _status):
+                    break
+                # <Alt>
+                # wrap(Expr) / Comma
+                staging10 = []
+                checkpoint6 = _pos
+                while True:
+                    # <Call>
+                    # wrap(Expr)
+                    func13 = _ParseFunction(_cont_wrap, (_cont_Expr,), ())
+                    (_status, _result, _pos,) = (yield (3, func13, _pos,))
+                    # </Call>
+                    if (not _status):
+                        break
+                    staging10.append(_result)
+                    checkpoint6 = _pos
+                    # <Ref name='Comma'>
+                    (_status, _result, _pos,) = (yield (3, _cont_Comma, _pos,))
+                    # </Ref>
+                    if (not _status):
+                        break
+                    checkpoint6 = _pos
+                _result = staging10
+                _status = True
+                _pos = checkpoint6
+                # </Alt>
+                break
+            # </Discard>
+            if (not _status):
+                break
+            staging11 = _result
+            # <String value=']'>
+            value17 = ']'
+            end17 = (_pos + 1)
+            if (_text[_pos : end17] == value17):
+                _pos = (yield (3, _cont__ignored, end17,))[2]
+                _status = True
+                _result = value17
+            else:
+                _status = False
+                _result = _generate_error_message161
+            # </String>
+            if _status:
+                _result = staging11
+            break
+        # </Discard>
+        if (not _status):
+            break
+        elements = _result
+        _result = ListLiteral(elements)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
+
+
+def _generate_error_message155(_text, _pos):
+    return "Expected '['."
+
+
+def _generate_error_message161(_text, _pos):
+    return "Expected ']'."
 
 
 def _cont_Atom(_text, _pos):
-     backtrack9 = farthest_pos6 = _pos
-     farthest_expr6 = 154
-     while True:
-          while True:
-               while True:
-                    value18 = '('
-                    end18 = (_pos + 1)
-                    if (_text[_pos : end18] == value18):
-                         _pos = (yield (3, _cont__ignored, end18,))[2]
-                         _status = True
-                         _result = value18
-                    else:
-                         _status = False
-                         _result = 157
-                    if (not _status):
-                         break
-                    func14 = _ParseFunction(_cont_wrap, (_cont_Expr,), ())
-                    (_status, _result, _pos,) = (yield (3, func14, _pos,))
-                    break
-               if (not _status):
-                    break
-               staging12 = _result
-               value19 = ')'
-               end19 = (_pos + 1)
-               if (_text[_pos : end19] == value19):
-                    _pos = (yield (3, _cont__ignored, end19,))[2]
+    # Rule 'Atom'
+    # <Choice>
+    backtrack9 = farthest_pos6 = _pos
+    farthest_err11 = 163
+    farthest_err12 = _generate_error_message163
+    while True:
+        # Option 1:
+        # <Discard>
+        # ('(' >> wrap(Expr)) << ')'
+        while True:
+            # <Discard>
+            # '(' >> wrap(Expr)
+            while True:
+                # <String value='('>
+                value18 = '('
+                end18 = (_pos + 1)
+                if (_text[_pos : end18] == value18):
+                    _pos = (yield (3, _cont__ignored, end18,))[2]
                     _status = True
-                    _result = value19
-               else:
+                    _result = value18
+                else:
                     _status = False
-                    _result = 161
-               if _status:
-                    _result = staging12
-               break
-          if _status:
-               break
-          if (farthest_pos6 < _pos):
-               farthest_pos6 = _pos
-               farthest_expr6 = 155
-          _pos = backtrack9
-          (_status, _result, _pos,) = (yield (3, _cont_LetExpression, _pos,))
-          if _status:
-               break
-          if (farthest_pos6 < _pos):
-               farthest_pos6 = _pos
-               farthest_expr6 = 162
-          _pos = backtrack9
-          (_status, _result, _pos,) = (yield (3, _cont_Ref, _pos,))
-          if _status:
-               break
-          if (farthest_pos6 < _pos):
-               farthest_pos6 = _pos
-               farthest_expr6 = 163
-          _pos = backtrack9
-          (_status, _result, _pos,) = (yield (3, _cont_StringLiteral, _pos,))
-          if _status:
-               break
-          if (farthest_pos6 < _pos):
-               farthest_pos6 = _pos
-               farthest_expr6 = 164
-          _pos = backtrack9
-          (_status, _result, _pos,) = (yield (3, _cont_RegexLiteral, _pos,))
-          if _status:
-               break
-          if (farthest_pos6 < _pos):
-               farthest_pos6 = _pos
-               farthest_expr6 = 165
-          _pos = backtrack9
-          (_status, _result, _pos,) = (yield (3, _cont_ListLiteral, _pos,))
-          if _status:
-               break
-          if (farthest_pos6 < _pos):
-               farthest_pos6 = _pos
-               farthest_expr6 = 166
-          _pos = backtrack9
-          (_status, _result, _pos,) = (yield (3, _cont_PythonExpression, _pos,))
-          if _status:
-               break
-          if (farthest_pos6 < _pos):
-               farthest_pos6 = _pos
-               farthest_expr6 = 167
-          _pos = farthest_pos6
-          _result = 154
-          break
-     (yield (_status, _result, _pos,))
+                    _result = _generate_error_message166
+                # </String>
+                if (not _status):
+                    break
+                # <Call>
+                # wrap(Expr)
+                func14 = _ParseFunction(_cont_wrap, (_cont_Expr,), ())
+                (_status, _result, _pos,) = (yield (3, func14, _pos,))
+                # </Call>
+                break
+            # </Discard>
+            if (not _status):
+                break
+            staging12 = _result
+            # <String value=')'>
+            value19 = ')'
+            end19 = (_pos + 1)
+            if (_text[_pos : end19] == value19):
+                _pos = (yield (3, _cont__ignored, end19,))[2]
+                _status = True
+                _result = value19
+            else:
+                _status = False
+                _result = _generate_error_message170
+            # </String>
+            if _status:
+                _result = staging12
+            break
+        # </Discard>
+        if _status:
+            break
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = backtrack9
+        # Option 2:
+        # <Ref name='LetExpression'>
+        (_status, _result, _pos,) = (yield (3, _cont_LetExpression, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = backtrack9
+        # Option 3:
+        # <Ref name='Ref'>
+        (_status, _result, _pos,) = (yield (3, _cont_Ref, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = backtrack9
+        # Option 4:
+        # <Ref name='StringLiteral'>
+        (_status, _result, _pos,) = (yield (3, _cont_StringLiteral, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = backtrack9
+        # Option 5:
+        # <Ref name='RegexLiteral'>
+        (_status, _result, _pos,) = (yield (3, _cont_RegexLiteral, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = backtrack9
+        # Option 6:
+        # <Ref name='ListLiteral'>
+        (_status, _result, _pos,) = (yield (3, _cont_ListLiteral, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = backtrack9
+        # Option 7:
+        # <Ref name='PythonExpression'>
+        (_status, _result, _pos,) = (yield (3, _cont_PythonExpression, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = farthest_pos6
+        _result = farthest_err12
+        break
+    # </Choice>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_Atom(text, pos=0):
-     return _run(text, pos, _cont_Atom)
+    return _run(text, pos, _cont_Atom)
 
 
-Atom = Rule('Atom', _parse_Atom)
+Atom = Rule('Atom', _parse_Atom, """
+    Atom = ('(' >> wrap(Expr)) << ')' | LetExpression | Ref | StringLiteral | RegexLiteral | ListLiteral | PythonExpression
+""")
+
+def _generate_error_message163(_text, _pos):
+    return
+
+
+def _generate_error_message166(_text, _pos):
+    return "Expected '('."
+
+
+def _generate_error_message170(_text, _pos):
+    return "Expected ')'."
+
 
 class KeywordArg(Node):
-     _fields = ('name', 'expr',)
-     def __init__(self, name, expr):
-          self.name = name
-          self.expr = expr
+    """
+    class KeywordArg {
+        name: Name << ('=' | ':')
+        expr: Expr
+    }
+    """
+    _fields = ('name', 'expr',)
 
-     def __repr__(self):
-          return f'KeywordArg(name={self.name!r}, expr={self.expr!r})'
+    def __init__(self, name, expr):
+        self.name = name
+        self.expr = expr
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_KeywordArg)
+    def __repr__(self):
+        return f'KeywordArg(name={self.name!r}, expr={self.expr!r})'
+
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_KeywordArg)
 
 
 
 def _cont_KeywordArg(_text, _pos):
-     while True:
-          while True:
-               (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
-               if (not _status):
+    # <Seq>
+    while True:
+        # <Discard>
+        # Name << ('=' | ':')
+        while True:
+            # <Ref name='Name'>
+            (_status, _result, _pos,) = (yield (3, _cont_Name, _pos,))
+            # </Ref>
+            if (not _status):
+                break
+            staging13 = _result
+            # <Choice>
+            backtrack10 = farthest_pos7 = _pos
+            farthest_err13 = 182
+            farthest_err14 = _generate_error_message182
+            while True:
+                # Option 1:
+                # <String value='='>
+                value20 = '='
+                end20 = (_pos + 1)
+                if (_text[_pos : end20] == value20):
+                    _pos = (yield (3, _cont__ignored, end20,))[2]
+                    _status = True
+                    _result = value20
+                else:
+                    _status = False
+                    _result = _generate_error_message183
+                # </String>
+                if _status:
                     break
-               staging13 = _result
-               backtrack10 = farthest_pos7 = _pos
-               farthest_expr7 = 172
-               while True:
-                    value20 = '='
-                    end20 = (_pos + 1)
-                    if (_text[_pos : end20] == value20):
-                         _pos = (yield (3, _cont__ignored, end20,))[2]
-                         _status = True
-                         _result = value20
-                    else:
-                         _status = False
-                         _result = 173
-                    if _status:
-                         break
-                    value21 = ':'
-                    end21 = (_pos + 1)
-                    if (_text[_pos : end21] == value21):
-                         _pos = (yield (3, _cont__ignored, end21,))[2]
-                         _status = True
-                         _result = value21
-                    else:
-                         _status = False
-                         _result = 174
-                    if _status:
-                         break
-                    _pos = farthest_pos7
-                    _result = 172
+                if (farthest_pos7 < _pos):
+                    farthest_pos7 = _pos
+                    farthest_err14 = _result
+                _pos = backtrack10
+                # Option 2:
+                # <String value=':'>
+                value21 = ':'
+                end21 = (_pos + 1)
+                if (_text[_pos : end21] == value21):
+                    _pos = (yield (3, _cont__ignored, end21,))[2]
+                    _status = True
+                    _result = value21
+                else:
+                    _status = False
+                    _result = _generate_error_message184
+                # </String>
+                if _status:
                     break
-               if _status:
-                    _result = staging13
-               break
-          if (not _status):
-               break
-          name = _result
-          (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
-          if (not _status):
-               break
-          expr = _result
-          _result = KeywordArg(name, expr)
-          break
-     (yield (_status, _result, _pos,))
+                if (farthest_pos7 < _pos):
+                    farthest_pos7 = _pos
+                    farthest_err14 = _result
+                _pos = farthest_pos7
+                _result = farthest_err14
+                break
+            # </Choice>
+            if _status:
+                _result = staging13
+            break
+        # </Discard>
+        if (not _status):
+            break
+        name = _result
+        # <Ref name='Expr'>
+        (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
+        # </Ref>
+        if (not _status):
+            break
+        expr = _result
+        _result = KeywordArg(name, expr)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
+
+
+def _generate_error_message182(_text, _pos):
+    return
+
+
+def _generate_error_message183(_text, _pos):
+    return "Expected '='."
+
+
+def _generate_error_message184(_text, _pos):
+    return "Expected ':'."
 
 
 class ArgList(Node):
-     _fields = ('args',)
-     def __init__(self, args):
-          self.args = args
+    """
+    class ArgList {
+        args: ('(' >> (wrap(KeywordArg | Expr) / Comma)) << ')'
+    }
+    """
+    _fields = ('args',)
 
-     def __repr__(self):
-          return f'ArgList(args={self.args!r})'
+    def __init__(self, args):
+        self.args = args
+        self._parse_info = None
 
-     @staticmethod
-     def parse(text, pos=0):
-          return _run(text, pos, _cont_ArgList)
+    def __repr__(self):
+        return f'ArgList(args={self.args!r})'
+
+    @staticmethod
+    def parse(text, pos=0):
+        return _run(text, pos, _cont_ArgList)
 
 
 
-def _parse_function_185(_text, _pos):
-     backtrack11 = farthest_pos8 = _pos
-     farthest_expr8 = 185
-     while True:
-          (_status, _result, _pos,) = (yield (3, _cont_KeywordArg, _pos,))
-          if _status:
-               break
-          if (farthest_pos8 < _pos):
-               farthest_pos8 = _pos
-               farthest_expr8 = 186
-          _pos = backtrack11
-          (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
-          if _status:
-               break
-          if (farthest_pos8 < _pos):
-               farthest_pos8 = _pos
-               farthest_expr8 = 187
-          _pos = farthest_pos8
-          _result = 185
-          break
-     (yield (_status, _result, _pos,))
+def _parse_function_196(_text, _pos):
+    # <Choice>
+    backtrack11 = farthest_pos8 = _pos
+    farthest_err15 = 196
+    farthest_err16 = _generate_error_message196
+    while True:
+        # Option 1:
+        # <Ref name='KeywordArg'>
+        (_status, _result, _pos,) = (yield (3, _cont_KeywordArg, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos8 < _pos):
+            farthest_pos8 = _pos
+            farthest_err16 = _result
+        _pos = backtrack11
+        # Option 2:
+        # <Ref name='Expr'>
+        (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos8 < _pos):
+            farthest_pos8 = _pos
+            farthest_err16 = _result
+        _pos = farthest_pos8
+        _result = farthest_err16
+        break
+    # </Choice>
+    (yield (_status, _result, _pos,))
 
 
 def _cont_ArgList(_text, _pos):
-     while True:
-          while True:
-               while True:
-                    value22 = '('
-                    end22 = (_pos + 1)
-                    if (_text[_pos : end22] == value22):
-                         _pos = (yield (3, _cont__ignored, end22,))[2]
-                         _status = True
-                         _result = value22
-                    else:
-                         _status = False
-                         _result = 181
-                    if (not _status):
-                         break
-                    staging14 = []
-                    checkpoint7 = _pos
-                    while True:
-                         func15 = _ParseFunction(_cont_wrap, (_parse_function_185,), ())
-                         (_status, _result, _pos,) = (yield (3, func15, _pos,))
-                         if (not _status):
-                              break
-                         staging14.append(_result)
-                         checkpoint7 = _pos
-                         (_status, _result, _pos,) = (yield (3, _cont_Comma, _pos,))
-                         if (not _status):
-                              break
-                         checkpoint7 = _pos
-                    _result = staging14
+    # <Seq>
+    while True:
+        # <Discard>
+        # ('(' >> (wrap(KeywordArg | Expr) / Comma)) << ')'
+        while True:
+            # <Discard>
+            # '(' >> (wrap(KeywordArg | Expr) / Comma)
+            while True:
+                # <String value='('>
+                value22 = '('
+                end22 = (_pos + 1)
+                if (_text[_pos : end22] == value22):
+                    _pos = (yield (3, _cont__ignored, end22,))[2]
                     _status = True
-                    _pos = checkpoint7
-                    break
-               if (not _status):
-                    break
-               staging15 = _result
-               value23 = ')'
-               end23 = (_pos + 1)
-               if (_text[_pos : end23] == value23):
-                    _pos = (yield (3, _cont__ignored, end23,))[2]
-                    _status = True
-                    _result = value23
-               else:
+                    _result = value22
+                else:
                     _status = False
-                    _result = 189
-               if _status:
-                    _result = staging15
-               break
-          if (not _status):
-               break
-          args = _result
-          _result = ArgList(args)
-          break
-     (yield (_status, _result, _pos,))
+                    _result = _generate_error_message192
+                # </String>
+                if (not _status):
+                    break
+                # <Alt>
+                # wrap(KeywordArg | Expr) / Comma
+                staging14 = []
+                checkpoint7 = _pos
+                while True:
+                    # <Call>
+                    # wrap(KeywordArg | Expr)
+                    func15 = _ParseFunction(_cont_wrap, (_parse_function_196,), ())
+                    (_status, _result, _pos,) = (yield (3, func15, _pos,))
+                    # </Call>
+                    if (not _status):
+                        break
+                    staging14.append(_result)
+                    checkpoint7 = _pos
+                    # <Ref name='Comma'>
+                    (_status, _result, _pos,) = (yield (3, _cont_Comma, _pos,))
+                    # </Ref>
+                    if (not _status):
+                        break
+                    checkpoint7 = _pos
+                _result = staging14
+                _status = True
+                _pos = checkpoint7
+                # </Alt>
+                break
+            # </Discard>
+            if (not _status):
+                break
+            staging15 = _result
+            # <String value=')'>
+            value23 = ')'
+            end23 = (_pos + 1)
+            if (_text[_pos : end23] == value23):
+                _pos = (yield (3, _cont__ignored, end23,))[2]
+                _status = True
+                _result = value23
+            else:
+                _status = False
+                _result = _generate_error_message200
+            # </String>
+            if _status:
+                _result = staging15
+            break
+        # </Discard>
+        if (not _status):
+            break
+        args = _result
+        _result = ArgList(args)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
 
 
-def _parse_function_203(_text, _pos):
-     backtrack12 = farthest_pos9 = _pos
-     farthest_expr9 = 203
-     while True:
-          value24 = '//'
-          end24 = (_pos + 2)
-          if (_text[_pos : end24] == value24):
-               _pos = (yield (3, _cont__ignored, end24,))[2]
-               _status = True
-               _result = value24
-          else:
-               _status = False
-               _result = 204
-          if _status:
-               break
-          value25 = '/'
-          end25 = (_pos + 1)
-          if (_text[_pos : end25] == value25):
-               _pos = (yield (3, _cont__ignored, end25,))[2]
-               _status = True
-               _result = value25
-          else:
-               _status = False
-               _result = 205
-          if _status:
-               break
-          _pos = farthest_pos9
-          _result = 203
-          break
-     (yield (_status, _result, _pos,))
+def _generate_error_message192(_text, _pos):
+    return "Expected '('."
 
 
-def _parse_function_209(_text, _pos):
-     backtrack13 = farthest_pos10 = _pos
-     farthest_expr10 = 209
-     while True:
-          value26 = '<<'
-          end26 = (_pos + 2)
-          if (_text[_pos : end26] == value26):
-               _pos = (yield (3, _cont__ignored, end26,))[2]
-               _status = True
-               _result = value26
-          else:
-               _status = False
-               _result = 210
-          if _status:
-               break
-          value27 = '>>'
-          end27 = (_pos + 2)
-          if (_text[_pos : end27] == value27):
-               _pos = (yield (3, _cont__ignored, end27,))[2]
-               _status = True
-               _result = value27
-          else:
-               _status = False
-               _result = 211
-          if _status:
-               break
-          _pos = farthest_pos10
-          _result = 209
-          break
-     (yield (_status, _result, _pos,))
+def _generate_error_message196(_text, _pos):
+    return
 
 
-def _parse_function_215(_text, _pos):
-     backtrack14 = farthest_pos11 = _pos
-     farthest_expr11 = 215
-     while True:
-          value28 = '<|'
-          end28 = (_pos + 2)
-          if (_text[_pos : end28] == value28):
-               _pos = (yield (3, _cont__ignored, end28,))[2]
-               _status = True
-               _result = value28
-          else:
-               _status = False
-               _result = 216
-          if _status:
-               break
-          value29 = '|>'
-          end29 = (_pos + 2)
-          if (_text[_pos : end29] == value29):
-               _pos = (yield (3, _cont__ignored, end29,))[2]
-               _status = True
-               _result = value29
-          else:
-               _status = False
-               _result = 217
-          if _status:
-               break
-          value30 = 'where'
-          end30 = (_pos + 5)
-          if (_text[_pos : end30] == value30):
-               _pos = (yield (3, _cont__ignored, end30,))[2]
-               _status = True
-               _result = value30
-          else:
-               _status = False
-               _result = 218
-          if _status:
-               break
-          _pos = farthest_pos11
-          _result = 215
-          break
-     (yield (_status, _result, _pos,))
+def _generate_error_message200(_text, _pos):
+    return "Expected ')'."
 
 
-def _parse_function_222(_text, _pos):
-     value31 = '|'
-     end31 = (_pos + 1)
-     if (_text[_pos : end31] == value31):
-          _pos = (yield (3, _cont__ignored, end31,))[2]
-          _status = True
-          _result = value31
-     else:
-          _status = False
-          _result = 222
-     (yield (_status, _result, _pos,))
+def _parse_function_214(_text, _pos):
+    # <Choice>
+    backtrack12 = farthest_pos9 = _pos
+    farthest_err17 = 214
+    farthest_err18 = _generate_error_message214
+    while True:
+        # Option 1:
+        # <String value='//'>
+        value24 = '//'
+        end24 = (_pos + 2)
+        if (_text[_pos : end24] == value24):
+            _pos = (yield (3, _cont__ignored, end24,))[2]
+            _status = True
+            _result = value24
+        else:
+            _status = False
+            _result = _generate_error_message215
+        # </String>
+        if _status:
+            break
+        if (farthest_pos9 < _pos):
+            farthest_pos9 = _pos
+            farthest_err18 = _result
+        _pos = backtrack12
+        # Option 2:
+        # <String value='/'>
+        value25 = '/'
+        end25 = (_pos + 1)
+        if (_text[_pos : end25] == value25):
+            _pos = (yield (3, _cont__ignored, end25,))[2]
+            _status = True
+            _result = value25
+        else:
+            _status = False
+            _result = _generate_error_message216
+        # </String>
+        if _status:
+            break
+        if (farthest_pos9 < _pos):
+            farthest_pos9 = _pos
+            farthest_err18 = _result
+        _pos = farthest_pos9
+        _result = farthest_err18
+        break
+    # </Choice>
+    (yield (_status, _result, _pos,))
+
+
+def _parse_function_220(_text, _pos):
+    # <Choice>
+    backtrack13 = farthest_pos10 = _pos
+    farthest_err19 = 220
+    farthest_err20 = _generate_error_message220
+    while True:
+        # Option 1:
+        # <String value='<<'>
+        value26 = '<<'
+        end26 = (_pos + 2)
+        if (_text[_pos : end26] == value26):
+            _pos = (yield (3, _cont__ignored, end26,))[2]
+            _status = True
+            _result = value26
+        else:
+            _status = False
+            _result = _generate_error_message221
+        # </String>
+        if _status:
+            break
+        if (farthest_pos10 < _pos):
+            farthest_pos10 = _pos
+            farthest_err20 = _result
+        _pos = backtrack13
+        # Option 2:
+        # <String value='>>'>
+        value27 = '>>'
+        end27 = (_pos + 2)
+        if (_text[_pos : end27] == value27):
+            _pos = (yield (3, _cont__ignored, end27,))[2]
+            _status = True
+            _result = value27
+        else:
+            _status = False
+            _result = _generate_error_message222
+        # </String>
+        if _status:
+            break
+        if (farthest_pos10 < _pos):
+            farthest_pos10 = _pos
+            farthest_err20 = _result
+        _pos = farthest_pos10
+        _result = farthest_err20
+        break
+    # </Choice>
+    (yield (_status, _result, _pos,))
+
+
+def _parse_function_226(_text, _pos):
+    # <Choice>
+    backtrack14 = farthest_pos11 = _pos
+    farthest_err21 = 226
+    farthest_err22 = _generate_error_message226
+    while True:
+        # Option 1:
+        # <String value='<|'>
+        value28 = '<|'
+        end28 = (_pos + 2)
+        if (_text[_pos : end28] == value28):
+            _pos = (yield (3, _cont__ignored, end28,))[2]
+            _status = True
+            _result = value28
+        else:
+            _status = False
+            _result = _generate_error_message227
+        # </String>
+        if _status:
+            break
+        if (farthest_pos11 < _pos):
+            farthest_pos11 = _pos
+            farthest_err22 = _result
+        _pos = backtrack14
+        # Option 2:
+        # <String value='|>'>
+        value29 = '|>'
+        end29 = (_pos + 2)
+        if (_text[_pos : end29] == value29):
+            _pos = (yield (3, _cont__ignored, end29,))[2]
+            _status = True
+            _result = value29
+        else:
+            _status = False
+            _result = _generate_error_message228
+        # </String>
+        if _status:
+            break
+        if (farthest_pos11 < _pos):
+            farthest_pos11 = _pos
+            farthest_err22 = _result
+        _pos = backtrack14
+        # Option 3:
+        # <String value='where'>
+        value30 = 'where'
+        end30 = (_pos + 5)
+        if (_text[_pos : end30] == value30):
+            _pos = (yield (3, _cont__ignored, end30,))[2]
+            _status = True
+            _result = value30
+        else:
+            _status = False
+            _result = _generate_error_message229
+        # </String>
+        if _status:
+            break
+        if (farthest_pos11 < _pos):
+            farthest_pos11 = _pos
+            farthest_err22 = _result
+        _pos = farthest_pos11
+        _result = farthest_err22
+        break
+    # </Choice>
+    (yield (_status, _result, _pos,))
+
+
+def _parse_function_233(_text, _pos):
+    # <String value='|'>
+    value31 = '|'
+    end31 = (_pos + 1)
+    if (_text[_pos : end31] == value31):
+        _pos = (yield (3, _cont__ignored, end31,))[2]
+        _status = True
+        _result = value31
+    else:
+        _status = False
+        _result = _generate_error_message233
+    # </String>
+    (yield (_status, _result, _pos,))
 
 
 def _cont_Expr(_text, _pos):
-     is_first1 = True
-     staging16 = None
-     while True:
-          is_first2 = True
-          staging17 = None
-          while True:
-               is_first3 = True
-               staging18 = None
-               while True:
-                    is_first4 = True
-                    staging19 = None
-                    while True:
-                         (_status, _result, _pos,) = (yield (3, _cont_Atom, _pos,))
-                         if _status:
-                              staging20 = _result
-                              checkpoint8 = _pos
-                              while True:
-                                   (_status, _result, _pos,) = (yield (3, _cont_ArgList, _pos,))
-                                   if _status:
-                                        staging20 = Postfix(staging20, _result)
-                                        checkpoint8 = _pos
-                                   else:
-                                        _status = True
-                                        _result = staging20
-                                        _pos = checkpoint8
-                                        break
-                         if _status:
-                              staging21 = _result
-                              checkpoint9 = _pos
-                              while True:
-                                   backtrack15 = farthest_pos12 = _pos
-                                   farthest_expr12 = 196
-                                   while True:
-                                        value32 = '?'
-                                        end32 = (_pos + 1)
-                                        if (_text[_pos : end32] == value32):
-                                             _pos = (yield (3, _cont__ignored, end32,))[2]
-                                             _status = True
-                                             _result = value32
-                                        else:
-                                             _status = False
-                                             _result = 197
-                                        if _status:
-                                             break
-                                        value33 = '*'
-                                        end33 = (_pos + 1)
-                                        if (_text[_pos : end33] == value33):
-                                             _pos = (yield (3, _cont__ignored, end33,))[2]
-                                             _status = True
-                                             _result = value33
-                                        else:
-                                             _status = False
-                                             _result = 198
-                                        if _status:
-                                             break
-                                        value34 = '+'
-                                        end34 = (_pos + 1)
-                                        if (_text[_pos : end34] == value34):
-                                             _pos = (yield (3, _cont__ignored, end34,))[2]
-                                             _status = True
-                                             _result = value34
-                                        else:
-                                             _status = False
-                                             _result = 199
-                                        if _status:
-                                             break
-                                        _pos = farthest_pos12
-                                        _result = 196
-                                        break
-                                   if _status:
-                                        staging21 = Postfix(staging21, _result)
-                                        checkpoint9 = _pos
-                                   else:
-                                        _status = True
-                                        _result = staging21
-                                        _pos = checkpoint9
-                                        break
-                         if (not _status):
-                              break
-                         checkpoint10 = _pos
-                         if is_first4:
-                              is_first4 = False
-                              staging19 = _result
-                         else:
-                              staging19 = Infix(staging19, operator1, _result)
-                         func16 = _ParseFunction(_cont_wrap, (_parse_function_203,), ())
-                         (_status, _result, _pos,) = (yield (3, func16, _pos,))
-                         if (not _status):
-                              break
-                         operator1 = _result
-                    if (not is_first4):
-                         _status = True
-                         _result = staging19
-                         _pos = checkpoint10
+    # Rule 'Expr'
+    # <OperatorPrecedence>
+    """
+    OperatorPrecedence(
+        Atom,
+        Postfix(ArgList),
+        Postfix('?' | '*' | '+'),
+        LeftAssoc(wrap('//' | '/')),
+        LeftAssoc(wrap('<<' | '>>')),
+        LeftAssoc(wrap('<|' | '|>' | 'where')),
+        LeftAssoc(wrap('|'))
+    )
+    """
+    # <LeftAssoc>
+    # LeftAssoc(wrap('|'))
+    is_first1 = True
+    staging16 = None
+    while True:
+        # <LeftAssoc>
+        # LeftAssoc(wrap('<|' | '|>' | 'where'))
+        is_first2 = True
+        staging17 = None
+        while True:
+            # <LeftAssoc>
+            # LeftAssoc(wrap('<<' | '>>'))
+            is_first3 = True
+            staging18 = None
+            while True:
+                # <LeftAssoc>
+                # LeftAssoc(wrap('//' | '/'))
+                is_first4 = True
+                staging19 = None
+                while True:
+                    # <Postfix>
+                    # Postfix('?' | '*' | '+')
+                    # <Postfix>
+                    # Postfix(ArgList)
+                    # <Ref name='Atom'>
+                    (_status, _result, _pos,) = (yield (3, _cont_Atom, _pos,))
+                    # </Ref>
+                    if _status:
+                        staging20 = _result
+                        checkpoint8 = _pos
+                        while True:
+                            # <Ref name='ArgList'>
+                            (_status, _result, _pos,) = (yield (3, _cont_ArgList, _pos,))
+                            # </Ref>
+                            if _status:
+                                staging20 = Postfix(staging20, _result)
+                                checkpoint8 = _pos
+                            else:
+                                _status = True
+                                _result = staging20
+                                _pos = checkpoint8
+                                break
+                    # </Postfix>
+                    if _status:
+                        staging21 = _result
+                        checkpoint9 = _pos
+                        while True:
+                            # <Choice>
+                            backtrack15 = farthest_pos12 = _pos
+                            farthest_err23 = 207
+                            farthest_err24 = _generate_error_message207
+                            while True:
+                                # Option 1:
+                                # <String value='?'>
+                                value32 = '?'
+                                end32 = (_pos + 1)
+                                if (_text[_pos : end32] == value32):
+                                    _pos = (yield (3, _cont__ignored, end32,))[2]
+                                    _status = True
+                                    _result = value32
+                                else:
+                                    _status = False
+                                    _result = _generate_error_message208
+                                # </String>
+                                if _status:
+                                    break
+                                if (farthest_pos12 < _pos):
+                                    farthest_pos12 = _pos
+                                    farthest_err24 = _result
+                                _pos = backtrack15
+                                # Option 2:
+                                # <String value='*'>
+                                value33 = '*'
+                                end33 = (_pos + 1)
+                                if (_text[_pos : end33] == value33):
+                                    _pos = (yield (3, _cont__ignored, end33,))[2]
+                                    _status = True
+                                    _result = value33
+                                else:
+                                    _status = False
+                                    _result = _generate_error_message209
+                                # </String>
+                                if _status:
+                                    break
+                                if (farthest_pos12 < _pos):
+                                    farthest_pos12 = _pos
+                                    farthest_err24 = _result
+                                _pos = backtrack15
+                                # Option 3:
+                                # <String value='+'>
+                                value34 = '+'
+                                end34 = (_pos + 1)
+                                if (_text[_pos : end34] == value34):
+                                    _pos = (yield (3, _cont__ignored, end34,))[2]
+                                    _status = True
+                                    _result = value34
+                                else:
+                                    _status = False
+                                    _result = _generate_error_message210
+                                # </String>
+                                if _status:
+                                    break
+                                if (farthest_pos12 < _pos):
+                                    farthest_pos12 = _pos
+                                    farthest_err24 = _result
+                                _pos = farthest_pos12
+                                _result = farthest_err24
+                                break
+                            # </Choice>
+                            if _status:
+                                staging21 = Postfix(staging21, _result)
+                                checkpoint9 = _pos
+                            else:
+                                _status = True
+                                _result = staging21
+                                _pos = checkpoint9
+                                break
+                    # </Postfix>
                     if (not _status):
-                         break
-                    checkpoint11 = _pos
-                    if is_first3:
-                         is_first3 = False
-                         staging18 = _result
+                        break
+                    checkpoint10 = _pos
+                    if is_first4:
+                        is_first4 = False
+                        staging19 = _result
                     else:
-                         staging18 = Infix(staging18, operator2, _result)
-                    func17 = _ParseFunction(_cont_wrap, (_parse_function_209,), ())
-                    (_status, _result, _pos,) = (yield (3, func17, _pos,))
+                        staging19 = Infix(staging19, operator1, _result)
+                    # <Call>
+                    # wrap('//' | '/')
+                    func16 = _ParseFunction(_cont_wrap, (_parse_function_214,), ())
+                    (_status, _result, _pos,) = (yield (3, func16, _pos,))
+                    # </Call>
                     if (not _status):
-                         break
-                    operator2 = _result
-               if (not is_first3):
+                        break
+                    operator1 = _result
+                if (not is_first4):
                     _status = True
-                    _result = staging18
-                    _pos = checkpoint11
-               if (not _status):
+                    _result = staging19
+                    _pos = checkpoint10
+                # </LeftAssoc>
+                if (not _status):
                     break
-               checkpoint12 = _pos
-               if is_first2:
-                    is_first2 = False
-                    staging17 = _result
-               else:
-                    staging17 = Infix(staging17, operator3, _result)
-               func18 = _ParseFunction(_cont_wrap, (_parse_function_215,), ())
-               (_status, _result, _pos,) = (yield (3, func18, _pos,))
-               if (not _status):
+                checkpoint11 = _pos
+                if is_first3:
+                    is_first3 = False
+                    staging18 = _result
+                else:
+                    staging18 = Infix(staging18, operator2, _result)
+                # <Call>
+                # wrap('<<' | '>>')
+                func17 = _ParseFunction(_cont_wrap, (_parse_function_220,), ())
+                (_status, _result, _pos,) = (yield (3, func17, _pos,))
+                # </Call>
+                if (not _status):
                     break
-               operator3 = _result
-          if (not is_first2):
-               _status = True
-               _result = staging17
-               _pos = checkpoint12
-          if (not _status):
-               break
-          checkpoint13 = _pos
-          if is_first1:
-               is_first1 = False
-               staging16 = _result
-          else:
-               staging16 = Infix(staging16, operator4, _result)
-          arg16 = _wrap_string_literal('|', _parse_function_222)
-          func19 = _ParseFunction(_cont_wrap, (arg16,), ())
-          (_status, _result, _pos,) = (yield (3, func19, _pos,))
-          if (not _status):
-               break
-          operator4 = _result
-     if (not is_first1):
-          _status = True
-          _result = staging16
-          _pos = checkpoint13
-     (yield (_status, _result, _pos,))
+                operator2 = _result
+            if (not is_first3):
+                _status = True
+                _result = staging18
+                _pos = checkpoint11
+            # </LeftAssoc>
+            if (not _status):
+                break
+            checkpoint12 = _pos
+            if is_first2:
+                is_first2 = False
+                staging17 = _result
+            else:
+                staging17 = Infix(staging17, operator3, _result)
+            # <Call>
+            # wrap('<|' | '|>' | 'where')
+            func18 = _ParseFunction(_cont_wrap, (_parse_function_226,), ())
+            (_status, _result, _pos,) = (yield (3, func18, _pos,))
+            # </Call>
+            if (not _status):
+                break
+            operator3 = _result
+        if (not is_first2):
+            _status = True
+            _result = staging17
+            _pos = checkpoint12
+        # </LeftAssoc>
+        if (not _status):
+            break
+        checkpoint13 = _pos
+        if is_first1:
+            is_first1 = False
+            staging16 = _result
+        else:
+            staging16 = Infix(staging16, operator4, _result)
+        # <Call>
+        # wrap('|')
+        arg16 = _wrap_string_literal('|', _parse_function_233)
+        func19 = _ParseFunction(_cont_wrap, (arg16,), ())
+        (_status, _result, _pos,) = (yield (3, func19, _pos,))
+        # </Call>
+        if (not _status):
+            break
+        operator4 = _result
+    if (not is_first1):
+        _status = True
+        _result = staging16
+        _pos = checkpoint13
+    # </LeftAssoc>
+    # </OperatorPrecedence>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_Expr(text, pos=0):
-     return _run(text, pos, _cont_Expr)
+    return _run(text, pos, _cont_Expr)
 
 
-Expr = Rule('Expr', _parse_Expr)
+Expr = Rule('Expr', _parse_Expr, """
+    Expr = OperatorPrecedence(
+        Atom,
+        Postfix(ArgList),
+        Postfix('?' | '*' | '+'),
+        LeftAssoc(wrap('//' | '/')),
+        LeftAssoc(wrap('<<' | '>>')),
+        LeftAssoc(wrap('<|' | '|>' | 'where')),
+        LeftAssoc(wrap('|'))
+    )
+""")
+
+def _generate_error_message207(_text, _pos):
+    return
+
+
+def _generate_error_message208(_text, _pos):
+    return "Expected '?'."
+
+
+def _generate_error_message209(_text, _pos):
+    return "Expected '*'."
+
+
+def _generate_error_message210(_text, _pos):
+    return "Expected '+'."
+
+
+def _generate_error_message214(_text, _pos):
+    return
+
+
+def _generate_error_message215(_text, _pos):
+    return "Expected '//'."
+
+
+def _generate_error_message216(_text, _pos):
+    return "Expected '/'."
+
+
+def _generate_error_message220(_text, _pos):
+    return
+
+
+def _generate_error_message221(_text, _pos):
+    return "Expected '<<'."
+
+
+def _generate_error_message222(_text, _pos):
+    return "Expected '>>'."
+
+
+def _generate_error_message226(_text, _pos):
+    return
+
+
+def _generate_error_message227(_text, _pos):
+    return "Expected '<|'."
+
+
+def _generate_error_message228(_text, _pos):
+    return "Expected '|>'."
+
+
+def _generate_error_message229(_text, _pos):
+    return "Expected 'where'."
+
+
+def _generate_error_message233(_text, _pos):
+    return "Expected '|'."
+
 
 def _cont_start(_text, _pos):
-     while True:
-          (_status, _result, _pos,) = (yield (3, _cont__ignored, _pos,))
-          if (not _status):
-               break
-          while True:
-               while True:
-                    checkpoint14 = _pos
-                    (_status, _result, _pos,) = (yield (3, _cont_Newline, _pos,))
-                    if _status:
-                         continue
-                    else:
-                         _pos = checkpoint14
+    # Rule 'start'
+    # <Discard>
+    # _cont__ignored >> (Skip(Newline) >> (Stmt / Sep))
+    while True:
+        # <Ref name='_cont__ignored'>
+        (_status, _result, _pos,) = (yield (3, _cont__ignored, _pos,))
+        # </Ref>
+        if (not _status):
+            break
+        # <Discard>
+        # Skip(Newline) >> (Stmt / Sep)
+        while True:
+            # <Skip>
+            # Skip(Newline)
+            while True:
+                checkpoint14 = _pos
+                # <Ref name='Newline'>
+                (_status, _result, _pos,) = (yield (3, _cont_Newline, _pos,))
+                # </Ref>
+                if _status:
+                    continue
+                else:
+                    _pos = checkpoint14
+                break
+            _status = True
+            _result = None
+            # </Skip>
+            # <Alt>
+            # Stmt / Sep
+            staging22 = []
+            checkpoint15 = _pos
+            while True:
+                # <Ref name='Stmt'>
+                (_status, _result, _pos,) = (yield (3, _cont_Stmt, _pos,))
+                # </Ref>
+                if (not _status):
                     break
-               _status = True
-               _result = None
-               if (not _status):
+                staging22.append(_result)
+                checkpoint15 = _pos
+                # <Ref name='Sep'>
+                (_status, _result, _pos,) = (yield (3, _cont_Sep, _pos,))
+                # </Ref>
+                if (not _status):
                     break
-               staging22 = []
-               checkpoint15 = _pos
-               while True:
-                    (_status, _result, _pos,) = (yield (3, _cont_Stmt, _pos,))
-                    if (not _status):
-                         break
-                    staging22.append(_result)
-                    checkpoint15 = _pos
-                    (_status, _result, _pos,) = (yield (3, _cont_Sep, _pos,))
-                    if (not _status):
-                         break
-                    checkpoint15 = _pos
-               _result = staging22
-               _status = True
-               _pos = checkpoint15
-               break
-          break
-     (yield (_status, _result, _pos,))
+                checkpoint15 = _pos
+            _result = staging22
+            _status = True
+            _pos = checkpoint15
+            # </Alt>
+            break
+        # </Discard>
+        break
+    # </Discard>
+    (yield (_status, _result, _pos,))
 
 
 def _parse_start(text, pos=0):
-     return _run(text, pos, _cont_start)
+    return _run(text, pos, _cont_start)
 
 
-start = Rule('start', _parse_start)
+start = Rule('start', _parse_start, """
+    start = _cont__ignored >> (Skip(Newline) >> (Stmt / Sep))
+""")
 
 def _cont__ignored(_text, _pos):
-     while True:
-          checkpoint16 = _pos
-          (_status, _result, _pos,) = (yield (3, _cont_Space, _pos,))
-          if _status:
-               continue
-          else:
-               _pos = checkpoint16
-          (_status, _result, _pos,) = (yield (3, _cont_Comment, _pos,))
-          if _status:
-               continue
-          else:
-               _pos = checkpoint16
-          break
-     _status = True
-     _result = None
-     (yield (_status, _result, _pos,))
+    # Rule '_ignored'
+    # <Skip>
+    # Skip(Space, Comment)
+    while True:
+        checkpoint16 = _pos
+        # <Ref name='Space'>
+        (_status, _result, _pos,) = (yield (3, _cont_Space, _pos,))
+        # </Ref>
+        if _status:
+            continue
+        else:
+            _pos = checkpoint16
+        # <Ref name='Comment'>
+        (_status, _result, _pos,) = (yield (3, _cont_Comment, _pos,))
+        # </Ref>
+        if _status:
+            continue
+        else:
+            _pos = checkpoint16
+        break
+    _status = True
+    _result = None
+    # </Skip>
+    (yield (_status, _result, _pos,))
 
 
 def _parse__ignored(text, pos=0):
-     return _run(text, pos, _cont__ignored)
+    return _run(text, pos, _cont__ignored)
 
 
-_ignored = Rule('_ignored', _parse__ignored)
+_ignored = Rule('_ignored', _parse__ignored, """
+    _ignored = Skip(Space, Comment)
+""")
 
