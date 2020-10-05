@@ -1,4 +1,5 @@
 from collections import defaultdict
+from contextlib import contextmanager
 import typing
 from string import Template
 
@@ -21,18 +22,37 @@ STATUS = Raw('_status')
 TEXT = Raw('_text')
 
 BREAK = Raw('break')
-CONTINUE = Raw('continue')
 
 CALL = 3
 
 
 class Expr:
+    def always_succeeds(self):
+        return False
+
     def compile(self, pb):
         if pb.has_available_blocks(self.num_blocks):
             self._compile(pb)
         else:
             func, params = _functionalize(pb, self, is_generator=False)
             pb(Tup(STATUS, RESULT, POS) << func(*params))
+
+
+def _add_comment(pb, expr):
+    content = str(expr)
+
+    if '\n' not in content:
+        pb(Raw('# ' + content))
+        return
+
+    if '"""' in content:
+        content = content.replace('"""', '"\\""')
+
+    pb(
+        Raw('"""'),
+        *[Raw(x) for x in content.split('\n')],
+        Raw('"""'),
+    )
 
 
 def _functionalize(pb, expr, is_generator=False):
@@ -43,6 +63,27 @@ def _functionalize(pb, expr, is_generator=False):
         cls = Yield if is_generator else Return
         pb(cls(Tup(STATUS, RESULT, POS)))
     return Raw(name), [Raw(x) for x in params]
+
+
+@contextmanager
+def _if_succeeds(pb, expr):
+    expr.compile(pb)
+    if expr.always_succeeds():
+        yield
+    else:
+        with pb.IF(STATUS):
+            yield
+
+
+@contextmanager
+def _if_fails(pb, expr):
+    expr.compile(pb)
+    if expr.always_succeeds():
+        with pb._sandbox():
+            yield
+    else:
+        with pb.IF_NOT(STATUS):
+            yield
 
 
 def visit(previsit, expr, postvisit=None):
@@ -69,22 +110,28 @@ class Alt(Expr):
         self.allow_trailer = allow_trailer
         self.allow_empty = allow_empty
 
+    def __str__(self):
+        op = '/' if self.allow_trailer else '//'
+        wrap = lambda x: f'({x})' if isinstance(x, BinaryOp) else x
+        return f'{wrap(self.expr)} {op} {wrap(self.separator)}'
+
+    def always_succeeds(self):
+        return self.allow_empty
+
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
         staging = pb.var('staging', Raw('[]'))
         checkpoint = pb.var('checkpoint', POS)
 
         with pb.loop():
-            self.expr.compile(pb)
-
-            with pb.IF_NOT(STATUS):
+            with _if_fails(pb, self.expr):
                 pb(BREAK)
 
             pb(staging.append(RESULT))
             pb(checkpoint << POS)
 
-            self.separator.compile(pb)
-
-            with pb.IF_NOT(STATUS):
+            with _if_fails(pb, self.separator):
                 pb(BREAK)
 
             if self.allow_trailer:
@@ -97,6 +144,7 @@ class Alt(Expr):
         else:
             with pb.IF(staging):
                 pb(*success)
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class Apply(Expr):
@@ -107,16 +155,21 @@ class Apply(Expr):
         self.expr2 = expr2
         self.apply_left = apply_left
 
+    def __str__(self):
+        op = '<|' if self.apply_left else '|>'
+        wrap = lambda x: f'({x})' if isinstance(x, BinaryOp) else x
+        return f'{wrap(self.expr1)} {op} {wrap(self.expr2)}'
+
     def _compile(self, pb):
-        self.expr1.compile(pb)
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
 
-        with pb.IF(STATUS):
+        with _if_succeeds(pb, self.expr1):
             first = pb.var('func' if self.apply_left else 'arg', RESULT)
-            self.expr2.compile(pb)
-
-            with pb.IF(STATUS):
+            with _if_succeeds(pb, self.expr2):
                 result = first(RESULT) if self.apply_left else RESULT(first)
                 pb(RESULT << result)
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class Call(Expr):
@@ -126,7 +179,13 @@ class Call(Expr):
         self.func = func
         self.args = args
 
+    def __str__(self):
+        args = ', '.join(str(x) for x in self.args)
+        return f'{self.func}({args})'
+
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
         args, kwargs = [], []
 
         for arg in self.args:
@@ -134,7 +193,7 @@ class Call(Expr):
             expr = arg.expr if is_kw else arg
 
             if isinstance(expr, Ref):
-                value = Raw(expr.name)
+                value = Raw(expr.resolved)
             elif isinstance(expr, PythonExpression):
                 value = Raw(expr.source_code)
             else:
@@ -154,9 +213,10 @@ class Call(Expr):
             else:
                 args.append(value)
 
-        func = raw._ParseFunction(Raw(self.func.name), Tup(*args), Tup(*kwargs))
+        func = raw._ParseFunction(Raw(self.func.resolved), Tup(*args), Tup(*kwargs))
         func = pb.var('func', func)
         pb(Tup(STATUS, RESULT, POS) << Yield(Tup(CALL, func, POS)))
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class Choice(Expr):
@@ -165,19 +225,27 @@ class Choice(Expr):
     def __init__(self, *exprs):
         self.exprs = exprs
 
+    def __str__(self):
+        return ' | '.join(str(x) for x in self.exprs)
+
+    def always_succeeds(self):
+        return any(x.always_succeeds() for x in self.exprs)
+
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
         backtrack = Var('backtrack')
         farthest_pos = Var('farthest_pos')
 
         pb(backtrack << farthest_pos << POS)
 
         farthest_err = pb.var('farthest_err', Val(self.program_id))
+        farthest_err = pb.var('farthest_err', Raw(_error_func_name(self)))
 
         with pb.breakable():
             for i, expr in enumerate(self.exprs):
-                expr.compile(pb)
+                pb(Raw(f'# Option {i+1}:'))
 
-                with pb.IF(STATUS):
+                with _if_succeeds(pb, expr):
                     pb(BREAK)
 
                 with pb.IF(farthest_pos < POS):
@@ -189,6 +257,10 @@ class Choice(Expr):
 
             pb(POS << farthest_pos)
             pb(RESULT << farthest_err)
+        pb(Raw(f'# </{self.__class__.__name__}>'))
+
+    def compile_error_message(self, pb, rule):
+        pb(Return())
 
 
 class Class(Expr):
@@ -201,16 +273,26 @@ class Class(Expr):
         self.is_ignored = is_ignored
         self.extra_id = None
 
+    def __str__(self):
+        params = '' if self.params is None else f'({", ".join(self.params)})'
+        fields = ''.join(f'    {x.name}: {x.expr}\n' for x in self.fields)
+        return f'class {self.name}{params} {{\n{fields}}}'
+
+    def always_succeeds(self):
+        return all(x.expr.always_succeeds() for x in self.fields)
+
     def _compile(self, pb):
         field_names = [x.name for x in self.fields]
         parse_func = Raw(f'{_cont_name(self.name)}')
 
         with pb.global_class(self.name, 'Node'):
+            _add_comment(pb, self)
             pb(raw._fields << Tup(*[Val(x) for x in field_names]))
 
             with pb.local_function('__init__', ['self'] + field_names):
                 for name in field_names:
                     pb(Raw(f'self.{name} = {name}'))
+                pb(Raw('self._parse_info = None'))
 
             with pb.local_function('__repr__', ['self']):
                 values = ', '.join(f'{x}={{self.{x}!r}}' for x in field_names)
@@ -244,21 +326,27 @@ class Discard(Expr):
         self.expr2 = expr2
         self.discard_left = discard_left
 
-    def _compile(self, pb):
-        with pb.breakable():
-            self.expr1.compile(pb)
+    def __str__(self):
+        op = '>>' if self.discard_left else '<<'
+        wrap = lambda x: f'({x})' if isinstance(x, BinaryOp) else x
+        return f'{wrap(self.expr1)} {op} {wrap(self.expr2)}'
 
-            with pb.IF_NOT(STATUS):
+    def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
+
+        with pb.breakable():
+            with _if_fails(pb, self.expr1):
                 pb(BREAK)
 
             if self.discard_left:
                 self.expr2.compile(pb)
             else:
                 staging = pb.var('staging', RESULT)
-                self.expr2.compile(pb)
-
-                with pb.IF(STATUS):
+                with _if_succeeds(pb, self.expr2):
                     pb(RESULT << staging)
+
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class Expect(Expr):
@@ -267,12 +355,18 @@ class Expect(Expr):
     def __init__(self, expr):
         self.expr = expr
 
-    def _compile(self, pb):
-        backtrack = pb.var('backtrack', POS)
-        self.expr.compile(pb)
+    def __str__(self):
+        return f'Expect({self.expr})'
 
-        with pb.IF(STATUS):
+    def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
+        backtrack = pb.var('backtrack', POS)
+
+        with _if_succeeds(pb, self.expr):
             pb(POS << backtrack)
+
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class ExpectNot(Expr):
@@ -281,18 +375,28 @@ class ExpectNot(Expr):
     def __init__(self, expr):
         self.expr = expr
 
+    def __str__(self):
+        return f'ExpectNot({self.expr})'
+
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
+
         backtrack = pb.var('backtrack', POS)
         self.expr.compile(pb)
         pb(POS << backtrack)
 
         with pb.IF(STATUS):
             pb(STATUS << Val(False))
-            pb(RESULT << Val(self.program_id))
+            pb(RESULT << Raw(_error_func_name(self)))
 
         with pb.ELSE():
             pb(STATUS << Val(True))
             pb(RESULT << Val(None))
+        pb(Raw(f'# </{self.__class__.__name__}>'))
+
+    def compile_error_message(self, pb, rule):
+        pb(Return())
 
 
 class Fail(Expr):
@@ -301,17 +405,26 @@ class Fail(Expr):
     def __init__(self, message=None):
         self.message = message
 
+    def __str__(self):
+        return 'Fail()' if self.message is None else f'Fail({self.message!r})'
+
     def _compile(self, pb):
-        pb(
-            STATUS << False,
-            RESULT << Val(self.program_id),
-        )
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
+        pb(STATUS << False, RESULT << Raw(_error_func_name(self)))
+        pb(Raw(f'# </{self.__class__.__name__}>'))
+
+    def compile_error_message(self, pb, rule):
+        pb(Return())
 
 
 class KeywordArg:
     def __init__(self, name, expr):
         self.name = name
         self.expr = expr
+
+    def __str__(self):
+        return f'{self.name}={self.expr}'
 
 
 def Left(expr1, expr2):
@@ -326,12 +439,18 @@ class LetExpression(Expr):
         self.expr = expr
         self.body = body
 
-    def _compile(self, pb):
-        self.expr.compile(pb)
+    def __str__(self):
+        return f'let {self.name} = {self.expr} in\n{self.body}'
 
-        with pb.IF(STATUS):
+    def _compile(self, pb):
+        pb(Raw('# <Let>'))
+        _add_comment(pb, self)
+
+        with _if_succeeds(pb, self.expr):
             pb(Raw(self.name) << RESULT)
             self.body.compile(pb)
+
+        pb(Raw('# </Let>'))
 
 
 class List(Expr):
@@ -341,18 +460,22 @@ class List(Expr):
         self.expr = expr
         self.allow_empty = allow_empty
 
+    def __str__(self):
+        op = '*' if self.allow_empty else '+'
+        return str(self.expr) + op
+
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
         staging = pb.var('staging', Raw('[]'))
 
         with pb.loop():
             checkpoint = pb.var('checkpoint', POS)
-            self.expr.compile(pb)
 
-            with pb.IF(STATUS):
-                pb(staging.append(RESULT), CONTINUE)
-
-            with pb.ELSE():
+            with _if_fails(pb, self.expr):
                 pb(POS << checkpoint, BREAK)
+
+            pb(staging.append(RESULT))
 
         success = [
             RESULT << staging,
@@ -365,6 +488,8 @@ class List(Expr):
             with pb.IF(staging):
                 pb(*success)
 
+        pb(Raw(f'# </{self.__class__.__name__}>'))
+
 
 class Opt(Expr):
     num_blocks = 1
@@ -372,28 +497,24 @@ class Opt(Expr):
     def __init__(self, expr):
         self.expr = expr
 
+    def __str__(self):
+        return f'Opt({self.expr})'
+
+    def always_succeeds(self):
+        return True
+
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
         backtrack = pb.var('backtrack', POS)
-        self.expr.compile(pb)
-        with pb.IF_NOT(STATUS):
+
+        with _if_fails(pb, self.expr):
             pb(
                 STATUS << Val(True),
                 POS << backtrack,
                 RESULT << Val(None),
             )
-
-
-class Pass(Expr):
-    num_blocks = 0
-
-    def __init__(self, value):
-        self.value = value
-
-    def _compile(self, pb):
-        pb(
-            STATUS << True,
-            RESULT << Val(self.value),
-        )
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class Ref(Expr):
@@ -402,9 +523,20 @@ class Ref(Expr):
     def __init__(self, name):
         self.name = name
         self.is_local = False
+        self._resolved = None
+
+    @property
+    def resolved(self):
+        return self.name if self._resolved is None else self._resolved
+
+    def __str__(self):
+        return self.name
 
     def _compile(self, pb):
-        pb(Tup(STATUS, RESULT, POS) << Yield(Tup(CALL, Raw(self.name), POS)))
+        pb(Raw(f'# <{self.__class__.__name__} name={self.name!r}>'))
+        func = self.name if self._resolved is None else self._resolved
+        pb(Tup(STATUS, RESULT, POS) << Yield(Tup(CALL, Raw(func), POS)))
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class RegexLiteral(Expr):
@@ -418,7 +550,12 @@ class RegexLiteral(Expr):
         self.pattern = pattern
         self.skip_ignored = False
 
+    def __str__(self):
+        pattern = self.pattern.replace('\\', '\\\\')
+        return f'@/{pattern}/'
+
     def _compile(self, pb):
+        pb(Raw(f'# <Regex pattern={self.pattern!r}>'))
         pb.add_import('from re import compile as compile_re')
         matcher = pb.define_global('matcher', f'compile_re({self.pattern!r}).match')
         match = pb.var('match', matcher(TEXT, POS))
@@ -432,8 +569,12 @@ class RegexLiteral(Expr):
             )
 
         with pb.ELSE():
-            pb(STATUS << False)
-            pb(RESULT << Val(self.program_id))
+            pb(STATUS << False, RESULT << Raw(_error_func_name(self)))
+
+        pb(Raw('# </Regex>'))
+
+    def compile_error_message(self, pb, rule):
+        pb(Return())
 
 
 def Right(expr1, expr2):
@@ -449,13 +590,17 @@ class Rule(Expr):
         self.expr = expr
         self.is_ignored = is_ignored
 
+    def __str__(self):
+        params = '' if self.params is None else f'({", ".join(self.params)})'
+        return f'{self.name}{params} = {self.expr}'
+
     def _compile(self, pb):
         params = [str(TEXT), str(POS)] + (self.params or [])
-
         cont_name = _cont_name(self.name)
         entry_name = _entry_name(self.name)
 
         with pb.global_function(cont_name, params):
+            pb(Raw(f'# Rule {self.name!r}'))
             self.expr.compile(pb)
             pb(Yield(Tup(STATUS, RESULT, POS)))
 
@@ -463,7 +608,14 @@ class Rule(Expr):
             pb(Return(Raw(f'_run(text, pos, {cont_name})')))
 
         with pb.global_section():
-            pb(Raw(f'{self.name} = Rule({self.name!r}, {entry_name})'))
+            definition = str(self)
+            if '"""' in definition:
+                definition = definition.replace('"""', '"\\""')
+            pb(
+                Raw(f'{self.name} = Rule({self.name!r}, {entry_name}, """'),
+                *[Raw(f'    {x}') for x in definition.split('\n')],
+                Raw('""")'),
+            )
 
 
 class Seq(Expr):
@@ -483,13 +635,16 @@ class Seq(Expr):
 
         self.constructor = constructor
 
+    def __str__(self):
+        return f'[{", ".join(str(x) for x in self.exprs)}]'
+
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
         with pb.breakable():
             items = []
             for name, expr in zip(self.names, self.exprs):
-                expr.compile(pb)
 
-                with pb.IF_NOT(STATUS):
+                with _if_fails(pb, expr):
                     pb(BREAK)
 
                 item = Var('item') if name is None else Raw(name)
@@ -498,6 +653,7 @@ class Seq(Expr):
 
             ctor = LIST if self.constructor is None else Raw(self.constructor)
             pb(RESULT << ctor(*items))
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class Skip(Expr):
@@ -506,7 +662,15 @@ class Skip(Expr):
     def __init__(self, *exprs):
         self.exprs = exprs
 
+    def __str__(self):
+        return f'Skip({", ".join(str(x) for x in self.exprs)})'
+
+    def always_succeeds(self):
+        return True
+
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
         checkpoint = Var('checkpoint')
 
         with pb.breakable():
@@ -515,7 +679,7 @@ class Skip(Expr):
                 expr.compile(pb)
 
                 with pb.IF(STATUS):
-                    pb(CONTINUE)
+                    pb(Raw('continue'))
 
                 with pb.ELSE():
                     pb(POS << checkpoint)
@@ -524,6 +688,7 @@ class Skip(Expr):
             STATUS << Val(True),
             RESULT << Val(None),
         )
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 def Some(expr):
@@ -538,12 +703,17 @@ class StringLiteral(Expr):
         self.skip_ignored = False
         self.num_blocks = 0 if self.value == '' else 1
 
+    def __str__(self):
+        return repr(self.value)
+
+    def always_succeeds(self):
+        return self.value == ''
+
     def _compile(self, pb):
+        pb(Raw(f'# <String value={self.value!r}>'))
         if self.value == '':
-            pb(
-                STATUS << Val(True),
-                RESULT << Val(''),
-            )
+            pb(STATUS << Val(True), RESULT << Val(''))
+            pb(Raw('# </String>'))
             return
 
         value = pb.var('value', Val(self.value))
@@ -557,7 +727,12 @@ class StringLiteral(Expr):
             )
 
         with pb.ELSE():
-            pb(STATUS << False, RESULT << Val(self.program_id))
+            pb(STATUS << False, RESULT << Raw(_error_func_name(self)))
+
+        pb(Raw('# </String>'))
+
+    def compile_error_message(self, pb, rule):
+        pb(Return(Val(f'Expected {self.value!r}.')))
 
 
 class OperatorPrecedence(Expr):
@@ -566,12 +741,20 @@ class OperatorPrecedence(Expr):
         self.rules = rules
         self.num_blocks = (rules[-1] if rules else atom).num_blocks
 
+    def __str__(self):
+        rules = [self.atom] + list(self.rules)
+        lines = ',\n'.join(f'    {x}' for x in rules)
+        return f'OperatorPrecedence(\n{lines}\n)'
+
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
         prev = self.atom
         for rule in self.rules:
             rule.operand = prev
             prev = rule
         prev.compile(pb)
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class OperatorPrecedenceRule(Expr):
@@ -579,19 +762,22 @@ class OperatorPrecedenceRule(Expr):
         self.operators = operators[0] if len(operators) == 1 else Choice(*operators)
         self.operand = None
 
+    def __str__(self):
+        return f'{self.__class__.__name__}({self.operators})'
+
 
 class LeftAssoc(OperatorPrecedenceRule):
     num_blocks = 2
 
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
         is_first = pb.var('is_first', Val(True))
         staging = pb.var('staging', Val(None))
         operator = Var('operator')
 
         with pb.loop():
-            self.operand.compile(pb)
-
-            with pb.IF_NOT(STATUS):
+            with _if_fails(pb, self.operand):
                 pb(BREAK)
 
             checkpoint = pb.var('checkpoint', POS)
@@ -605,9 +791,7 @@ class LeftAssoc(OperatorPrecedenceRule):
                 if isinstance(self, NonAssoc):
                     pb(BREAK)
 
-            self.operators.compile(pb)
-
-            with pb.IF_NOT(STATUS):
+            with _if_fails(pb, self.operators):
                 pb(BREAK)
 
             pb(operator << RESULT)
@@ -618,16 +802,18 @@ class LeftAssoc(OperatorPrecedenceRule):
                 RESULT << staging,
                 POS << checkpoint,
             )
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class NonAssoc(LeftAssoc):
     pass
 
-
 class RightAssoc(OperatorPrecedenceRule):
     num_blocks = 4
 
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
         backup = pb.var('backup', Val(None))
         prev = pb.var('prev', Val(None))
 
@@ -635,9 +821,8 @@ class RightAssoc(OperatorPrecedenceRule):
         checkpoint = Var('checkpoint')
 
         with pb.loop():
-            self.operand.compile(pb)
 
-            with pb.IF_NOT(STATUS):
+            with _if_fails(pb, self.operand):
                 with pb.IF(prev):
                     with pb.IF(backup):
                         pb(backup.right << prev.left, RESULT << staging)
@@ -648,9 +833,8 @@ class RightAssoc(OperatorPrecedenceRule):
 
             pb(checkpoint << POS)
             operand = pb.var('operand', RESULT)
-            self.operators.compile(pb)
 
-            with pb.IF_NOT(STATUS):
+            with _if_fails(pb, self.operators):
                 with pb.IF(prev):
                     pb(prev.right << operand, RESULT << staging)
 
@@ -667,14 +851,17 @@ class RightAssoc(OperatorPrecedenceRule):
             with pb.ELSE():
                 pb(staging << prev << step)
 
+        pb(Raw(f'# </{self.__class__.__name__}>'))
+
 
 class Postfix(OperatorPrecedenceRule):
     num_blocks = 3
 
     def _compile(self, pb):
-        self.operand.compile(pb)
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
 
-        with pb.IF(STATUS):
+        with _if_succeeds(pb, self.operand):
             staging = pb.var('staging', RESULT)
             checkpoint = pb.var('checkpoint', POS)
 
@@ -692,20 +879,22 @@ class Postfix(OperatorPrecedenceRule):
                         POS << checkpoint,
                         BREAK,
                     )
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class Prefix(OperatorPrecedenceRule):
     num_blocks = 2
 
     def _compile(self, pb):
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
         prev = pb.var('prev', Val(None))
         checkpoint = pb.var('checkpoint', POS)
         staging = Var('staging')
 
         with pb.loop():
-            self.operators.compile(pb)
 
-            with pb.IF_NOT(STATUS):
+            with _if_fails(pb, self.operators):
                 pb(POS << checkpoint, BREAK)
 
             pb(checkpoint << POS)
@@ -721,6 +910,7 @@ class Prefix(OperatorPrecedenceRule):
 
         with pb.IF(Binop(STATUS, 'and', prev)):
             pb(prev.right << RESULT, RESULT << staging)
+        pb(Raw(f'# </{self.__class__.__name__}>'))
 
 
 class PythonExpression(Expr):
@@ -729,16 +919,22 @@ class PythonExpression(Expr):
     def __init__(self, source_code):
         self.source_code = source_code
 
+    def __str__(self):
+        return f'`{self.source_code}`'
+
+    def always_succeeds(self):
+        return True
+
     def _compile(self, pb):
-        pb(
-            RESULT << Raw(self.source_code),
-            STATUS << True,
-        )
+        pb(RESULT << Raw(self.source_code), STATUS << True)
 
 
 class PythonSection:
     def __init__(self, source_code):
         self.source_code = source_code
+
+    def __str__(self):
+        return f'```{self.source_code}```'
 
 
 class Where(Expr):
@@ -748,20 +944,28 @@ class Where(Expr):
         self.expr = expr
         self.predicate = predicate
 
+    def __str__(self):
+        wrap = lambda x: f'({x})' if isinstance(x, BinaryOp) else x
+        return f'{wrap(self.expr)} where {wrap(self.predicate)}'
+
     def _compile(self, pb):
-        self.expr.compile(pb)
+        pb(Raw(f'# <{self.__class__.__name__}>'))
+        _add_comment(pb, self)
 
-        with pb.IF(STATUS):
+        with _if_succeeds(pb, self.expr):
             arg = pb.var('arg', RESULT)
-            self.predicate.compile(pb)
 
-            with pb.IF(STATUS):
+            with _if_succeeds(pb, self.predicate):
                 with pb.IF(RESULT(arg)):
                     pb(RESULT << arg)
 
                 with pb.ELSE():
                     pb(STATUS << False)
-                    pb(RESULT << Val(self.program_id))
+                    pb(RESULT << Raw(_error_func_name(self)))
+        pb(Raw(f'# </{self.__class__.__name__}>'))
+
+    def compile_error_message(self, pb, rule):
+        pb(Return())
 
 
 def _skip_ignored(pos):
@@ -774,6 +978,13 @@ def _cont_name(name):
 
 def _entry_name(name):
     return f'_parse_{name}'
+
+
+def _error_func_name(expr):
+    return f'_generate_error_message{expr.program_id}'
+
+
+BinaryOp = (Alt, Apply, Choice, Discard, Where)
 
 
 def generate_source_code(nodes):
@@ -824,7 +1035,7 @@ def generate_source_code(nodes):
     if ignored:
         # Create a rule called "_ignored" that skips all the ignored rules.
         refs = [Ref(x.name) for x in ignored]
-        rules.append(Rule('_ignored', None, Skip(*refs)))
+        rules.append(Rule('_ignored', None, Skip(*refs), 'ignored'))
 
         # If we have a start rule, then update its expression to skip ahead past
         # any leading ignored stuff.
@@ -857,8 +1068,16 @@ def generate_source_code(nodes):
         start=_cont_name(default_rule.name),
     )))
 
+    visited = set()
+    def maybe_compile_error_message(rule, expr):
+        if hasattr(expr, 'compile_error_message') and expr.program_id not in visited:
+            visited.add(expr.program_id)
+            with pb.global_function(_error_func_name(expr), [str(TEXT), str(POS)]):
+                expr.compile_error_message(pb, rule)
+
     for rule in rules:
         rule.compile(pb)
+        visit(lambda x: maybe_compile_error_message(rule, x), rule)
 
     return pb.generate_source_code()
 
@@ -917,7 +1136,7 @@ def _update_rule_references(rules):
 
     def check_refs(node):
         if isinstance(node, Ref) and node.name in rule_names and not node.is_local:
-            node.name = _cont_name(node.name)
+            node._resolved = _cont_name(node.name)
 
     visit(check_refs, rules)
 
@@ -958,19 +1177,21 @@ class Node:
 
 
 class Rule:
-    def __init__(self, name, parse):
+    def __init__(self, name, parse, definition):
         self.name = name
         self.parse = parse
+        self.definition = definition
 
     def __repr__(self):
-        return f'Rule(name={self.name!r}, parse={self.parse.__name__})'
+        return (f'Rule(name={self.name!r}, parse={self.parse.__name__},'
+            f' definition={self.definition!r})')
 '''
 
 
 _main_template = r'''
 class ParseError(Exception):
-    def __init__(self, expr_code, pos):
-        self.expr_code = expr_code
+    def __init__(self, message, pos):
+        self.message = message
         self.pos = pos
 
 
@@ -1053,7 +1274,9 @@ def _run(text, pos, start):
     if result[0]:
         return result[1]
     else:
-        raise ParseError(result[1], result[2])
+        pos = result[2]
+        message = result[1](text, pos)
+        raise ParseError(message, pos)
 
 
 def visit(node):

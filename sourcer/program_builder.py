@@ -241,8 +241,11 @@ class ClassStmt:
     def write(self, writer):
         writer.write_str(f'class {self._name}')
         writer.write_str(f'({self._superclass}):\n' if self._superclass else ':\n')
+
         with writer.indented():
             for stmt in self._body:
+                if isinstance(stmt, FuncStmt) and stmt._name == '__init__':
+                    writer.write_str('\n')
                 writer.write_stmt(stmt)
 
 
@@ -468,7 +471,7 @@ class ProgramWriter:
             expr.write(self)
 
     def write_indent(self):
-        self.write_str('     ' * self._indent)
+        self.write_str('    ' * self._indent)
 
     def write_line(self, contents):
         self.write_stmt(Raw(contents))
