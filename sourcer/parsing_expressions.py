@@ -45,12 +45,9 @@ def _add_comment(pb, expr):
         pb(Raw('# ' + content))
         return
 
-    if '"""' in content:
-        content = content.replace('"""', '"\\""')
-
     pb(
         Raw('"""'),
-        *[Raw(x) for x in content.split('\n')],
+        *[Raw(x) for x in content.replace('"""', '\\"\\"\\"').split('\n')],
         Raw('"""'),
     )
 
