@@ -469,7 +469,7 @@ For now, here's a list of the supported expressions:
 
 - Python Expression:
 
-    - ``\`foo\``` -- returns the Python value ``foo``
+    - `\`foo\`` -- returns the Python value ``foo``
 
 - Predicate:
 
