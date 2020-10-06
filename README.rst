@@ -420,8 +420,12 @@ For now, here's a list of the supported expressions:
 
 - Alternation:
 
-    - `foo / bar` -- consumes an optional trailing separator
-    - `foo // bar` -- does not consume a trailing separator
+    - ``foo / bar`` -- parses a list of ``foo`` separated by ``bar``, consuming
+      an optional trailing separator
+    - ``foo // bar`` -- parses a list of ``foo`` separated by ``bar``, and does
+      not consume a trailing separator
+    - In both cases, returns the list of ``foo`` values and discards the ``bar``
+      values
 
 - Application:
 
