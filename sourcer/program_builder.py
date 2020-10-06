@@ -4,7 +4,8 @@ import io
 
 
 class ProgramBuilder:
-    def __init__(self):
+    def __init__(self, docstring=None):
+        self._docstring = docstring
         self._imports = set()
         self._globals = []
         self._global_map = {}
@@ -18,6 +19,13 @@ class ProgramBuilder:
 
     def generate_source_code(self):
         writer = ProgramWriter()
+
+        if self._docstring:
+            writer.write_str('"""\n')
+            writer.write_str(self._docstring
+                .replace('\\', '\\\\')
+                .replace('"""', '\\"\\"\\"'))
+            writer.write_str('\n"""\n\n')
 
         for imp in sorted(self._imports):
             writer.write_line(imp)

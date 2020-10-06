@@ -9,13 +9,16 @@ def Grammar(description, name='grammar', include_source=False):
     # Parse the grammar description.
     raw = meta.parse(description)
 
+    # Create the docstring for the module.
+    docstring = '# Grammar definition:\n' + description
+
     # Convert the parse tree into a list of parsing expressions.
     nodes = meta.transform(raw, _create_parsing_expression)
 
     # Generate and compile the souce code.
-    source_code = parsing_expressions.generate_source_code(nodes)
+    source_code = parsing_expressions.generate_source_code(docstring, nodes)
     code_object = compile(source_code, f'<{name}>', 'exec', optimize=2)
-    module = types.ModuleType(name)
+    module = types.ModuleType(name, doc=docstring)
     exec(code_object, module.__dict__)
 
     # Optionally include the source code.

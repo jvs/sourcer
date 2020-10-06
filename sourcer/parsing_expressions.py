@@ -1011,8 +1011,8 @@ def _error_func_name(expr):
 BinaryOp = (Alt, Apply, Choice, Discard, Where)
 
 
-def generate_source_code(nodes):
-    pb = ProgramBuilder()
+def generate_source_code(docstring, nodes):
+    pb = ProgramBuilder(docstring=docstring)
     pb.add_import('from collections import namedtuple as _nt')
     pb(Raw(_program_setup))
 
