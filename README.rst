@@ -271,7 +271,56 @@ grammars.
 
 
 
-Example 4: Parsing Significant Indentation
+Example 4: Parsing Something Like XML
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Maybe you have to parse something where you have matching start and end tags.
+Here's a simple example that you can work from.
+
+.. code:: python
+
+    from sourcer import Grammar
+
+    g = Grammar(r'''
+        # A document is a list of one or more items:
+        start = Item+
+
+        # An item is either an element or some text:
+        Item = Element | Text
+
+        # A text section doesn't contain the "<" character:
+        class Text {
+            content: @/[^<]+/
+        }
+
+        # An element is a pair of matching tags, and zero or more items:
+        class Element {
+            open: "<" >> Word << ">"
+            items: Item*
+            close: "</" >> Word << ">" where `lambda x: x == open`
+        }
+
+        # A word doesn't have special characters, and doesn't start with a digit:
+        Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+    ''')
+
+    result = g.parse('To: <party><b>Second</b> Floor Only</party>')
+    print(result)
+    assert result == [
+        g.Text('To: '),
+        g.Element(
+            open='party',
+            items=[
+                g.Element('b', [g.Text('Second')], 'b'),
+                g.Text(' Floor Only'),
+            ],
+            close='party',
+        ),
+    ]
+
+
+
+Example 5: Parsing Significant Indentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you ever need to parse something with significant indentation, you can start
