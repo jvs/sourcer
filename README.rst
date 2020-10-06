@@ -69,8 +69,7 @@ So that's what this library is for. It's for when you have to take some text
 and turn it into a tree of Python objects.
 
 
-Aren't there a ton of other parsing libraries for Python?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Aren't there a ton of other parsing libraries for Python?**
 
 Yes.  Try a few and see which one you like best.
 
