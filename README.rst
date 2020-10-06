@@ -307,7 +307,6 @@ Here's a simple example that you can work from.
     # Use the "Document" rule directly:
     result = g.Document.parse('To: <party><b>Second</b> Floor Only</party>')
 
-    print(result)
     assert result == [
         g.Text('To: '),
         g.Element(
@@ -538,3 +537,40 @@ Alternation
     except g.PartialParseError as exc:
         assert exc.partial_result == ['these', 'those', 'theirs']
         assert exc.last_position.index == 20
+
+
+
+Grammar Modules
+---------------
+
+This part is work in progress, too.
+
+
+Generating A Python File
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Really quickly, if you want to generate Python source code from your grammar,
+and perhaps save the source to a file, here's an example:
+
+.. code:: python
+
+    from sourcer import Grammar
+
+    g = Grammar(
+        r'''
+            start = "Hello" >> @/[a-zA-Z]+/
+
+            ignore Space = @/[ \t]+/
+            ignore Punctuation = "," | "." | "!" | "?"
+        ''',
+
+        # Add the optional "include_source" flag:
+        include_source=True,
+    )
+
+    # The Python code is in the `_source_code` field:
+    assert 'Space' in g._source_code
+
+
+You can then take the `_source_code` field of your grammar and write it to a
+file as part of your build.
