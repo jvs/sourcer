@@ -186,7 +186,7 @@ def test_expect_and_expect_not_expressions():
             value: Word << Expect("?")
         }
 
-        start = (Angry | Calm | Confused) // ("!" | "?" | "." | ";")
+        start = (Angry | Calm | Confused) / ("!" | "?" | "." | ";")
     ''')
     result = g.parse('foo! bar? baz? fiz; buz.')
     assert result == [
@@ -299,7 +299,7 @@ def test_simplified_indentation():
         Name = @/[a-zA-Z]+/
         Newline = @/[\r\n]+/
 
-        Start = Opt(Newline) >> (Statement('') // Newline)
+        Start = Opt(Newline) >> (Statement('') / Newline)
     ''')
 
     result = g.parse('print ok\nprint bye')

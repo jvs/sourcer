@@ -304,10 +304,13 @@ class Class(Expr):
                     args = Tup(*self.params)
                     kwargs = Raw('{}')
                     pb(raw.closure << raw._ParseFunction(parse_func, args, kwargs))
-                    pb(Return(Raw('lambda text, pos=0: _run(text, pos, closure)')))
+                    pb(Return(Raw(
+                        'lambda text, pos=0, fullparse=True:'
+                        ' _run(text, pos, closure, fullparse)'
+                    )))
             else:
-                with pb.local_function('parse', ['text', 'pos=0']):
-                    pb(Return(Raw(f'_run(text, pos, {parse_func})')))
+                with pb.local_function('parse', ['text', 'pos=0', 'fullparse=True']):
+                    pb(Return(Raw(f'_run(text, pos, {parse_func}, fullparse)')))
 
         params = [str(TEXT), str(POS)] + (self.params or [])
         with pb.global_function(parse_func, params):
@@ -619,8 +622,8 @@ class Rule(Expr):
             self.expr.compile(pb)
             pb(Yield(Tup(STATUS, RESULT, POS)))
 
-        with pb.global_function(entry_name, ['text', 'pos=0']):
-            pb(Return(Raw(f'_run(text, pos, {cont_name})')))
+        with pb.global_function(entry_name, ['text', 'pos=0', 'fullparse=True']):
+            pb(Return(Raw(f'_run(text, pos, {cont_name}, fullparse)')))
 
         with pb.global_section():
             definition = str(self)
@@ -1247,6 +1250,14 @@ class ParseError(Exception):
         self.position = _Position(index, line, column)
 
 
+class PartialParseError(Exception):
+    def __init__(self, partial_result, last_position, excerpt):
+        super().__init__('Incomplete parse. Unexpected input on line'
+            f' {last_position.line}, column {last_position.column}:\n{excerpt}')
+        self.partial_result = partial_result
+        self.last_position = last_position
+
+
 class Infix(Node):
     _fields = ('left', 'operator', 'right')
 
@@ -1281,8 +1292,8 @@ class Prefix(Node):
         return f'Prefix({self.operator!r}, {self.right!r})'
 
 
-def parse(text, pos=0):
-    return _run(text, pos, $start)
+def parse(text, pos=0, fullparse=True):
+    return _run(text, pos, $start, fullparse)
 
 
 _PositionInfo = _nt('_PositionInfo', 'start, end')
@@ -1306,7 +1317,7 @@ def _wrap_string_literal(string_value, parse_function):
     return result
 
 
-def _run(text, pos, start):
+def _run(text, pos, start, fullparse):
     memo = {}
     result = None
 
@@ -1329,7 +1340,7 @@ def _run(text, pos, start):
             result = None
 
     if result[0]:
-        return _finalize_parse_info(text, result[1])
+        return _finalize_parse_info(text, result[1], result[2], fullparse)
     else:
         pos = result[2]
         message = result[1](text, pos)
@@ -1383,7 +1394,7 @@ def _transform(node, callback):
     return callback(node)
 
 
-def _finalize_parse_info(text, nodes):
+def _finalize_parse_info(text, nodes, pos, fullparse):
     line_numbers, column_numbers = _map_index_to_line_and_column(text)
 
     for node in visit(nodes):
@@ -1395,6 +1406,12 @@ def _finalize_parse_info(text, nodes):
                 start=_Position(start, line_numbers[start], column_numbers[start]),
                 end=_Position(end, line_numbers[end], column_numbers[end]),
             )
+
+    if fullparse and pos < len(text):
+        line, col = line_numbers[pos], column_numbers[pos]
+        position = _Position(pos, line, col)
+        excerpt = _extract_excerpt(text, pos, col)
+        raise PartialParseError(nodes, position, excerpt)
 
     return nodes
 

@@ -231,7 +231,7 @@ with this example.
         Name = @/[a-zA-Z]+/
         Newline = @/[\r\n]+/
 
-        Start = Opt(Newline) >> (Statement('') // Newline)
+        Start = Opt(Newline) >> (Statement('') / Newline)
     ''')
 
     from textwrap import dedent
