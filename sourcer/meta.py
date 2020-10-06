@@ -106,8 +106,7 @@ Expr = OperatorPrecedence(
     LeftAssoc(wrap("|")),
 )
 
-# TODO: Implement `End`.
-start = Skip(Newline) >> (Stmt / Sep) # << End
+start = Skip(Newline) >> (Stmt / Sep)
 
 """
 
@@ -160,6 +159,14 @@ class ParseError(Exception):
         self.position = _Position(index, line, column)
 
 
+class PartialParseError(Exception):
+    def __init__(self, partial_result, last_position, excerpt):
+        super().__init__('Incomplete parse. Unexpected input on line'
+            f' {last_position.line}, column {last_position.column}:\n{excerpt}')
+        self.partial_result = partial_result
+        self.last_position = last_position
+
+
 class Infix(Node):
     _fields = ('left', 'operator', 'right')
 
@@ -194,8 +201,8 @@ class Prefix(Node):
         return f'Prefix({self.operator!r}, {self.right!r})'
 
 
-def parse(text, pos=0):
-    return _run(text, pos, _cont_start)
+def parse(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_start, fullparse)
 
 
 _PositionInfo = _nt('_PositionInfo', 'start, end')
@@ -219,7 +226,7 @@ def _wrap_string_literal(string_value, parse_function):
     return result
 
 
-def _run(text, pos, start):
+def _run(text, pos, start, fullparse):
     memo = {}
     result = None
 
@@ -242,7 +249,7 @@ def _run(text, pos, start):
             result = None
 
     if result[0]:
-        return _finalize_parse_info(text, result[1])
+        return _finalize_parse_info(text, result[1], result[2], fullparse)
     else:
         pos = result[2]
         message = result[1](text, pos)
@@ -296,7 +303,7 @@ def _transform(node, callback):
     return callback(node)
 
 
-def _finalize_parse_info(text, nodes):
+def _finalize_parse_info(text, nodes, pos, fullparse):
     line_numbers, column_numbers = _map_index_to_line_and_column(text)
 
     for node in visit(nodes):
@@ -308,6 +315,12 @@ def _finalize_parse_info(text, nodes):
                 start=_Position(start, line_numbers[start], column_numbers[start]),
                 end=_Position(end, line_numbers[end], column_numbers[end]),
             )
+
+    if fullparse and pos < len(text):
+        line, col = line_numbers[pos], column_numbers[pos]
+        position = _Position(pos, line, col)
+        excerpt = _extract_excerpt(text, pos, col)
+        raise PartialParseError(nodes, position, excerpt)
 
     return nodes
 
@@ -390,8 +403,8 @@ def _cont_Space(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_Space(text, pos=0):
-    return _run(text, pos, _cont_Space)
+def _parse_Space(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_Space, fullparse)
 
 
 Space = Rule('Space', _parse_Space, """
@@ -430,8 +443,8 @@ def _cont_Comment(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_Comment(text, pos=0):
-    return _run(text, pos, _cont_Comment)
+def _parse_Comment(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_Comment, fullparse)
 
 
 Comment = Rule('Comment', _parse_Comment, """
@@ -470,8 +483,8 @@ def _cont_Newline(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_Newline(text, pos=0):
-    return _run(text, pos, _cont_Newline)
+def _parse_Newline(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_Newline, fullparse)
 
 
 Newline = Rule('Newline', _parse_Newline, """
@@ -549,8 +562,8 @@ def _cont_Sep(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_Sep(text, pos=0):
-    return _run(text, pos, _cont_Sep)
+def _parse_Sep(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_Sep, fullparse)
 
 
 Sep = Rule('Sep', _parse_Sep, """
@@ -606,8 +619,8 @@ def _cont_Name(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_Name(text, pos=0):
-    return _run(text, pos, _cont_Name)
+def _parse_Name(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_Name, fullparse)
 
 
 Name = Rule('Name', _parse_Name, """
@@ -657,8 +670,8 @@ def _cont_Comma(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_Comma(text, pos=0):
-    return _run(text, pos, _cont_Comma)
+def _parse_Comma(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_Comma, fullparse)
 
 
 Comma = Rule('Comma', _parse_Comma, """
@@ -734,8 +747,8 @@ def _cont_wrap(_text, _pos, x):
     (yield (_status, _result, _pos,))
 
 
-def _parse_wrap(text, pos=0):
-    return _run(text, pos, _cont_wrap)
+def _parse_wrap(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_wrap, fullparse)
 
 
 wrap = Rule('wrap', _parse_wrap, """
@@ -762,8 +775,8 @@ def _cont_kw(_text, _pos, word):
     (yield (_status, _result, _pos,))
 
 
-def _parse_kw(text, pos=0):
-    return _run(text, pos, _cont_kw)
+def _parse_kw(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_kw, fullparse)
 
 
 kw = Rule('kw', _parse_kw, """
@@ -865,8 +878,8 @@ def _cont_Params(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_Params(text, pos=0):
-    return _run(text, pos, _cont_Params)
+def _parse_Params(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_Params, fullparse)
 
 
 Params = Rule('Params', _parse_Params, """
@@ -923,8 +936,8 @@ class StringLiteral(Node):
         return f'StringLiteral(value={self.value!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_StringLiteral)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_StringLiteral, fullparse)
 
 
 
@@ -1127,8 +1140,8 @@ class RegexLiteral(Node):
         return f'RegexLiteral(value={self.value!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_RegexLiteral)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_RegexLiteral, fullparse)
 
 
 
@@ -1197,8 +1210,8 @@ class PythonSection(Node):
         return f'PythonSection(value={self.value!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_PythonSection)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_PythonSection, fullparse)
 
 
 
@@ -1267,8 +1280,8 @@ class PythonExpression(Node):
         return f'PythonExpression(value={self.value!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_PythonExpression)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_PythonExpression, fullparse)
 
 
 
@@ -1343,8 +1356,8 @@ class RuleDef(Node):
         return f'RuleDef(is_ignored={self.is_ignored!r}, name={self.name!r}, params={self.params!r}, expr={self.expr!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_RuleDef)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_RuleDef, fullparse)
 
 
 
@@ -1683,8 +1696,8 @@ class ClassDef(Node):
         return f'ClassDef(name={self.name!r}, params={self.params!r}, fields={self.fields!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_ClassDef)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_ClassDef, fullparse)
 
 
 
@@ -1923,8 +1936,8 @@ def _cont_Stmt(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_Stmt(text, pos=0):
-    return _run(text, pos, _cont_Stmt)
+def _parse_Stmt(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_Stmt, fullparse)
 
 
 Stmt = Rule('Stmt', _parse_Stmt, """
@@ -1968,8 +1981,8 @@ class LetExpression(Node):
         return f'LetExpression(name={self.name!r}, expr={self.expr!r}, body={self.body!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_LetExpression)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_LetExpression, fullparse)
 
 
 
@@ -2168,8 +2181,8 @@ class Ref(Node):
         return f'Ref(value={self.value!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_Ref)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_Ref, fullparse)
 
 
 
@@ -2206,8 +2219,8 @@ class ListLiteral(Node):
         return f'ListLiteral(elements={self.elements!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_ListLiteral)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_ListLiteral, fullparse)
 
 
 
@@ -2446,8 +2459,8 @@ def _cont_Atom(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_Atom(text, pos=0):
-    return _run(text, pos, _cont_Atom)
+def _parse_Atom(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_Atom, fullparse)
 
 
 Atom = Rule('Atom', _parse_Atom, """
@@ -2523,8 +2536,8 @@ class KeywordArg(Node):
         return f'KeywordArg(name={self.name!r}, expr={self.expr!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_KeywordArg)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_KeywordArg, fullparse)
 
 
 
@@ -2672,8 +2685,8 @@ class ArgList(Node):
         return f'ArgList(args={self.args!r})'
 
     @staticmethod
-    def parse(text, pos=0):
-        return _run(text, pos, _cont_ArgList)
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_ArgList, fullparse)
 
 
 
@@ -3235,8 +3248,8 @@ def _cont_Expr(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_Expr(text, pos=0):
-    return _run(text, pos, _cont_Expr)
+def _parse_Expr(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_Expr, fullparse)
 
 
 Expr = Rule('Expr', _parse_Expr, """
@@ -3563,8 +3576,8 @@ def _cont_start(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_start(text, pos=0):
-    return _run(text, pos, _cont_start)
+def _parse_start(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_start, fullparse)
 
 
 start = Rule('start', _parse_start, """
@@ -3598,8 +3611,8 @@ def _cont__ignored(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse__ignored(text, pos=0):
-    return _run(text, pos, _cont__ignored)
+def _parse__ignored(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont__ignored, fullparse)
 
 
 _ignored = Rule('_ignored', _parse__ignored, """
