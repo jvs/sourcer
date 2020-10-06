@@ -495,7 +495,7 @@ For now, here's a list of the supported expressions:
 - Sequence:
 
     - ``[foo, bar, baz]`` -- parses `foo`, then `bar`, then `baz`, returning the
-      results in a list.
+      results in a list
 
 - String Matching:
 
