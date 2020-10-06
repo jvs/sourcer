@@ -43,7 +43,8 @@ wip:
 # Build the distributeion.
 dist:
 	rm -rf dist/
-	python setup.py sdist
+	python3 setup.py sdist
+	twine check dist/*
 
 # Upload the library to pypitest.
 test_upload: dist

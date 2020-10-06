@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-
-from distutils.core import setup
+import setuptools
 
 def long_description():
     try:
@@ -9,14 +7,16 @@ def long_description():
     except:
         return ''
 
-setup(
+
+setuptools.setup(
     name = 'sourcer',
-    version = '0.3.1',
+    version = '0.3.4',
     author = 'John K. Von Seggern',
     author_email = 'vonseg@protonmail.com',
     url = 'https://github.com/jvs/sourcer',
     description = 'simple parsing library',
     long_description = long_description(),
+    long_description_content_type = 'text/x-rst',
     python_requires = '>=3.6',
     install_requires = [],
     packages = ['sourcer'],

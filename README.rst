@@ -14,10 +14,6 @@ To install sourcer::
 
     pip install sourcer
 
-Or download the source from `github <https://github.com/jvs/sourcer>`_
-and install with::
-
-    python setup.py install
 
 
 Hello $World example
