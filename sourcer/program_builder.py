@@ -176,6 +176,9 @@ class Expr:
     def __lt__(self, other):
         return Binop(self, '<', other)
 
+    def __le__(self, other):
+        return Binop(self, '<=', other)
+
 
 class Assign(Expr):
     def __init__(self, left, right):
@@ -348,6 +351,18 @@ class Not(Expr):
         writer.write_str('(not ')
         writer.write_expr(self._right)
         writer.write_str(')')
+
+
+class Raise:
+    def __init__(self, expr=None):
+        self._expr = expr
+
+    def write(self, writer):
+        writer.write_str('raise')
+
+        if self._expr is not None:
+            writer.write_str(' ')
+            writer.write_expr(self._expr)
 
 
 class Raw(Expr):

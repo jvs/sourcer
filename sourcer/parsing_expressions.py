@@ -4,7 +4,7 @@ import typing
 from string import Template
 
 from .program_builder import (
-    Binop, LIST, ProgramBuilder, Raw, Return, Tup, Val, Var, Yield,
+    Binop, LIST, ProgramBuilder, Raise, Raw, Return, Tup, Val, Var, Yield,
 )
 
 
@@ -262,8 +262,8 @@ class Choice(Expr):
             pb(RESULT << farthest_err)
         pb(Raw(f'# </{self.__class__.__name__}>'))
 
-    def compile_error_message(self, pb, rule):
-        pb(Return())
+    def complain(self):
+        return 'Unexpected input'
 
 
 class Class(Expr):
@@ -405,8 +405,8 @@ class ExpectNot(Expr):
             pb(RESULT << Val(None))
         pb(Raw(f'# </{self.__class__.__name__}>'))
 
-    def compile_error_message(self, pb, rule):
-        pb(Return())
+    def complain(self):
+        return f'Did not expect to match: {self.expr}'
 
 
 class Fail(Expr):
@@ -424,8 +424,8 @@ class Fail(Expr):
         pb(STATUS << False, RESULT << Raw(_error_func_name(self)))
         pb(Raw(f'# </{self.__class__.__name__}>'))
 
-    def compile_error_message(self, pb, rule):
-        pb(Return())
+    def complain(self):
+        return 'Failed' if self.message is None else str(self.message)
 
 
 class KeywordArg:
@@ -574,8 +574,8 @@ class RegexLiteral(Expr):
 
     def _compile(self, pb):
         pb(Raw(f'# <Regex pattern={self.pattern!r}>'))
-        pb.add_import('from re import compile as compile_re')
-        matcher = pb.define_global('matcher', f'compile_re({self.pattern!r}).match')
+        pb.add_import('from re import compile as _compile_re')
+        matcher = pb.define_global('matcher', f'_compile_re({self.pattern!r}).match')
         match = pb.var('match', matcher(TEXT, POS))
         end = match.end()
 
@@ -591,8 +591,8 @@ class RegexLiteral(Expr):
 
         pb(Raw('# </Regex>'))
 
-    def compile_error_message(self, pb, rule):
-        pb(Return())
+    def complain(self):
+        return f'Expected to match the regular expression /{self.pattern}/'
 
 
 def Right(expr1, expr2):
@@ -758,8 +758,8 @@ class StringLiteral(Expr):
 
         pb(Raw('# </String>'))
 
-    def compile_error_message(self, pb, rule):
-        pb(Return(Val(f'Expected {self.value!r}.')))
+    def complain(self):
+        return f'Expected to match the string {self.value!r}'
 
 
 class OperatorPrecedence(Expr):
@@ -991,8 +991,8 @@ class Where(Expr):
                     pb(RESULT << Raw(_error_func_name(self)))
         pb(Raw(f'# </{self.__class__.__name__}>'))
 
-    def compile_error_message(self, pb, rule):
-        pb(Return())
+    def complain(self):
+        return f'Expected to satisfy the predicate: {self.predicate}'
 
 
 def _skip_ignored(pos):
@@ -1008,7 +1008,7 @@ def _entry_name(name):
 
 
 def _error_func_name(expr):
-    return f'_generate_error_message{expr.program_id}'
+    return f'_raise_error{expr.program_id}'
 
 
 BinaryOp = (Alt, Apply, Choice, Discard, Where)
@@ -1097,10 +1097,38 @@ def generate_source_code(nodes):
 
     visited = set()
     def maybe_compile_error_message(rule, expr):
-        if hasattr(expr, 'compile_error_message') and expr.program_id not in visited:
-            visited.add(expr.program_id)
-            with pb.global_function(_error_func_name(expr), [str(TEXT), str(POS)]):
-                expr.compile_error_message(pb, rule)
+        if not hasattr(expr, 'complain') or expr.program_id in visited:
+            return
+
+        visited.add(expr.program_id)
+        if expr.always_succeeds():
+            return
+
+        with pb.global_function(_error_func_name(expr), [str(TEXT), str(POS)]):
+            with pb.IF(raw.len(TEXT) <= POS):
+                pb(
+                    raw.title << Val('Unexpected end of input.'),
+                    raw.line << Val(None),
+                    raw.col << Val(None),
+                )
+
+            with pb.ELSE():
+                pb(
+                    Tup(raw.line, raw.col) << raw._get_line_and_column(TEXT, POS),
+                    raw.excerpt << raw._extract_excerpt(TEXT, POS, raw.col),
+                    raw.title << Raw(
+                        r"f'Error on line {line}, column {col}:\n{excerpt}\n'"
+                    ),
+                )
+
+            pb(
+                raw.details << Raw('('),
+                Val(f'Failed to parse the {rule.name!r} rule, at the expression:\n'),
+                Val(f'    {str(expr)}\n\n'),
+                Val(expr.complain()),
+                Raw(')'),
+                Raise(raw.ParseError(raw.title + raw.details, POS, raw.line, raw.col)),
+            )
 
     for rule in rules:
         rule.compile(pb)
@@ -1217,9 +1245,9 @@ class Rule:
 
 _main_template = r'''
 class ParseError(Exception):
-    def __init__(self, message, pos):
-        self.message = message
-        self.pos = pos
+    def __init__(self, message, index, line, column):
+        super().__init__(message)
+        self.position = _Position(index, line, column)
 
 
 class Infix(Node):
@@ -1359,19 +1387,7 @@ def _transform(node, callback):
 
 
 def _finalize_parse_info(text, nodes):
-    line_numbers = []
-    col_numbers = []
-    line_number = 1
-    col_number = 0
-
-    for c in text:
-        if c == '\n':
-            line_number += 1
-            col_number = 0
-        else:
-            col_number += 1
-        line_numbers.append(line_number)
-        col_numbers.append(col_number)
+    line_numbers, column_numbers = _map_index_to_line_and_column(text)
 
     for node in visit(nodes):
         parse_info = getattr(node, '_position_info', None)
@@ -1379,9 +1395,58 @@ def _finalize_parse_info(text, nodes):
             start, end = parse_info
             end -= 1
             node._position_info = _PositionInfo(
-                start=_Position(start, line_numbers[start], col_numbers[start]),
-                end=_Position(end, line_numbers[end], col_numbers[end]),
+                start=_Position(start, line_numbers[start], column_numbers[start]),
+                end=_Position(end, line_numbers[end], column_numbers[end]),
             )
 
     return nodes
+
+
+def _extract_excerpt(text, pos, col):
+    start = pos - (col - 1)
+    match = _compile_re('\n').search(text, pos + 1)
+    end = len(text) if match is None else match.start()
+
+    if end - start < 96:
+        return text[start : end] + _caret_at(col - 1)
+
+    if col < 60:
+        # Chop the line off at the end.
+        return text[start : start + 90] + ' ...' + _caret_at(col - 1)
+
+    elif end - pos < 40:
+        # Chop the line off at the start.
+        return '... ' + text[end - 90 : end] + _caret_at(pos - (end - 90) + 4)
+
+    else:
+        # Chop the line off at both ends.
+        return '... ' + text[pos - 42 : pos + 42] + ' ...' + _caret_at(42 + 4)
+
+
+def _caret_at(index):
+    return '\n' + (' ' * index) + '^'
+
+
+def _get_line_and_column(text, pos):
+    line_numbers, column_numbers = _map_index_to_line_and_column(text)
+    return line_numbers[pos], column_numbers[pos]
+
+
+def _map_index_to_line_and_column(text):
+    line_numbers = []
+    column_numbers = []
+
+    current_line = 1
+    current_column = 0
+
+    for c in text:
+        if c == '\n':
+            current_line += 1
+            current_column = 0
+        else:
+            current_column += 1
+        line_numbers.append(current_line)
+        column_numbers.append(current_column)
+
+    return line_numbers, column_numbers
 '''
