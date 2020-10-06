@@ -99,59 +99,7 @@ Examples
 --------
 
 
-Example 1: Something Like JSON
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Maybe you have to parse something that is a little bit like JSON, but different
-enough that you can't use a real JSON parser. Here's a simple example that you
-can start with and work from, and build it up into what you need:
-
-.. code:: python
-
-    from sourcer import Grammar
-
-    g = Grammar(r'''
-        # Import Python modules by quoting your import statement in backticks.
-        # (You can also use triple backticks to quote multiple lines at once.)
-        `from ast import literal_eval`
-
-        # This grammar parses one value.
-        start = Value
-
-        # A value is one of these things.
-        Value = Object | Array | String | Number | Keyword
-
-        # An object is zero or more members separated by commas, enclosed in
-        # curly braces. Convert objects to Python dicts.
-        Object = "{" >> (Member // ",") << "}" |> `dict`
-
-        # A member is a pair of string literal and value, separated by a colon.
-        Member = [String << ":", Value]
-
-        # An array is zero or more values separated by commas, enclosed in
-        # square braces. Convert arrays to Python lists.
-        Array = "[" >> (Value // ",") << "]"
-
-        # Interpret each string as a Python literal string.
-        String = @/"(?:[^\\"]|\\.)*"/ |> `literal_eval`
-
-        # Interpret each number as a Python float literal.
-        Number = @/-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/ |> `float`
-
-        # Convert boolean literals to Python booleans, and "null" to None.
-        Keyword = "true" >> `True` | "false" >> `False` | "null" >> `None`
-
-        ignored Space = @/\s+/
-    ''')
-
-    result = g.parse('{"foo": "bar", "baz": true}')
-    assert result == {'foo': 'bar', 'baz': True}
-
-    result = g.parse('[12, -34, {"56": 78, "foo": null}]')
-    assert result == [12, -34, {'56': 78, 'foo': None}]
-
-
-Example 2: Arithmetic Expressions
+Example 1: Arithmetic Expressions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here's a barebones grammar for arithmetic expressions. You can build it up with
@@ -213,6 +161,58 @@ Some notes about this example:
 * The ``OperatorPrecedence`` rule constructs the operator precedence table.
   It parses operations and returns ``Infix``, ``Prefix``, and ``Postfix`` objects.
 
+
+
+Example 2: Something Like JSON
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Maybe you have to parse something that is a little bit like JSON, but different
+enough that you can't use a real JSON parser. Here's a simple example that you
+can start with and work from, and build it up into what you need:
+
+.. code:: python
+
+    from sourcer import Grammar
+
+    g = Grammar(r'''
+        # Import Python modules by quoting your import statement in backticks.
+        # (You can also use triple backticks to quote multiple lines at once.)
+        `from ast import literal_eval`
+
+        # This grammar parses one value.
+        start = Value
+
+        # A value is one of these things.
+        Value = Object | Array | String | Number | Keyword
+
+        # An object is zero or more members separated by commas, enclosed in
+        # curly braces. Convert objects to Python dicts.
+        Object = "{" >> (Member // ",") << "}" |> `dict`
+
+        # A member is a pair of string literal and value, separated by a colon.
+        Member = [String << ":", Value]
+
+        # An array is zero or more values separated by commas, enclosed in
+        # square braces. Convert arrays to Python lists.
+        Array = "[" >> (Value // ",") << "]"
+
+        # Interpret each string as a Python literal string.
+        String = @/"(?:[^\\"]|\\.)*"/ |> `literal_eval`
+
+        # Interpret each number as a Python float literal.
+        Number = @/-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/ |> `float`
+
+        # Convert boolean literals to Python booleans, and "null" to None.
+        Keyword = "true" >> `True` | "false" >> `False` | "null" >> `None`
+
+        ignored Space = @/\s+/
+    ''')
+
+    result = g.parse('{"foo": "bar", "baz": true}')
+    assert result == {'foo': 'bar', 'baz': True}
+
+    result = g.parse('[12, -34, {"56": 78, "foo": null}]')
+    assert result == [12, -34, {'56': 78, 'foo': None}]
 
 
 Example 3: Using Classes
