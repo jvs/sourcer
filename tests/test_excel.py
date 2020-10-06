@@ -57,7 +57,6 @@ def test_A1_notation_1():
 
 def test_A1_notation_2():
     result = g.parse('$C12')
-    print(result)
     assert result == g.CellRef(
         book=None,
         sheet=None,
