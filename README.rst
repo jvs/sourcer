@@ -283,7 +283,7 @@ Here's a simple example that you can work from.
 
     g = Grammar(r'''
         # A document is a list of one or more items:
-        start = Item+
+        Document = Item+
 
         # An item is either an element or some text:
         Item = Element | Text
@@ -304,7 +304,9 @@ Here's a simple example that you can work from.
         Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
     ''')
 
-    result = g.parse('To: <party><b>Second</b> Floor Only</party>')
+    # Use the "Document" rule directly:
+    result = g.Document.parse('To: <party><b>Second</b> Floor Only</party>')
+
     print(result)
     assert result == [
         g.Text('To: '),
