@@ -160,6 +160,9 @@ class Apply(Expr):
         wrap = lambda x: f'({x})' if isinstance(x, BinaryOp) else x
         return f'{wrap(self.expr1)} {op} {wrap(self.expr2)}'
 
+    def always_succeeds(self):
+        return self.expr1.always_succeeds() and self.expr2.always_succeeds()
+
     def _compile(self, pb):
         pb(Raw(f'# <{self.__class__.__name__}>'))
         _add_comment(pb, self)
@@ -331,6 +334,10 @@ class Discard(Expr):
         wrap = lambda x: f'({x})' if isinstance(x, BinaryOp) else x
         return f'{wrap(self.expr1)} {op} {wrap(self.expr2)}'
 
+    def always_succeeds(self):
+        return (self.expr1.always_succeeds()
+            and self.expr2.always_succeeds())
+
     def _compile(self, pb):
         pb(Raw(f'# <{self.__class__.__name__}>'))
         _add_comment(pb, self)
@@ -357,6 +364,9 @@ class Expect(Expr):
 
     def __str__(self):
         return f'Expect({self.expr})'
+
+    def always_succeeds(self):
+        return self.expr.always_succeeds()
 
     def _compile(self, pb):
         pb(Raw(f'# <{self.__class__.__name__}>'))
@@ -442,6 +452,10 @@ class LetExpression(Expr):
     def __str__(self):
         return f'let {self.name} = {self.expr} in\n{self.body}'
 
+    def always_succeeds(self):
+        return (self.expr.always_succeeds()
+            and self.body.always_succeeds())
+
     def _compile(self, pb):
         pb(Raw('# <Let>'))
         _add_comment(pb, self)
@@ -464,6 +478,9 @@ class List(Expr):
         x = f'({self.expr})' if isinstance(self.expr, BinaryOp) else self.expr
         op = '*' if self.allow_empty else '+'
         return f'{x}{op}'
+
+    def always_succeeds(self):
+        return self.allow_empty
 
     def _compile(self, pb):
         pb(Raw(f'# <{self.__class__.__name__}>'))
