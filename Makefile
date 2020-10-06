@@ -42,4 +42,6 @@ wip:
 
 # Upload the library to pypi.
 upload:
-	python setup.py sdist upload -r pypi
+	rm -rf dist/
+	python setup.py sdist
+	twine upload --repository pypitest dist/*
