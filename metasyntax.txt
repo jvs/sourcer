@@ -103,5 +103,4 @@ Expr = OperatorPrecedence(
     LeftAssoc(wrap("|")),
 )
 
-# TODO: Implement `End`.
-start = Skip(Newline) >> (Stmt / Sep) # << End
+start = Skip(Newline) >> (Stmt / Sep)
