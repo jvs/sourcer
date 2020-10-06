@@ -502,8 +502,8 @@ For now, here's a list of the supported expressions:
     - ``'foo'`` -- matches the string 'foo'`
 
 
-Alternation:
-~~~~~~~~~~~~
+Alternation
+~~~~~~~~~~~
 
 .. code:: python
 
