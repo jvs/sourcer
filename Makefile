@@ -40,8 +40,15 @@ black: image
 wip:
 	$(RUN) python wip.py
 
-# Upload the library to pypi.
-upload:
+# Build the distributeion.
+dist:
 	rm -rf dist/
 	python setup.py sdist
+
+# Upload the library to pypitest.
+test_upload: dist
 	twine upload --repository pypitest dist/*
+
+# Upload the library to pypi.
+real_upload: dist
+	twine upload --repository pypi dist/*
