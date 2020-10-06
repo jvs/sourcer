@@ -419,22 +419,22 @@ For now, here's a list of the supported expressions:
 
 - Alternation:
 
-    - ``foo / bar`` -- parses a list of `foo` separated by `bar`, consuming
+    - ``foo / bar`` -- parses a list of foo separated by bar, consuming
       an optional trailing separator
-    - ``foo // bar`` -- parses a list of `foo` separated by `bar`, and does
+    - ``foo // bar`` -- parses a list of foo separated by bar, and does
       not consume a trailing separator
-    - In both cases, returns the list of `foo` values and discards the `bar`
+    - In both cases, returns the list of foo values and discards the bar
       values
 
 - Application:
 
-    - ``foo |> bar`` -- parses `foo` then parses `bar`, then returns ``bar(foo)``
-    - ``foo <| bar`` -- parses `foo` then parses `bar`, then returns ``foo(bar)``
+    - ``foo |> bar`` -- parses foo then parses bar, then returns ``bar(foo)``
+    - ``foo <| bar`` -- parses foo then parses bar, then returns ``foo(bar)``
 
 - Binding:
 
-    - ``let foo = bar in baz`` -- parses `bar`, binding the result to `foo`, then
-      parses `baz`
+    - ``let foo = bar in baz`` -- parses bar, binding the result to foo, then
+      parses baz
 
 - Class:
 
@@ -442,8 +442,8 @@ For now, here's a list of the supported expressions:
 
 - Expectation:
 
-    - ``Expect(foo)`` -- parses `foo` without consuming any input
-    - ``ExpectNot(foo)`` -- fails if it can parse `foo`
+    - ``Expect(foo)`` -- parses foo without consuming any input
+    - ``ExpectNot(foo)`` -- fails if it can parse foo
 
 - Failure:
 
@@ -451,7 +451,7 @@ For now, here's a list of the supported expressions:
 
 - Invocation:
 
-    - ``foo(bar)`` -- parses the rule `foo` using the parsing expression `bar`
+    - ``foo(bar)`` -- parses the rule foo using the parsing expression bar
 
 - OperatorPrecedence:
 
@@ -459,48 +459,48 @@ For now, here's a list of the supported expressions:
 
 - Option:
 
-    - ``foo?`` -- parse `foo`, if that fails then return ``None``
+    - ``foo?`` -- parse foo, if that fails then return ``None``
     - ``Opt(foo)`` -- verbose form of ``foo?``
 
 - Ordered Choice:
 
-    - ``foo | bar`` -- parses `foo`, and if that fails, then tries `bar`
+    - ``foo | bar`` -- parses foo, and if that fails, then tries bar
 
 - Python Expression:
 
-    - `\`foo\`` -- returns the Python value ``foo``
+    - \`foo\` -- returns the Python value ``foo``
 
 - Predicate:
 
-    - ``foo where bar`` -- parses `foo`, then `bar`, returning `foo` only if
-      ``bar(foo)`` returns `True` (or some other truthy value)
+    - ``foo where bar`` -- parses foo, then bar, returning foo only if
+      ``bar(foo)`` returns ``True`` (or some other truthy value)
 
 - Projection:
 
-    - ``foo >> bar`` -- parses `foo`, then parses `bar`, then returns only `bar`
-    - ``foo << bar`` -- parses `foo`, then parses `bar`, then returns only `foo`
+    - ``foo >> bar`` -- parses foo, then parses bar, returning only bar
+    - ``foo << bar`` -- parses foo, then parses bar, returning only foo
 
 - Regular Expression:
 
-    - ``@/foo/`` -- matches the regular expression `foo`
-    - ``@/foo/i`` -- matches the regular expression `foo`, ignoring case
+    - ``@/foo/`` -- matches the regular expression foo
+    - ``@/foo/i`` -- matches the regular expression foo, ignoring case
 
 - Repetition:
 
-    - ``foo*`` -- parses `foo` zero or more times, returning the results in a list
-    - ``foo+`` -- parses `foo` one or more times
-    - ``List(foo)`` -- verbose form of `foo*`
-    - ``Some(foo)`` -- verbose form of `foo+`
+    - ``foo*`` -- parses foo zero or more times, returning the results in a list
+    - ``foo+`` -- parses foo one or more times
+    - ``List(foo)`` -- verbose form of ``foo*``
+    - ``Some(foo)`` -- verbose form of ``foo+``
 
 - Sequence:
 
-    - ``[foo, bar, baz]`` -- parses `foo`, then `bar`, then `baz`, returning the
+    - ``[foo, bar, baz]`` -- parses foo, then bar, then baz, returning the
       results in a list
 
 - String Matching:
 
-    - ``'foo'`` -- matches the string 'foo'`
-    - ``'foo'i`` -- matches the string 'foo'`, ignoring case
+    - ``'foo'`` -- matches the string 'foo'
+    - ``'foo'i`` -- matches the string 'foo', ignoring case
 
 
 Alternation
@@ -574,5 +574,5 @@ and perhaps save the source to a file, here's an example:
     assert 'Space' in g._source_code
 
 
-You can then take the `_source_code` field of your grammar and write it to a
+You can then take the ``_source_code`` field of your grammar and write it to a
 file as part of your build.
