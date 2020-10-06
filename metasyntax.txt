@@ -1,0 +1,106 @@
+```
+import ast
+import textwrap
+```
+
+ignored Space = @/[ \t]+/
+ignored Comment = @/#[^\r\n]*/
+
+Newline = @/[\r\n][\s]*/
+Sep = Some(Newline | ";")
+Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+Comma = wrap(",")
+
+wrap(x) => Skip(Newline) >> x << Skip(Newline)
+
+# Parse a full word, then see if it matches our keyword. The point is to make
+# sure that we don't simply match the first part of a word. (For example, if
+# the input string is "classify", we wouldn't want to match the keyword "class".)
+kw(word) => Name where `lambda x: x == word`
+
+Params = wrap("(") >> (wrap(Name) / Comma) << ")"
+
+class StringLiteral {
+    value: (
+        @/(?s)("""([^\\]|\\.)*?""")/
+        | @/(?s)('''([^\\]|\\.)*?''')/
+        | @/("([^"\\]|\\.)*")/
+        | @/('([^'\\]|\\.)*')/
+    ) |> `ast.literal_eval`
+}
+
+class RegexLiteral {
+    # Remove the leading "@/" and the trailing "/".
+    value: @/\@\/([^\/\\]|\\.)*\// |> `lambda x: x[2:-1]`
+}
+
+class PythonSection {
+    # Strip the backticks and remove any common indentation.
+    value: @/(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
+}
+
+class PythonExpression {
+    # Strip the backticks.
+    value: @/`.*?`/ |> `lambda x: x[1:-1]`
+}
+
+class RuleDef {
+    is_ignored: Opt(kw("ignored") | kw("ignore")) |> `bool`
+    name: Name
+    params: Opt(Params) << wrap("=>" | "=" | ":")
+    expr: Expr
+}
+
+class ClassDef {
+    name: kw("class") >> Name
+    params: Opt(Params)
+    fields: wrap("{") >> (RuleDef / Sep) << "}"
+}
+
+Stmt = ClassDef
+    | RuleDef
+    | PythonSection
+    | PythonExpression
+
+class LetExpression {
+    name: kw("let") >> Name << wrap("=")
+    expr: Expr << wrap(kw("in"))
+    body: Expr
+}
+
+class Ref {
+    value: Name
+}
+
+class ListLiteral {
+    elements: "[" >> (wrap(Expr) / Comma) << "]"
+}
+
+Atom = ("(" >> wrap(Expr) << ")")
+    | LetExpression
+    | Ref
+    | StringLiteral
+    | RegexLiteral
+    | ListLiteral
+    | PythonExpression
+
+class KeywordArg {
+    name: Name << ("=" | ":")
+    expr: Expr
+}
+
+class ArgList {
+    args: "(" >> (wrap(KeywordArg | Expr) / Comma) << ")"
+}
+
+Expr = OperatorPrecedence(
+    Atom,
+    Postfix(ArgList),
+    Postfix("?" | "*" | "+"),
+    LeftAssoc(wrap("//" | "/")),
+    LeftAssoc(wrap("<<" | ">>")),
+    LeftAssoc(wrap("<|" | "|>" | "where")),
+    LeftAssoc(wrap("|")),
+)
+
+start = Skip(Newline) >> (Stmt / Sep)

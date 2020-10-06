@@ -1,0 +1,13 @@
+# Ignore everything by default.
+**
+
+# Don't ignore python files in the project folder.
+!*.py
+
+# Don't ignore our dev requirements.
+!requirements*.txt
+
+# And finally, don't ignore our main folders.
+!examples
+!sourcer
+!tests

@@ -11,12 +11,14 @@ def long_description():
 
 setup(
     name = 'sourcer',
-    version = '0.1.3',
+    version = '0.3.0',
     author = 'John K. Von Seggern',
-    author_email = 'vonseg@gmail.com',
+    author_email = 'vonseg@protonmail.com',
     url = 'https://github.com/jvs/sourcer',
     description = 'simple parsing library',
     long_description = long_description(),
+    python_requires = '>=3.6',
+    install_requires = [],
     packages = ['sourcer'],
     classifiers = [
         'Development Status :: 2 - Pre-Alpha',

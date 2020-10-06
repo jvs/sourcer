@@ -1,13 +1,8 @@
 sourcer
 =======
 
-Simple parsing library for Python.
+A parsing library for Python (version 3.6 and later).
 
-There's not much documentation yet, and the performance is probably pretty
-bad, but if you want to give it a try, go for it!
-
-Feel free to send me your feedback at vonseg@gmail.com. Or use the github
-`issue tracker <https://github.com/jvs/sourcer/issues>`_.
 
 .. contents::
 
@@ -19,289 +14,384 @@ To install sourcer::
 
     pip install sourcer
 
-If pip is not installed, use easy_install::
-
-    easy_install sourcer
-
 Or download the source from `github <https://github.com/jvs/sourcer>`_
 and install with::
 
     python setup.py install
 
 
+Hello $World example
+~~~~~~~~~~~~~~~~~~~~
+
+.. code:: python
+
+    from sourcer import Grammar
+
+    g = Grammar(r'''
+        start = "Hello" >> @/[a-zA-Z]+/
+
+        ignore Space = @/[ \t]+/
+        ignore Punctuation = "," | "." | "!" | "?"
+    ''')
+
+    # Try it out:
+    result = g.parse('Hello, World!')
+    assert result == 'World'
+
+    result = g.parse('Hello Chief?!?!!')
+    assert result == 'Chief'
+
+
+Some notes about this example:
+
+* The ``>>`` operator means "Parse and then discard the the left hand side."
+* The ``@/.../`` syntax delimits a regular expression.
+
+
+Why?
+----
+
+Sometimes you have to parse things, and sometimes a regex won't cut it.
+
+Things you might have to parse someday:
+
+- log files
+- business rules
+- market data feeds
+- equations
+- queries
+- user input
+- domain specific languages
+- obscure data formats
+- legacy source code
+
+So that's what this library is for. It's for when you have to take some text
+and turn it into a tree of Python objects.
+
+
+**Aren't there a ton of other parsing libraries for Python?**
+
+Yes.  Try a few and see which one you like best.
+
+
+
+Features
+~~~~~~~~
+
+- Supports Python version 3.6 and later.
+- Create parsers at runtime, or generate Python source code as part of your build.
+- Implements `Parsing Expression Grammars <http://en.wikipedia.org/wiki/Parsing_expression_grammar>`
+  (where "|" represents ordered choice).
+- Built-in support for operator precedence parsing.
+- Supports Python expressions, for defining predicates and transformations
+  directly within grammars.
+- Supports class definitions for defining the structure of your parse trees.
+- Each rule in a grammar becomes a top-level function in the generated Python
+  module, so you can use a grammar as a parsing library, rather than just a
+  monolithic "parse" function.
+- Supports data dependent rules, for things like:
+
+    - significant indentation.
+    - matching start and end tags.
+
+
 Examples
 --------
 
 
-Example 1: Hello, World!
+Example 1: Something Like JSON
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Maybe you have to parse something that is a little bit like JSON, but different
+enough that you can't use a real JSON parser. Here's a simple example that you
+can start with and work from, and build it up into what you need:
+
+.. code:: python
+
+    from sourcer import Grammar
+
+    g = Grammar(r'''
+        # Import Python modules by quoting your import statement in backticks.
+        # (You can also use triple backticks to quote multiple lines at once.)
+        `from ast import literal_eval`
+
+        # This grammar parses one value.
+        start = Value
+
+        # A value is one of these things.
+        Value = Object | Array | String | Number | Keyword
+
+        # An object is zero or more members separated by commas, enclosed in
+        # curly braces. Convert objects to Python dicts.
+        Object = "{" >> (Member // ",") << "}" |> `dict`
+
+        # A member is a pair of string literal and value, separated by a colon.
+        Member = [String << ":", Value]
+
+        # An array is zero or more values separated by commas, enclosed in
+        # square braces. Convert arrays to Python lists.
+        Array = "[" >> (Value // ",") << "]"
+
+        # Interpret each string as a Python literal string.
+        String = @/"(?:[^\\"]|\\.)*"/ |> `literal_eval`
+
+        # Interpret each number as a Python float literal.
+        Number = @/-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/ |> `float`
+
+        # Convert boolean literals to Python booleans, and "null" to None.
+        Keyword = "true" >> `True` | "false" >> `False` | "null" >> `None`
+
+        ignored Space = @/\s+/
+    ''')
+
+    result = g.parse('{"foo": "bar", "baz": true}')
+    assert result == {'foo': 'bar', 'baz': True}
+
+    result = g.parse('[12, -34, {"56": 78, "foo": null}]')
+    assert result == [12, -34, {'56': 78, 'foo': None}]
+
+
+Example 2: Arithmetic Expressions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Here's a barebones grammar for arithmetic expressions. You can build it up with
+your own operators, if you have to parse some kind of specialized equations.
+
+.. code:: python
+
+    from sourcer import Grammar
+
+    g = Grammar(r'''
+        ignore Space = @/\s+/
+
+        # Turn integers into Python int objects.
+        Int = @/\d+/ |> `int`
+
+        # Discard parentheses, so that they don't show up in the result.
+        Parens = '(' >> Expr << ')'
+
+        Expr = OperatorPrecedence(
+            Int | Parens,
+            Prefix('+' | '-'),
+            RightAssoc('^'),
+            Postfix('%'),
+            LeftAssoc('*' | '/'),
+            LeftAssoc('+' | '-'),
+        )
+        start = Expr
+    ''')
+
+    # Simple addition:
+    result = g.parse('1 + 2')
+    assert result == g.Infix(1, '+', 2)
+
+    # Left associativity:
+    result = g.parse('1 + 2 + 3')
+    assert result == g.Infix(g.Infix(1, '+', 2), '+', 3)
+
+    # Postfix operator:
+    result = g.parse('12 * 34%')
+    assert result == g.Infix(12, '*', g.Postfix(34, '%'))
+
+    # Operator precedence:
+    result = g.parse('4 + -5 / 6')
+    assert result == g.Infix(4, '+', g.Infix(g.Prefix('-', 5), '/', 6))
+
+    # Parentheses:
+    result = g.parse('7 * (8 + 9)')
+    assert result == g.Infix(7, '*', g.Infix(8, '+', 9))
+
+    # Right associativity:
+    result = g.parse('10 ^ 11 ^ 12')
+    assert result == g.Infix(10, '^', g.Infix(11, '^', 12))
+
+
+Some notes about this example:
+
+* The ``|>`` operator means "Take the result from the left operand and then
+  apply the function on the right."
+* The ``OperatorPrecedence`` rule constructs the operator precedence table.
+  It parses operations and returns ``Infix``, ``Prefix``, and ``Postfix`` objects.
+
+
+
+Example 3: Using Classes
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Let's parse the string "Hello, World!" (just to make sure the basics work):
+This is just a quick example to show how you can define classes within your
+grammars.
 
 .. code:: python
 
-    from sourcer import *
+    from sourcer import Grammar
 
-    # Let's parse strings like "Hello, foo!", and just keep the "foo" part.
-    greeting = 'Hello' >> Opt(',') >> ' ' >> Pattern(r'\w+') << '!'
+    g = Grammar(r'''
+        # Parse a list of commands separated by semicolons.
+        start = Command / ";"
 
-    # Let's try it on the string "Hello, World!"
-    person1 = parse(greeting, 'Hello, World!')
-    assert person1 == 'World'
+        # A command is an action and a range.
+        class Command {
+            action: "Copy" | "Delete" | "Print"
+            range: Range
+        }
 
-    # Now let's try omitting the comma, since we made it optional (with "Opt").
-    person2 = parse(greeting, 'Hello Chief!')
-    assert person2 == 'Chief'
+        # A range can be open or closed on either end.
+        class Range {
+            open: "(" | "["
+            left: Int << ","
+            right: Int
+            close: "]" | ")"
+        }
 
-Some notes about this example:
+        Int = @/\d+/ |> `int`
 
-* The ``>>`` operator means "Discard the result from the left operand. Just
-  return the result from the right operand."
-* The ``<<`` operator similarly means "Just return the result from the result
-  from the left operand and discard the result from the right operand."
-* ``Opt`` means "This term is optional. Parse it if it's there, otherwise just
-  keep going."
-* ``Pattern`` means "Parse strings that match this regular expression."
+        ignore Space = @/\s+/
+    ''')
 
+    result = g.parse('Print [10, 20); Delete (33, 44);')
+    assert result == [
+        g.Command(
+            action='Print',
+            range=g.Range('[', 10, 20, ')')
+        ),
+        g.Command(
+            action='Delete',
+            range=g.Range('(', 33, 44, ')')
+        ),
+    ]
 
-Example 2: Parsing Arithmetic Expressions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Here's a quick example showing how to use operator precedence parsing:
-
-.. code:: python
-
-    from sourcer import *
-
-    Int = Pattern(r'\d+') * int
-    Parens = '(' >> ForwardRef(lambda: Expr) << ')'
-    Expr = OperatorPrecedence(
-        Int | Parens,
-        InfixRight('^'),
-        Prefix('+', '-'),
-        Postfix('%'),
-        InfixLeft('*', '/'),
-        InfixLeft('+', '-'),
+    # Objects created from these classes have position information:
+    assert result[1]._position_info.start == g._Position(
+        index=16, line=1, column=17,
     )
 
-    # Now let's try parsing an expression.
-    t1 = parse(Expr, '1+2^3/4')
-    assert t1 == Operation(1, '+', Operation(Operation(2, '^', 3), '/', 4))
-
-    # Let's try putting some parentheses in the next one.
-    t2 = parse(Expr, '1*(2+3)')
-    assert t2 == Operation(1, '*', Operation(2, '+', 3))
-
-    # Finally, let's try using a unary operator in our expression.
-    t3 = parse(Expr, '-1*2')
-    assert t3 == Operation(Operation(None, '-', 1), '*', 2)
-
-Some notes about this example:
-
-* The ``*`` operator means "Take the result from the left operand and then
-  apply the function on the right."
-* In this case, the function is simply ``int``.
-* So in our example, the ``Int`` rule matches any string of digit characters
-  and produces the corresponding ``int`` value.
-* So the ``Parens`` rule in our example parses an expression in parentheses,
-  discarding the parentheses.
-* The ``ForwardRef`` term is necessary because the ``Parens`` rule wants to
-  refer to the ``Expr`` rule, but ``Expr`` hasn't been defined by that point.
-* The ``OperatorPrecedence`` rule constructs the operator precedence table.
-  It parses operations and returns ``Operation`` objects.
+    assert result[1]._position_info.end == g._Position(
+        index=30, line=1, column=31,
+    )
 
 
-Example 3: Building an Abstract Syntax Tree
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Let's try building a simple AST for the
-`lambda calculus <http://en.wikipedia.org/wiki/Lambda_calculus>`_. We can use
-``Struct`` classes to define the AST and the parser at the same time:
+Example 4: Parsing Something Like XML
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Maybe you have to parse something where you have matching start and end tags.
+Here's a simple example that you can work from.
 
 .. code:: python
 
-    from sourcer import *
+    from sourcer import Grammar
 
-    class Identifier(Struct):
-        def parse(self):
-            self.name = Word
+    g = Grammar(r'''
+        # A document is a list of one or more items:
+        Document = Item+
 
-    class Abstraction(Struct):
-        def parse(self):
-            self.parameter = '\\' >> Word
-            self.body = '. ' >> Expr
+        # An item is either an element or some text:
+        Item = Element | Text
 
-    class Application(LeftAssoc):
-        def parse(self):
-            self.left = Operand
-            self.operator = ' '
-            self.right = Operand
+        # A text section doesn't contain the "<" character:
+        class Text {
+            content: @/[^<]+/
+        }
 
-    Word = Pattern(r'\w+')
-    Parens = '(' >> ForwardRef(lambda: Expr) << ')'
-    Operand = Parens | Abstraction | Identifier
-    Expr = Application | Operand
+        # An element is a pair of matching tags, and zero or more items:
+        class Element {
+            open: "<" >> Word << ">"
+            items: Item*
+            close: "</" >> Word << ">" where `lambda x: x == open`
+        }
 
-    t1 = parse(Expr, r'(\x. x) y')
-    assert isinstance(t1, Application)
-    assert isinstance(t1.left, Abstraction)
-    assert isinstance(t1.right, Identifier)
-    assert t1.left.parameter == 'x'
-    assert t1.left.body.name == 'x'
-    assert t1.right.name == 'y'
+        # A word doesn't have special characters, and doesn't start with a digit:
+        Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+    ''')
 
-    t2 = parse(Expr, 'x y z')
-    assert isinstance(t2, Application)
-    assert isinstance(t2.left, Application)
-    assert isinstance(t2.right, Identifier)
-    assert t2.left.left.name == 'x'
-    assert t2.left.right.name == 'y'
-    assert t2.right.name == 'z'
+    # Use the "Document" rule directly:
+    result = g.Document.parse('To: <party><b>Second</b> Floor Only</party>')
 
+    assert result == [
+        g.Text('To: '),
+        g.Element(
+            open='party',
+            items=[
+                g.Element('b', [g.Text('Second')], 'b'),
+                g.Text(' Floor Only'),
+            ],
+            close='party',
+        ),
+    ]
 
-Example 4: Tokenizing
-~~~~~~~~~~~~~~~~~~~~~
-
-It's often useful to tokenize your input before parsing it. Let's create a
-tokenizer for the lambda calculus.
-
-.. code:: python
-
-    from sourcer import *
-
-    class LambdaTokens(TokenSyntax):
-        def __init__(self):
-            self.Word = r'\w+'
-            self.Symbol = AnyChar(r'(\.)')
-            self.Space = Skip(r'\s+')
-
-    # Run the tokenizer on a lambda term with a bunch of random whitespace.
-    Tokens = LambdaTokens()
-    ans1 = tokenize(Tokens, '\n (   x  y\n\t) ')
-
-    # Assert that we didn't get any space tokens.
-    assert len(ans1) == 4
-    (t1, t2, t3, t4) = ans1
-    assert isinstance(t1, Tokens.Symbol) and t1.content == '('
-    assert isinstance(t2, Tokens.Word) and t2.content == 'x'
-    assert isinstance(t3, Tokens.Word) and t3.content == 'y'
-    assert isinstance(t4, Tokens.Symbol) and t4.content == ')'
-
-    # Let's use the tokenizer with a simple grammar, just to show how that
-    # works.
-    Sentence = Some(Tokens.Word) << '.'
-    ans2 = tokenize_and_parse(Tokens, Sentence, 'This is a test.')
-
-    # Assert that we got a list of Word tokens.
-    assert all(isinstance(i, Tokens.Word) for i in ans2)
-
-    # Assert that the tokens have the expected content.
-    contents = [i.content for i in ans2]
-    assert contents == ['This', 'is', 'a', 'test']
-
-
-In this example, the ``Skip`` term tells the tokenizer that we want to ignore
-whitespace. The ``AnyChar`` term tell the tokenizer that a symbol can be any
-one of the characters ``(``, ``\``, ``.``, ``)``. Alternatively, we could have
-used:
-
-.. code:: python
-
-    Symbol = r'[(\\.)]'
 
 
 Example 5: Parsing Significant Indentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We can use sourcer to parse languages with significant indentation. Here's a
-bare-bones example to demonstrate one possible approach.
+If you ever need to parse something with significant indentation, you can start
+with this example.
 
 .. code:: python
 
-    from sourcer import *
+    from sourcer import Grammar
 
-    class TestTokens(TokenSyntax):
-        def __init__(self):
-            # Let's just use words, newlines, and spaces in this example.
-            self.Word = r'\w+'
-            self.Newline = r'\n'
-            # In this case, we'll say that an indent is a newline followed by
-            # some spaces, followed by a word.
-            self.Indent = r'(?<=\n) +(?=\w)'
-            # And let's just throw out all other space characters.
-            self.Space = Skip(' +')
+    g = Grammar(r'''
+        ignore Space = @/[ \t]+/
 
-    # All our token classes are attributes of this ``Tokens`` object. It's
-    # essentially a namespace for our token classes.
-    Tokens = TestTokens()
+        Indent = @/\n[ \t]*/
 
-    class InlineStatement(Struct):
-        def parse(self):
-            # Let's say an inline-statement is just some word tokens. We'll use
-            # ``Content`` to get the string content of each token (since in this
-            # case, we don't care about the tokens themselves).
-            self.words = Some(Content(Tokens.Word))
+        MatchIndent(i) =>
+            Indent where `lambda x: x == i`
 
-        def __repr__(self):
-            # We'll define a ``repr`` method so that we can easily check the
-            # parse results. We'll just put a semicolon after each statement.
-            return '%s;' % ' '.join(self.words)
+        IncreaseIndent(i) =>
+            Indent where `lambda x: len(x) > len(i)`
 
-    class Block(Struct):
-        def parse(self, indent=''):
-            # A block is a bunch of statements at the same indentation,
-            # all separated by some newline tokens.
-            self.statements = Statement(indent) // Some(Tokens.Newline)
+        Body(current_indent) =>
+            let i = IncreaseIndent(current_indent) in
+            Statement(i) // MatchIndent(i)
 
-        def __repr__(self):
-            # In this case, we'll put a space between each statement and enclose
-            # the whole block in curly braces. This will make it easy for us to
-            # tell if our parse results look right.
-            return '{%s}' % ' '.join(repr(i) for i in self.statements)
+        Statement(current_indent) =>
+            If(current_indent) | Print
 
-    def Statement(indent):
-        # Let's say there are two ways to get a statement:
-        # - Get an inline-statement with the current indentation.
-        # - Get a block that is indented farther than the current indentation.
-        return (CurrentIndent(indent) >> InlineStatement
-            | IncreaseIndent(indent) ** Block)
+        class If(current_indent) {
+            test: "if" >> Name
+            body: Body(current_indent)
+        }
 
-    def CurrentIndent(indent):
-        # The point of this function is to return a parsing expression that
-        # matches the current indent (which is provided as an argument).
+        class Print {
+            name: "print" >> Name
+        }
 
-        # If the current indent is the empty string, then we don't need to
-        # consume any input. (We don't have tokens for zero-indentation.)
-        return None if indent == '' else indent
+        Name = @/[a-zA-Z]+/
+        Newline = @/[\r\n]+/
 
-    def IncreaseIndent(current):
-        # To see if the next indentation is more than the current indentation,
-        # we peek at the next token, using ``Expect``, and we get its string
-        # content using ``Content``. The ``^`` operator means "require". In this
-        # case, we require that the next indentation is longer than the current
-        # indentation.
-        token = Expect(Content(Tokens.Indent))
-        return token ^ (lambda token: len(current) < len(token))
+        Start = Opt(Newline) >> (Statement('') / Newline)
+    ''')
 
-    # Let's say that a program is a block, optionally surrounded by newlines.
-    # (The ``>>`` and ``<<`` operators discard the newlines in this case.)
-    OptNewlines = List(Tokens.Newline)
-    Program = OptNewlines >> Block << OptNewlines
+    from textwrap import dedent
 
-    test = '''
-    print foo
-    while true
-        print bar
-        if baz
-            then break
-    exit
-    '''
+    result = g.parse('print ok\nprint bye')
+    assert result == [g.Print('ok'), g.Print('bye')]
 
-    # Let's parse the test case and then use ``repr`` to make sure that we get
-    # back what we expect.
-    ans = tokenize_and_parse(Tokens, Program, test)
-    expect = '{print foo; while true; {print bar; if baz; {then break;}} exit;}'
-    assert repr(ans) == expect
+    result = g.parse('if foo\n  print bar')
+    assert result == [g.If('foo', [g.Print('bar')])]
+
+    result = g.parse(dedent('''
+        print ok
+        if foo
+            if bar
+                print baz
+                print fiz
+            print buz
+        print zim
+    '''))
+    assert result == [
+        g.Print('ok'),
+        g.If('foo', [
+            g.If('bar', [
+                g.Print('baz'),
+                g.Print('fiz'),
+            ]),
+            g.Print('buz'),
+        ]),
+        g.Print('zim'),
+    ]
 
 
 More Examples
@@ -315,3 +405,172 @@ Background
 ----------
 `Parsing expression grammar
 <http://en.wikipedia.org/wiki/Parsing_expression_grammar>`_.
+
+The main thing to know is that the "|" operator represents an ordered choice.
+
+
+Parsing Expressions
+-------------------
+
+This is work in progress. The goal is to provide examples of each of the
+different parsing expressions.
+
+For now, here's a list of the supported expressions:
+
+- Alternation:
+
+    - ``foo / bar`` -- parses a list of `foo` separated by `bar`, consuming
+      an optional trailing separator
+    - ``foo // bar`` -- parses a list of `foo` separated by `bar`, and does
+      not consume a trailing separator
+    - In both cases, returns the list of `foo` values and discards the `bar`
+      values
+
+- Application:
+
+    - ``foo |> bar`` -- parses `foo` then parses `bar`, then returns ``bar(foo)``
+    - ``foo <| bar`` -- parses `foo` then parses `bar`, then returns ``foo(bar)``
+
+- Binding:
+
+    - ``let foo = bar in baz`` -- parses `bar`, binding the result to `foo`, then
+      parses `baz`
+
+- Class:
+
+    - ``class Foo { bar: Bar; baz: Baz }`` -- defines a sequence of named elements
+
+- Expectation:
+
+    - ``Expect(foo)`` -- parses `foo` without consuming any input
+    - ``ExpectNot(foo)`` -- fails if it can parse `foo`
+
+- Failure:
+
+    - ``Fail(message)`` -- fails with the provided error message
+
+- Invocation:
+
+    - ``foo(bar)`` -- parses the rule `foo` using the parsing expression `bar`
+
+- OperatorPrecedence:
+
+    - ``OperatorPrecedence(...)`` -- defines an operator precedence table
+
+- Option:
+
+    - ``foo?`` -- parse `foo`, if that fails then return ``None``
+    - ``Opt(foo)`` -- verbose form of ``foo?``
+
+- Ordered Choice:
+
+    - ``foo | bar`` -- parses `foo`, and if that fails, then tries `bar`
+
+- Python Expression:
+
+    - `\`foo\`` -- returns the Python value ``foo``
+
+- Predicate:
+
+    - ``foo where bar`` -- parses `foo`, then `bar`, returning `foo` only if
+      ``bar(foo)`` returns `True` (or some other truthy value)
+
+- Projection:
+
+    - ``foo >> bar`` -- parses `foo`, then parses `bar`, then returns only `bar`
+    - ``foo << bar`` -- parses `foo`, then parses `bar`, then returns only `foo`
+
+- Regular Expression:
+
+    - ``@/foo/`` -- matches the regular expression `foo`
+
+- Repetition:
+
+    - ``foo*`` -- parses `foo` zero or more times, returning the results in a list
+    - ``foo+`` -- parses `foo` one or more times
+    - ``List(foo)`` -- verbose form of `foo*`
+    - ``Some(foo)`` -- verbose form of `foo+`
+
+- Sequence:
+
+    - ``[foo, bar, baz]`` -- parses `foo`, then `bar`, then `baz`, returning the
+      results in a list
+
+- String Matching:
+
+    - ``'foo'`` -- matches the string 'foo'`
+
+
+Alternation
+~~~~~~~~~~~
+
+.. code:: python
+
+    from sourcer import Grammar
+
+    g = Grammar(r'''
+        # Alternation -- with optional trailing separator:
+        Statements = Statement / ";"
+
+        # Alternation -- without trailing separator:
+        Arguments = Argument // ","
+
+        Statement = Word+
+        Argument = Word
+        Word = @/\w+/
+
+        ignore Space = @/\s+/
+    ''')
+
+    # Use optional trailing separator:
+    result = g.Statements.parse('print this; do that;')
+    assert result == [['print', 'this'], ['do', 'that']]
+
+    # Omit optional trailing separator:
+    result = g.Statements.parse('go here; then stop')
+    assert result == [['go', 'here'], ['then', 'stop']]
+
+    # Try using optional separator where it's not allowed:
+    try:
+        result = g.Arguments.parse('these, those, theirs,')
+        assert False
+    except g.PartialParseError as exc:
+        assert exc.partial_result == ['these', 'those', 'theirs']
+        assert exc.last_position.index == 20
+
+
+
+Grammar Modules
+---------------
+
+This part is work in progress, too.
+
+
+Generating A Python File
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Really quickly, if you want to generate Python source code from your grammar,
+and perhaps save the source to a file, here's an example:
+
+.. code:: python
+
+    from sourcer import Grammar
+
+    g = Grammar(
+        r'''
+            start = "Hello" >> @/[a-zA-Z]+/
+
+            ignore Space = @/[ \t]+/
+            ignore Punctuation = "," | "." | "!" | "?"
+        ''',
+
+        # Add the optional "include_source" flag:
+        include_source=True,
+    )
+
+    # The Python code is in the `_source_code` field:
+    assert 'Space' in g._source_code
+
+
+You can then take the `_source_code` field of your grammar and write it to a
+file as part of your build.
