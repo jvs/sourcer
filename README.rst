@@ -406,3 +406,131 @@ Background
 ----------
 `Parsing expression grammar
 <http://en.wikipedia.org/wiki/Parsing_expression_grammar>`_.
+
+The main thing to know is that the "|" operator represents an ordered choice.
+
+
+Parsing Expressions
+-------------------
+
+This is work in progress. The goal is to provide examples of each of the
+different parsing expressions.
+
+For now, here's a list of the supported expressions:
+
+- Alternation:
+
+    - `foo / bar` -- consumes an optional trailing separator
+    - `foo // bar` -- does not consume a trailing separator
+
+- Application:
+
+    - `foo |> bar` -- parses `foo` then parses `bar`, then returns `bar(foo)`
+    - `foo <| bar` -- parses `foo` then parses `bar`, then returns `foo(bar)`
+
+- Binding:
+
+    - `let foo = bar in baz` -- parses `bar`, binding the result to `foo`, then
+      parses `baz`
+
+- Class:
+
+    - `class Foo { bar: Bar; baz: Baz }` -- defines a sequence of named elements
+
+- Expectation:
+
+    - `Expect(foo)` -- parses `foo` without consuming any input
+    - `ExpectNot(foo)` -- fails if it can parse `foo`
+
+- Failure:
+
+    - `Fail(message)` -- fails with the provided error message
+
+- Invocation:
+
+    - `foo(bar)` -- parses the rule `foo` using the parsing expression `bar`
+
+- OperatorPrecedence:
+
+    - `OperatorPrecedence(...)` -- defines an operator precedence table
+
+- Option:
+
+    - `foo?` -- parse `foo`, if that fails then return `None`
+    - `Opt(foo)` -- verbose form of `foo?`
+
+- Ordered Choice:
+
+    - `foo | bar` -- parses `foo`, and if that fails, then tries `bar`
+
+- Python Expression:
+
+    - `\`foo\`` -- returns the Python value `foo`
+
+- Predicate:
+
+    - `foo where bar` -- parses `foo`, then `bar`, returning `foo` only if
+      `bar(foo)` returns `True` (or some other truthy value)
+
+- Projection:
+
+    - `foo >> bar` -- parses `foo`, then parses `bar`, then returns only `bar`
+    - `foo << bar` -- parses `foo`, then parses `bar`, then returns only `foo`
+
+- Regular Expression:
+
+    - `@/foo/` -- matches the regular expression `foo`
+
+- Repetition:
+
+    - `foo*` -- parses `foo` zero or more times, returning the results in a list
+    - `foo+` -- parses `foo` one or more times
+    - `List(foo)` -- verbose form of `foo*`
+    - `Some(foo)` -- verbose form of `foo+`
+
+- Sequence:
+
+    - `[foo, bar, baz]` -- parses `foo`, then `bar`, then `baz`, returning the
+      results in a list.
+
+- String Matching:
+
+    - `'foo'` -- matches the string `'foo'`
+
+
+Alternation:
+~~~~~~~~~~~~
+
+.. code:: python
+
+    from sourcer import Grammar
+
+    g = Grammar(r'''
+        # Alternation -- with optional trailing separator:
+        Statements = Statement / ";"
+
+        # Alternation -- without trailing separator:
+        Arguments = Argument // ","
+
+        Statement = Word+
+        Argument = Word
+        Word = @/\w+/
+
+        ignore Space = @/\s+/
+    ''')
+
+    # Use optional trailing separator:
+    result = g.Statements.parse('print this; do that;')
+    assert result == [['print', 'this'], ['do', 'that']]
+
+    # Omit optional trailing separator:
+    result = g.Statements.parse('go here; then stop')
+    assert result == [['go', 'here'], ['then', 'stop']]
+
+    # Try using optional separator where it's not allowed:
+    try:
+        result = g.Arguments.parse('these, those, theirs,')
+        assert False
+    except g.PartialParseError as exc:
+        assert exc.partial_result == ['these', 'those', 'theirs']
+        assert exc.last_position.index == 20
