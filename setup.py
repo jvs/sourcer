@@ -11,7 +11,7 @@ def long_description():
 
 setup(
     name = 'sourcer',
-    version = '0.2.0',
+    version = '0.3.0',
     author = 'John K. Von Seggern',
     author_email = 'vonseg@protonmail.com',
     url = 'https://github.com/jvs/sourcer',
