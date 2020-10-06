@@ -574,7 +574,6 @@ class RegexLiteral(Expr):
 
     def _compile(self, pb):
         pb(Raw(f'# <Regex pattern={self.pattern!r}>'))
-        pb.add_import('from re import compile as _compile_re')
         matcher = pb.define_global('matcher', f'_compile_re({self.pattern!r}).match')
         match = pb.var('match', matcher(TEXT, POS))
         end = match.end()
@@ -1017,6 +1016,7 @@ BinaryOp = (Alt, Apply, Choice, Discard, Where)
 def generate_source_code(docstring, nodes):
     pb = ProgramBuilder(docstring=docstring)
     pb.add_import('from collections import namedtuple as _nt')
+    pb.add_import('from re import compile as _compile_re')
     pb(Raw(_program_setup))
 
     # Collect all the rules and stuff.
