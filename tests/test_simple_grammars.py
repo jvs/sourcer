@@ -350,3 +350,32 @@ def test_passing_pythons_max_block_depth():
         result = result[-1]
 
     assert result == 'T' and count == 100
+
+
+def test_case_insensitivity():
+    g = Grammar(r'''
+        hi = "hi"
+        hello = "hello"i
+        command = @/copy|delete|print/i
+    ''')
+
+    result = g.hi.parse('hi')
+    assert result == 'hi'
+
+    with pytest.raises(Exception):
+        g.hi.parse('HI')
+
+    result = g.hello.parse('Hello')
+    assert result == 'Hello'
+
+    result = g.hello.parse('HELLO')
+    assert result == 'HELLO'
+
+    result = g.command.parse('COPY')
+    assert result == 'COPY'
+
+    result = g.command.parse('Delete')
+    assert result == 'Delete'
+
+    result = g.command.parse('print')
+    assert result == 'print'

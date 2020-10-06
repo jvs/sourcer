@@ -483,6 +483,7 @@ For now, here's a list of the supported expressions:
 - Regular Expression:
 
     - ``@/foo/`` -- matches the regular expression `foo`
+    - ``@/foo/i`` -- matches the regular expression `foo`, ignoring case
 
 - Repetition:
 
@@ -499,6 +500,7 @@ For now, here's a list of the supported expressions:
 - String Matching:
 
     - ``'foo'`` -- matches the string 'foo'`
+    - ``'foo'i`` -- matches the string 'foo'`, ignoring case
 
 
 Alternation

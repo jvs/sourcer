@@ -19,6 +19,7 @@ wrap(x) => Skip(Newline) >> x << Skip(Newline)
 kw(word) => Name where `lambda x: x == word`
 
 Params = wrap("(") >> (wrap(Name) / Comma) << ")"
+IgnoreCaseFlag = "i" | "I"
 
 class StringLiteral {
     value: (
@@ -27,11 +28,13 @@ class StringLiteral {
         | @/("([^"\\]|\\.)*")/
         | @/('([^'\\]|\\.)*')/
     ) |> `ast.literal_eval`
+    ignore_case: IgnoreCaseFlag?
 }
 
 class RegexLiteral {
     # Remove the leading "@/" and the trailing "/".
     value: @/\@\/([^\/\\]|\\.)*\// |> `lambda x: x[2:-1]`
+    ignore_case: IgnoreCaseFlag?
 }
 
 class PythonSection {

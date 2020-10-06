@@ -1,3 +1,4 @@
+import re
 import types
 
 from .parsing_expressions import *
@@ -30,10 +31,13 @@ def Grammar(description, name='grammar', include_source=False):
 
 def _create_parsing_expression(node):
     if isinstance(node, meta.StringLiteral):
-        return StringLiteral(node.value)
+        if node.ignore_case:
+            return RegexLiteral(re.escape(node.value), ignore_case=True)
+        else:
+            return StringLiteral(node.value)
 
     if isinstance(node, meta.RegexLiteral):
-        return RegexLiteral(node.value)
+        return RegexLiteral(node.value, ignore_case=node.ignore_case)
 
     if isinstance(node, meta.PythonExpression):
         return PythonExpression(node.value)

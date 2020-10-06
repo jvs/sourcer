@@ -560,21 +560,27 @@ class Ref(Expr):
 class RegexLiteral(Expr):
     num_blocks = 1
 
-    def __init__(self, pattern):
+    def __init__(self, pattern, ignore_case=False):
         if isinstance(pattern, typing.Pattern):
             pattern = pattern.pattern
         if not isinstance(pattern, str):
             raise TypeError('Expected str')
         self.pattern = pattern
         self.skip_ignored = False
+        self.ignore_case = ignore_case
 
     def __str__(self):
         pattern = self.pattern.replace('\\', '\\\\')
-        return f'@/{pattern}/'
+        flag = 'i' if self.ignore_case else ''
+        return f'@/{pattern}/{flag}'
 
     def _compile(self, pb):
         pb(Raw(f'# <Regex pattern={self.pattern!r}>'))
-        matcher = pb.define_global('matcher', f'_compile_re({self.pattern!r}).match')
+
+        flags = '_IGNORECASE' if self.ignore_case else '0'
+        bound_method = f'_compile_re({self.pattern!r}, flags={flags}).match'
+        matcher = pb.define_global('matcher', bound_method)
+
         match = pb.var('match', matcher(TEXT, POS))
         end = match.end()
 
@@ -1016,7 +1022,7 @@ BinaryOp = (Alt, Apply, Choice, Discard, Where)
 def generate_source_code(docstring, nodes):
     pb = ProgramBuilder(docstring=docstring)
     pb.add_import('from collections import namedtuple as _nt')
-    pb.add_import('from re import compile as _compile_re')
+    pb.add_import('from re import compile as _compile_re, IGNORECASE as _IGNORECASE')
     pb(Raw(_program_setup))
 
     # Collect all the rules and stuff.
