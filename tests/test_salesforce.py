@@ -147,10 +147,14 @@ def test_some_simple_formulas():
     result = run('1 + 2 * 3')
     assert result == 7
 
-    result = run('foo == bar && fiz == buz', {'foo': 1, 'bar': 1, 'fiz': 2, 'buz': 2})
+    result = run('foo == bar && fiz == buz', bindings={
+        'foo': 1, 'bar': 1, 'fiz': 2, 'buz': 2,
+    })
     assert result == True
 
-    result = run('foo == bar && fiz == buz', {'foo': 1, 'bar': 1, 'fiz': 2, 'buz': 3})
+    result = run('foo == bar && fiz == buz', bindings={
+        'foo': 1, 'bar': 1, 'fiz': 2, 'buz': 3,
+    })
     assert result == False
 
     result = run('1 <= 2 && (false || true)')
@@ -159,13 +163,16 @@ def test_some_simple_formulas():
     result = run('1 > 2 || (true && false)')
     assert result == False # Explicitly compare to False.
 
-    result = run('foo != bar', {'foo': 10, 'bar': 10})
+    result = run('foo != bar', bindings={'foo': 10, 'bar': 10})
     assert not result
 
-    result = run('foo != bar', {'foo': 1, 'bar': 2})
+    result = run('foo != bar', bindings={'foo': 1, 'bar': 2})
     assert result
 
-    result = run('foo.bar.baz', {'foo': {'bar': {'baz': 100}}})
+    result = run('foo.bar', bindings={'foo': {'bar': 10}})
+    assert result == 10
+
+    result = run('foo.bar.baz', bindings={'foo': {'bar': {'baz': 100}}})
     assert result == 100
 
     result = run('MIN(20, 10, 30)')
