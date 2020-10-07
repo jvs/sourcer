@@ -100,5 +100,8 @@ def _create_parsing_expression(node):
     if isinstance(node, meta.ClassDef):
         return Class(node.name, node.params, node.fields)
 
+    if isinstance(node, meta.IgnoreStmt):
+        return Rule(None, None, node.expr, is_ignored=True)
+
     # Otherwise, fail if we don't know what to do with this node.
     raise Exception(f'Unexpected expression: {node!r}')

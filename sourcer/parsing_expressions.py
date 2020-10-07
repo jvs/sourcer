@@ -1040,7 +1040,7 @@ def generate_source_code(docstring, nodes):
         if node.is_ignored:
             ignored.append(node)
 
-        if start_rule is None and node.name.lower() == 'start':
+        if start_rule is None and node.name and node.name.lower() == 'start':
             start_rule = node
 
     if start_rule is not None and start_rule.is_ignored:
@@ -1053,11 +1053,15 @@ def generate_source_code(docstring, nodes):
 
     visited_names = set()
     for rule in rules:
-        if rule.name.startswith('_'):
+        if rule.name is not None and rule.name.startswith('_'):
             raise Exception(
                 'Grammar rule names must start with a letter. Found a rule that'
                 f' starts with an underscore: "{rule.name}". '
             )
+
+        if not rule.name:
+            rule.name = f'_anonymous_{id(rule)}'
+
         if rule.name in visited_names:
             raise Exception(
                 'Each grammar rule must have a unique name. Found two or more'

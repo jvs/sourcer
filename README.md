@@ -8,12 +8,12 @@ from sourcer import Grammar
 g = Grammar(r'''
     start = "Hello" >> /[a-zA-Z]+/
 
-    ignore Space = /[ \t]+/
-    ignore Punctuation = "," | "." | "!" | "?"
+    ignore /[ \t]+/
+    ignore "," | "." | "!" | "?"
 ''')
 
-assert 'World' == g.parse('Hello, World!')
-assert 'Chief' == g.parse('Hello Chief?!?!!')
+assert g.parse('Hello, World!') == 'World'
+assert g.parse('Hello Chief?!?!!') == 'Chief'
 ```
 
 Notes:
@@ -112,7 +112,7 @@ g = Grammar(r'''
     Int = /\d+/ |> `int`
 
     # Ignore whitespace.
-    ignore Space = /\s+/
+    ignore /\s+/
 ''')
 
 # Some examples:
@@ -167,7 +167,7 @@ g = Grammar(r'''
     # Convert boolean literals to Python booleans, and "null" to None.
     Keyword = "true" >> `True` | "false" >> `False` | "null" >> `None`
 
-    ignored Space = /\s+/
+    ignore /\s+/
 ''')
 
 # Notice that we get back Python dicts, lists, strings, booleans, etc.
@@ -214,7 +214,7 @@ g = Grammar(r'''
     # Integers.
     Int = /\d+/ |> `int`
 
-    ignore Space = /\s+/
+    ignore /\s+/
 ''')
 
 result = g.parse('Print [10, 20); Delete (33, 44];')
@@ -226,7 +226,7 @@ assert result == [
 cmd = result[1]
 assert cmd.action == 'Delete'
 
-# Objects created from these classes have position information:
+# The Command objects have position information:
 info = cmd._position_info
 assert info.start == g._Position(index=16, line=1, column=17)
 assert info.end == g._Position(index=30, line=1, column=31)
@@ -302,7 +302,7 @@ with this example and build it up.
 from sourcer import Grammar
 
 g = Grammar(r'''
-    ignore Space = /[ \t]+/
+    ignore /[ \t]+/
 
     Indent = /\n[ \t]*/
 
@@ -488,7 +488,7 @@ g = Grammar(r'''
     Argument = Word
     Word = /\w+/
 
-    ignore Space = /\s+/
+    ignore /\s+/
 ''')
 
 # Use optional trailing separator:
@@ -526,8 +526,8 @@ g = Grammar(
     r'''
         start = "Hello" >> /[a-zA-Z]+/
 
-        ignore Space = /[ \t]+/
-        ignore Punctuation = "," | "." | "!" | "?"
+        ignore /[ \t]+/
+        ignore "," | "." | "!" | "?"
     ''',
 
     # Add the optional "include_source" flag:
@@ -535,7 +535,7 @@ g = Grammar(
 )
 
 # The Python code is in the `_source_code` field:
-assert 'Space' in g._source_code
+assert 'def parse' in g._source_code
 ```
 
 You can then take the `_source_code` field of your grammar and write it to a

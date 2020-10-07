@@ -52,7 +52,7 @@ g = Grammar(r'''
         value: StringLiteral |> `ast.literal_eval`
     }
 
-    ignore Space = /\s+/
+    ignore /\s+/
 
 ''', include_source=True)
 
