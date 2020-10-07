@@ -91,6 +91,7 @@ Here's a simple grammar for arithmetic expressions.
 ```python
 from sourcer import Grammar
 
+# Note: The Grammar is compiled to a Python module and assigned to "g".
 g = Grammar(r'''
     start = Expr
 
@@ -113,8 +114,6 @@ g = Grammar(r'''
     # Ignore whitespace.
     ignore Space = /\s+/
 ''')
-
-# Note: The Grammar is compiled to a Python module and assigned to "g".
 
 # Some examples:
 
