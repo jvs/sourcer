@@ -59,10 +59,8 @@ and turn it into a tree of Python objects.
 #### But aren't there a ton of parsing libraries for Python already?
 
 Yes, there are. Most of them focus on different problems. Sourcer focuses on the
-output of parsing, rather than the means.
-
-The main point of Sourcer is that you can just define the thing that you really
-want, and then get on with your life.
+output of parsing, rather than the means. The main point of Sourcer is that you
+can just define the thing that you really want, and then get on with your life.
 
 
 ## Features
