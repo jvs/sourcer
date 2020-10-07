@@ -10,7 +10,7 @@ def long_description():
 
 setuptools.setup(
     name = 'sourcer',
-    version = '0.3.5',
+    version = '0.3.6',
     author = 'John K. Von Seggern',
     author_email = 'vonseg@protonmail.com',
     url = 'https://github.com/jvs/sourcer',

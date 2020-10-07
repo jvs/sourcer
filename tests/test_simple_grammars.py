@@ -5,8 +5,8 @@ from sourcer import Grammar
 
 def test_simple_words():
     g = Grammar(r'''
-        ignore Space = @/[ \t]+/
-        Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+        ignore Space = /[ \t]+/
+        Word = /[_a-zA-Z][_a-zA-Z0-9]*/
         start = Word*
     ''')
 
@@ -16,9 +16,9 @@ def test_simple_words():
 
 def test_arithmetic_expressions():
     g = Grammar(r'''
-        ignored Space = @/\s+/
+        ignored Space = /\s+/
 
-        Int = @/\d+/ |> `int`
+        Int = /\d+/ |> `int`
         Parens = '(' >> Expr << ')'
 
         Expr = OperatorPrecedence(
@@ -76,13 +76,13 @@ def test_simple_json_grammar():
 
         Array = "[" >> (Value // ",") << "]"
 
-        String = @/"(?:[^\\"]|\\.)*"/ |> `literal_eval`
+        String = /"(?:[^\\"]|\\.)*"/ |> `literal_eval`
 
-        Number = @/-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/ |> `float`
+        Number = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/ |> `float`
 
         Keyword = "true" >> `True` | "false" >> `False` | "null" >> `None`
 
-        ignored Space = @/\s+/
+        ignored Space = /\s+/
     ''')
 
     result = g.parse('{"foo": "bar", "baz": true}')
@@ -118,15 +118,15 @@ def test_python_expressions():
         ```
 
         Expr = (
-            @/\d+/ |> `int`
-            | @/true/ >> `True`
-            | @/false/ >> `False`
-            | @/null/ >> `None`
-            | @/"([^"\\]|\\.)*"/ |> `ast.literal_eval`
+            /\d+/ |> `int`
+            | /true/ >> `True`
+            | /false/ >> `False`
+            | /null/ >> `None`
+            | /"([^"\\]|\\.)*"/ |> `ast.literal_eval`
         )
-        Space = @/\s+/
+        Space = /\s+/
 
-        Start = Expr / Space
+        Start = Expr /? Space
     ''')
     result = g.parse(r'12 null 34 false 56 "hello:\n\tworld" 78 true')
     assert result == [12, None, 34, False, 56, 'hello:\n\tworld', 78, True]
@@ -134,11 +134,11 @@ def test_python_expressions():
 
 def test_postfix_operators():
     g = Grammar(r'''
-        ignore Space = @/[ \t]+/
-        Atom = @/[a-zA-Z]+/
+        ignore Space = /[ \t]+/
+        Atom = /[a-zA-Z]+/
 
         class ArgList {
-            args: "(" >> (Expr / ",") << ")"
+            args: "(" >> (Expr /? ",") << ")"
         }
 
         Expr = OperatorPrecedence(
@@ -170,9 +170,9 @@ def test_where_expressions():
             value: Int where `lambda x: x % 2 == 0`
         }
 
-        Int = @/\d+/ |> `int`
+        Int = /\d+/ |> `int`
 
-        ignore Space = @/[ \t]+/
+        ignore Space = /[ \t]+/
     ''')
     result = g.parse('11 22 33 44')
     assert result == [g.Odd(11), g.Even(22), g.Odd(33), g.Even(44)]
@@ -180,8 +180,8 @@ def test_where_expressions():
 
 def test_expect_and_expect_not_expressions():
     g = Grammar(r'''
-        ignore Space = @/[ \t]+/
-        Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+        ignore Space = /[ \t]+/
+        Word = /[_a-zA-Z][_a-zA-Z0-9]*/
 
         class Angry {
             value: Word << Expect("!")
@@ -195,7 +195,7 @@ def test_expect_and_expect_not_expressions():
             value: Word << Expect("?")
         }
 
-        start = (Angry | Calm | Confused) / ("!" | "?" | "." | ";")
+        start = (Angry | Calm | Confused) /? ("!" | "?" | "." | ";")
     ''')
     result = g.parse('foo! bar? baz? fiz; buz.')
     assert result == [
@@ -216,12 +216,12 @@ def test_simple_data_dependent_class():
         }
 
         class Text {
-            content: @/[^<]+/
+            content: /[^<]+/
         }
 
         Item = Element | Text
 
-        Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+        Word = /[_a-zA-Z][_a-zA-Z0-9]*/
 
         start = Item+
     ''')
@@ -239,8 +239,8 @@ def test_simple_data_dependent_class():
 
 def test_simple_rule_with_parameter():
     g = Grammar(r'''
-        ignored Space = @/[ \t]+/
-        Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+        ignored Space = /[ \t]+/
+        Name = /[_a-zA-Z][_a-zA-Z0-9]*/
         Pair(x) = "(" >> [x << ",", x] << ")"
 
         class Range {
@@ -259,18 +259,18 @@ def test_simple_rule_with_parameter():
 
 def test_simple_class_with_parameters():
     g = Grammar(r'''
-        ignored Space = @/[ \t]+/
+        ignored Space = /[ \t]+/
 
-        Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
-        Int = @/\d+/ |> `int`
+        Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+        Int = /\d+/ |> `int`
 
         class Pair(A, B) {
             first: A << "&"
             second: B
         }
 
-        Names = "[" >> (Name / ",") << "]"
-        Ints = "[" >> (Int / ",") << "]"
+        Names = "[" >> (Name /? ",") << "]"
+        Ints = "[" >> (Int /? ",") << "]"
         Start = Pair(Names, Ints)
     ''')
     result = g.parse('[foo, bar, baz] & [11, 22, 33]')
@@ -279,9 +279,9 @@ def test_simple_class_with_parameters():
 
 def test_simplified_indentation():
     g = Grammar(r'''
-        ignore Space = @/[ \t]+/
+        ignore Space = /[ \t]+/
 
-        Indent = @/\n[ \t]*/
+        Indent = /\n[ \t]*/
 
         MatchIndent(i) =>
             Indent where `lambda x: x == i`
@@ -305,10 +305,10 @@ def test_simplified_indentation():
             name: "print" >> Name
         }
 
-        Name = @/[a-zA-Z]+/
-        Newline = @/[\r\n]+/
+        Name = /[a-zA-Z]+/
+        Newline = /[\r\n]+/
 
-        Start = Opt(Newline) >> (Statement('') / Newline)
+        Start = Opt(Newline) >> (Statement('') /? Newline)
     ''')
 
     result = g.parse('print ok\nprint bye')
@@ -365,7 +365,7 @@ def test_case_insensitivity():
     g = Grammar(r'''
         hi = "hi"
         hello = "hello"i
-        command = @/copy|delete|print/i
+        command = /copy|delete|print/i
     ''')
 
     result = g.hi.parse('hi')

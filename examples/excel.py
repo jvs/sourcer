@@ -7,9 +7,9 @@ description = r'''
     start = Formula
     Formula = "="? >> Expr
 
-    ignored Space = @/[ \t\n\r]+/
+    ignored Space = /[ \t\n\r]+/
 
-    Offset = @/\d+|\[\-?\d+\]/
+    Offset = /\d+|\[\-?\d+\]/
 
     class R1C1Ref {
         row = "R" >> Offset
@@ -18,26 +18,26 @@ description = r'''
 
     class A1Ref {
         col_modifier = "$"?
-        col = @/I[A-V]|[A-H][A-Z]|[A-Z]/
+        col = /I[A-V]|[A-H][A-Z]|[A-Z]/
         row_modifier = "$"?
-        row = @/\d+/
+        row = /\d+/
     }
 
     class DateTime {
-        string = @/\d{4}-\d\d-\d\d \d\d:\d\d:\d\d/
+        string = /\d{4}-\d\d-\d\d \d\d:\d\d:\d\d/
     }
 
-    Word = @/[a-zA-Z_\@][a-zA-Z0-9_\.\@]*/
+    Word = /[a-zA-Z_\@][a-zA-Z0-9_\.\@]*/
 
-    LongNumber = @/[0-9]\.[0-9]+(e|E)(\+|\-)[0-9]+/ |> `literal_eval`
-    ShortNumber = @/[0-9]+(\.[0-9]*)?|\.[0-9]+/ |> `literal_eval`
+    LongNumber = /[0-9]\.[0-9]+(e|E)(\+|\-)[0-9]+/ |> `literal_eval`
+    ShortNumber = /[0-9]+(\.[0-9]*)?|\.[0-9]+/ |> `literal_eval`
 
-    String = @/"([^"]|"")*"/ |> `lambda x: x[1:-1].replace('""', '"')`
-    Sheet = @/'([^']|'')*'/ |> `lambda x: x[1:-1].repalce("''", "'")`
+    String = /"([^"]|"")*"/ |> `lambda x: x[1:-1].replace('""', '"')`
+    Sheet = /'([^']|'')*'/ |> `lambda x: x[1:-1].repalce("''", "'")`
 
-    Error = @/\#[a-zA-Z0-9_\/]+(\!|\?)?/ |> `lambda x: {'error': x}`
+    Error = /\#[a-zA-Z0-9_\/]+(\!|\?)?/ |> `lambda x: {'error': x}`
 
-    Array = "{" >> (ExprList / ";") << "}"
+    Array = "{" >> (ExprList /? ";") << "}"
 
     class FunctionCall {
         name = Word
@@ -76,7 +76,7 @@ description = r'''
     )
 
     Expr = Operators(allow_union=`True`)
-    ExprList = Operators(allow_union=`False`)? / ","
+    ExprList = Operators(allow_union=`False`)? /? ","
 '''
 
 grammar = Grammar(description, include_source=True)

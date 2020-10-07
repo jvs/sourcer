@@ -83,7 +83,7 @@ def _create_parsing_expression(node):
         classes = {
             '|>': lambda a, b: Apply(a, b, apply_left=False),
             '<|': lambda a, b: Apply(a, b, apply_left=True),
-            '/': lambda a, b: Alt(a, b, allow_trailer=True),
+            '/?': lambda a, b: Alt(a, b, allow_trailer=True),
             '//': lambda a, b: Alt(a, b, allow_trailer=False),
             '<<': Left,
             '>>': Right,

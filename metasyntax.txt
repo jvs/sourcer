@@ -3,12 +3,12 @@ import ast
 import textwrap
 ```
 
-ignored Space = @/[ \t]+/
-ignored Comment = @/#[^\r\n]*/
+ignored Space = /[ \t]+/
+ignored Comment = /#[^\r\n]*/
 
-Newline = @/[\r\n][\s]*/
+Newline = /[\r\n][\s]*/
 Sep = Some(Newline | ";")
-Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+Name = /[_a-zA-Z][_a-zA-Z0-9]*/
 Comma = wrap(",")
 
 wrap(x) => Skip(Newline) >> x << Skip(Newline)
@@ -18,33 +18,33 @@ wrap(x) => Skip(Newline) >> x << Skip(Newline)
 # the input string is "classify", we wouldn't want to match the keyword "class".)
 kw(word) => Name where `lambda x: x == word`
 
-Params = wrap("(") >> (wrap(Name) / Comma) << ")"
+Params = wrap("(") >> (wrap(Name) /? Comma) << ")"
 IgnoreCaseFlag = "i" | "I"
 
 class StringLiteral {
     value: (
-        @/(?s)("""([^\\]|\\.)*?""")/
-        | @/(?s)('''([^\\]|\\.)*?''')/
-        | @/("([^"\\]|\\.)*")/
-        | @/('([^'\\]|\\.)*')/
+        /(?s)("""([^\\]|\\.)*?""")/
+        | /(?s)('''([^\\]|\\.)*?''')/
+        | /("([^"\\]|\\.)*")/
+        | /('([^'\\]|\\.)*')/
     ) |> `ast.literal_eval`
     ignore_case: IgnoreCaseFlag?
 }
 
 class RegexLiteral {
-    # Remove the leading "@/" and the trailing "/".
-    value: @/\@\/([^\/\\]|\\.)*\// |> `lambda x: x[2:-1]`
+    # Remove the leading and trailing slashes.
+    value: /\/([^\/\\]|\\.)*\// |> `lambda x: x[1:-1]`
     ignore_case: IgnoreCaseFlag?
 }
 
 class PythonSection {
     # Strip the backticks and remove any common indentation.
-    value: @/(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
+    value: /(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
 }
 
 class PythonExpression {
     # Strip the backticks.
-    value: @/`.*?`/ |> `lambda x: x[1:-1]`
+    value: /`.*?`/ |> `lambda x: x[1:-1]`
 }
 
 class RuleDef {
@@ -57,7 +57,7 @@ class RuleDef {
 class ClassDef {
     name: kw("class") >> Name
     params: Opt(Params)
-    fields: wrap("{") >> (RuleDef / Sep) << "}"
+    fields: wrap("{") >> (RuleDef /? Sep) << "}"
 }
 
 Stmt = ClassDef
@@ -76,7 +76,7 @@ class Ref {
 }
 
 class ListLiteral {
-    elements: "[" >> (wrap(Expr) / Comma) << "]"
+    elements: "[" >> (wrap(Expr) /? Comma) << "]"
 }
 
 Atom = ("(" >> wrap(Expr) << ")")
@@ -93,17 +93,17 @@ class KeywordArg {
 }
 
 class ArgList {
-    args: "(" >> (wrap(KeywordArg | Expr) / Comma) << ")"
+    args: "(" >> (wrap(KeywordArg | Expr) /? Comma) << ")"
 }
 
 Expr = OperatorPrecedence(
     Atom,
     Postfix(ArgList),
     Postfix("?" | "*" | "+"),
-    LeftAssoc(wrap("//" | "/")),
+    LeftAssoc(wrap("//" | "/?")),
     LeftAssoc(wrap("<<" | ">>")),
     LeftAssoc(wrap("<|" | "|>" | "where")),
     LeftAssoc(wrap("|")),
 )
 
-start = Skip(Newline) >> (Stmt / Sep)
+start = Skip(Newline) >> (Stmt /? Sep)

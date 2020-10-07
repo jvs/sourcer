@@ -108,7 +108,7 @@ class Alt(Expr):
         self.allow_empty = allow_empty
 
     def __str__(self):
-        op = '/' if self.allow_trailer else '//'
+        op = '/?' if self.allow_trailer else '//'
         wrap = lambda x: f'({x})' if isinstance(x, BinaryOp) else x
         return f'{wrap(self.expr)} {op} {wrap(self.separator)}'
 
@@ -572,7 +572,7 @@ class RegexLiteral(Expr):
     def __str__(self):
         pattern = self.pattern.replace('\\', '\\\\')
         flag = 'i' if self.ignore_case else ''
-        return f'@/{pattern}/{flag}'
+        return f'/{pattern}/{flag}'
 
     def _compile(self, pb):
         pb(Raw(f'# <Regex pattern={self.pattern!r}>'))

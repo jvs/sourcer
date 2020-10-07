@@ -6,9 +6,9 @@ A parsing library for Python (version 3.6 and later).
 from sourcer import Grammar
 
 g = Grammar(r'''
-    start = "Hello" >> @/[a-zA-Z]+/
+    start = "Hello" >> /[a-zA-Z]+/
 
-    ignore Space = @/[ \t]+/
+    ignore Space = /[ \t]+/
     ignore Punctuation = "," | "." | "!" | "?"
 ''')
 
@@ -23,7 +23,7 @@ assert result == 'Chief'
 Notes:
 
 * `>>` means "discard the the left hand side"
-* `@/.../` means "regular expression"
+* `/.../` means "regular expression"
 
 
 ## Installation
@@ -106,10 +106,10 @@ g = Grammar(r'''
     Parens = '(' >> Expr << ')'
 
     # Turn integers into Python int objects.
-    Int = @/\d+/ |> `int`
+    Int = /\d+/ |> `int`
 
     # Ignore whitespace.
-    ignore Space = @/\s+/
+    ignore Space = /\s+/
 ''')
 
 # Note: The Grammar is compiled to a Python module and assigned to "g".
@@ -158,15 +158,15 @@ g = Grammar(r'''
     Array = "[" >> (Value // ",") << "]"
 
     # Interpret each string as a Python literal string.
-    String = @/"(?:[^\\"]|\\.)*"/ |> `literal_eval`
+    String = /"(?:[^\\"]|\\.)*"/ |> `literal_eval`
 
     # Interpret each number as a Python float literal.
-    Number = @/-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/ |> `float`
+    Number = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/ |> `float`
 
     # Convert boolean literals to Python booleans, and "null" to None.
     Keyword = "true" >> `True` | "false" >> `False` | "null" >> `None`
 
-    ignored Space = @/\s+/
+    ignored Space = /\s+/
 ''')
 
 # Notice that we get back Python dicts, lists, strings, booleans, etc.
@@ -194,7 +194,7 @@ from sourcer import Grammar
 
 g = Grammar(r'''
     # A list of commands separated by semicolons.
-    start = Command / ";"
+    start = Command /? ";"
 
     # A pair of action and range.
     class Command {
@@ -211,9 +211,9 @@ g = Grammar(r'''
     }
 
     # Integers.
-    Int = @/\d+/ |> `int`
+    Int = /\d+/ |> `int`
 
-    ignore Space = @/\s+/
+    ignore Space = /\s+/
 ''')
 
 result = g.parse('Print [10, 20); Delete (33, 44];')
@@ -256,7 +256,7 @@ g = Grammar(r'''
 
     # Text goes until it sees a "<" character:
     class Text {
-        content: @/[^<]+/
+        content: /[^<]+/
     }
 
     # An element is a pair of matching tags, and zero or more items:
@@ -267,7 +267,7 @@ g = Grammar(r'''
     }
 
     # A word doesn't have special characters, and doesn't start with a digit:
-    Word = @/[_a-zA-Z][_a-zA-Z0-9]*/
+    Word = /[_a-zA-Z][_a-zA-Z0-9]*/
 ''')
 
 # We can use the "Document" rule directly:
@@ -301,9 +301,9 @@ with this example and build it up.
 from sourcer import Grammar
 
 g = Grammar(r'''
-    ignore Space = @/[ \t]+/
+    ignore Space = /[ \t]+/
 
-    Indent = @/\n[ \t]*/
+    Indent = /\n[ \t]*/
 
     MatchIndent(i) =>
         Indent where `lambda x: x == i`
@@ -327,10 +327,10 @@ g = Grammar(r'''
         name: "print" >> Name
     }
 
-    Name = @/[a-zA-Z]+/
-    Newline = @/[\r\n]+/
+    Name = /[a-zA-Z]+/
+    Newline = /[\r\n]+/
 
-    Start = Opt(Newline) >> (Statement('') / Newline)
+    Start = Opt(Newline) >> (Statement('') /? Newline)
 ''')
 
 from textwrap import dedent
@@ -386,7 +386,7 @@ For now, here's a list of the supported expressions:
 
 - Alternation:
 
-    - `foo / bar` -- parses a list of foo separated by bar, consuming
+    - `foo /? bar` -- parses a list of foo separated by bar, consuming
       an optional trailing separator.
     - `foo // bar` -- parses a list of foo separated by bar, and does
       not consume a trailing separator.
@@ -449,9 +449,9 @@ For now, here's a list of the supported expressions:
 
 - Regular Expression:
 
-    - `@/foo/` -- matches the regular expression foo.
-    - `@/foo/i` -- matches the regular expression foo, ignoring case.
-    - `@/(?i)foo/` -- matches the regular expression foo, also ignoring case.
+    - `/foo/` -- matches the regular expression foo.
+    - `/foo/i` -- matches the regular expression foo, ignoring case.
+    - `/(?i)foo/` -- matches the regular expression foo, also ignoring case.
 
 - Repetition:
 
@@ -478,16 +478,16 @@ from sourcer import Grammar
 
 g = Grammar(r'''
     # Alternation -- with optional trailing separator:
-    Statements = Statement / ";"
+    Statements = Statement /? ";"
 
     # Alternation -- without trailing separator:
     Arguments = Argument // ","
 
     Statement = Word+
     Argument = Word
-    Word = @/\w+/
+    Word = /\w+/
 
-    ignore Space = @/\s+/
+    ignore Space = /\s+/
 ''')
 
 # Use optional trailing separator:
@@ -523,9 +523,9 @@ from sourcer import Grammar
 
 g = Grammar(
     r'''
-        start = "Hello" >> @/[a-zA-Z]+/
+        start = "Hello" >> /[a-zA-Z]+/
 
-        ignore Space = @/[ \t]+/
+        ignore Space = /[ \t]+/
         ignore Punctuation = "," | "." | "!" | "?"
     ''',
 

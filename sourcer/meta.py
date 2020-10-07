@@ -6,12 +6,12 @@ import ast
 import textwrap
 ```
 
-ignored Space = @/[ \\t]+/
-ignored Comment = @/#[^\\r\\n]*/
+ignored Space = /[ \\t]+/
+ignored Comment = /#[^\\r\\n]*/
 
-Newline = @/[\\r\\n][\\s]*/
+Newline = /[\\r\\n][\\s]*/
 Sep = Some(Newline | ";")
-Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+Name = /[_a-zA-Z][_a-zA-Z0-9]*/
 Comma = wrap(",")
 
 wrap(x) => Skip(Newline) >> x << Skip(Newline)
@@ -21,33 +21,33 @@ wrap(x) => Skip(Newline) >> x << Skip(Newline)
 # the input string is "classify", we wouldn't want to match the keyword "class".)
 kw(word) => Name where `lambda x: x == word`
 
-Params = wrap("(") >> (wrap(Name) / Comma) << ")"
+Params = wrap("(") >> (wrap(Name) /? Comma) << ")"
 IgnoreCaseFlag = "i" | "I"
 
 class StringLiteral {
     value: (
-        @/(?s)(\"\"\"([^\\\\]|\\\\.)*?\"\"\")/
-        | @/(?s)('''([^\\\\]|\\\\.)*?''')/
-        | @/("([^"\\\\]|\\\\.)*")/
-        | @/('([^'\\\\]|\\\\.)*')/
+        /(?s)(\"\"\"([^\\\\]|\\\\.)*?\"\"\")/
+        | /(?s)('''([^\\\\]|\\\\.)*?''')/
+        | /("([^"\\\\]|\\\\.)*")/
+        | /('([^'\\\\]|\\\\.)*')/
     ) |> `ast.literal_eval`
     ignore_case: IgnoreCaseFlag?
 }
 
 class RegexLiteral {
-    # Remove the leading "@/" and the trailing "/".
-    value: @/\\@\\/([^\\/\\\\]|\\\\.)*\\// |> `lambda x: x[2:-1]`
+    # Remove the leading and trailing slashes.
+    value: /\\/([^\\/\\\\]|\\\\.)*\\// |> `lambda x: x[1:-1]`
     ignore_case: IgnoreCaseFlag?
 }
 
 class PythonSection {
     # Strip the backticks and remove any common indentation.
-    value: @/(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
+    value: /(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
 }
 
 class PythonExpression {
     # Strip the backticks.
-    value: @/`.*?`/ |> `lambda x: x[1:-1]`
+    value: /`.*?`/ |> `lambda x: x[1:-1]`
 }
 
 class RuleDef {
@@ -60,7 +60,7 @@ class RuleDef {
 class ClassDef {
     name: kw("class") >> Name
     params: Opt(Params)
-    fields: wrap("{") >> (RuleDef / Sep) << "}"
+    fields: wrap("{") >> (RuleDef /? Sep) << "}"
 }
 
 Stmt = ClassDef
@@ -79,7 +79,7 @@ class Ref {
 }
 
 class ListLiteral {
-    elements: "[" >> (wrap(Expr) / Comma) << "]"
+    elements: "[" >> (wrap(Expr) /? Comma) << "]"
 }
 
 Atom = ("(" >> wrap(Expr) << ")")
@@ -96,25 +96,25 @@ class KeywordArg {
 }
 
 class ArgList {
-    args: "(" >> (wrap(KeywordArg | Expr) / Comma) << ")"
+    args: "(" >> (wrap(KeywordArg | Expr) /? Comma) << ")"
 }
 
 Expr = OperatorPrecedence(
     Atom,
     Postfix(ArgList),
     Postfix("?" | "*" | "+"),
-    LeftAssoc(wrap("//" | "/")),
+    LeftAssoc(wrap("//" | "/?")),
     LeftAssoc(wrap("<<" | ">>")),
     LeftAssoc(wrap("<|" | "|>" | "where")),
     LeftAssoc(wrap("|")),
 )
 
-start = Skip(Newline) >> (Stmt / Sep)
+start = Skip(Newline) >> (Stmt /? Sep)
 
 """
 
 from collections import namedtuple as _nt
-from re import compile as _compile_re
+from re import compile as _compile_re, IGNORECASE as _IGNORECASE
 
 
 
@@ -386,7 +386,7 @@ matcher5 = _compile_re('(?s)("""([^\\\\]|\\\\.)*?""")', flags=0).match
 matcher6 = _compile_re("(?s)('''([^\\\\]|\\\\.)*?''')", flags=0).match
 matcher7 = _compile_re('("([^"\\\\]|\\\\.)*")', flags=0).match
 matcher8 = _compile_re("('([^'\\\\]|\\\\.)*')", flags=0).match
-matcher9 = _compile_re('\\@\\/([^\\/\\\\]|\\\\.)*\\/', flags=0).match
+matcher9 = _compile_re('\\/([^\\/\\\\]|\\\\.)*\\/', flags=0).match
 matcher10 = _compile_re('(?s)```.*?```', flags=0).match
 matcher11 = _compile_re('`.*?`', flags=0).match
 
@@ -411,7 +411,7 @@ def _parse_Space(text, pos=0, fullparse=True):
 
 
 Space = Rule('Space', _parse_Space, """
-    Space = @/[ \\t]+/
+    Space = /[ \\t]+/
 """)
 
 def _raise_error2(_text, _pos):
@@ -425,7 +425,7 @@ def _raise_error2(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'Space' rule, at the expression:\n"
-    '    @/[ \\\\t]+/\n\n'
+    '    /[ \\\\t]+/\n\n'
     'Expected to match the regular expression /[ \\t]+/'
     )
     raise ParseError((title + details), _pos, line, col)
@@ -451,7 +451,7 @@ def _parse_Comment(text, pos=0, fullparse=True):
 
 
 Comment = Rule('Comment', _parse_Comment, """
-    Comment = @/#[^\\r\\n]*/
+    Comment = /#[^\\r\\n]*/
 """)
 
 def _raise_error4(_text, _pos):
@@ -465,7 +465,7 @@ def _raise_error4(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'Comment' rule, at the expression:\n"
-    '    @/#[^\\\\r\\\\n]*/\n\n'
+    '    /#[^\\\\r\\\\n]*/\n\n'
     'Expected to match the regular expression /#[^\\r\\n]*/'
     )
     raise ParseError((title + details), _pos, line, col)
@@ -491,7 +491,7 @@ def _parse_Newline(text, pos=0, fullparse=True):
 
 
 Newline = Rule('Newline', _parse_Newline, """
-    Newline = @/[\\r\\n][\\s]*/
+    Newline = /[\\r\\n][\\s]*/
 """)
 
 def _raise_error6(_text, _pos):
@@ -505,7 +505,7 @@ def _raise_error6(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'Newline' rule, at the expression:\n"
-    '    @/[\\\\r\\\\n][\\\\s]*/\n\n'
+    '    /[\\\\r\\\\n][\\\\s]*/\n\n'
     'Expected to match the regular expression /[\\r\\n][\\s]*/'
     )
     raise ParseError((title + details), _pos, line, col)
@@ -627,7 +627,7 @@ def _parse_Name(text, pos=0, fullparse=True):
 
 
 Name = Rule('Name', _parse_Name, """
-    Name = @/[_a-zA-Z][_a-zA-Z0-9]*/
+    Name = /[_a-zA-Z][_a-zA-Z0-9]*/
 """)
 
 def _raise_error13(_text, _pos):
@@ -641,7 +641,7 @@ def _raise_error13(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'Name' rule, at the expression:\n"
-    '    @/[_a-zA-Z][_a-zA-Z0-9]*/\n\n'
+    '    /[_a-zA-Z][_a-zA-Z0-9]*/\n\n'
     'Expected to match the regular expression /[_a-zA-Z][_a-zA-Z0-9]*/'
     )
     raise ParseError((title + details), _pos, line, col)
@@ -821,10 +821,10 @@ def _parse_function_35(_text, _pos):
 def _cont_Params(_text, _pos):
     # Rule 'Params'
     # <Discard>
-    # (wrap('(') >> (wrap(Name) / Comma)) << ')'
+    # (wrap('(') >> (wrap(Name) /? Comma)) << ')'
     while True:
         # <Discard>
-        # wrap('(') >> (wrap(Name) / Comma)
+        # wrap('(') >> (wrap(Name) /? Comma)
         while True:
             # <Call>
             # wrap('(')
@@ -835,7 +835,7 @@ def _cont_Params(_text, _pos):
             if (not _status):
                 break
             # <Alt>
-            # wrap(Name) / Comma
+            # wrap(Name) /? Comma
             staging3 = []
             checkpoint4 = _pos
             while True:
@@ -886,7 +886,7 @@ def _parse_Params(text, pos=0, fullparse=True):
 
 
 Params = Rule('Params', _parse_Params, """
-    Params = (wrap('(') >> (wrap(Name) / Comma)) << ')'
+    Params = (wrap('(') >> (wrap(Name) /? Comma)) << ')'
 """)
 
 def _raise_error35(_text, _pos):
@@ -1034,7 +1034,7 @@ def _raise_error45(_text, _pos):
 class StringLiteral(Node):
     """
     class StringLiteral {
-        value: (@/(?s)(\"\"\"([^\\\\]|\\\\.)*?\"\"\")/ | @/(?s)('''([^\\\\]|\\\\.)*?''')/ | @/("([^"\\\\]|\\\\.)*")/ | @/('([^'\\\\]|\\\\.)*')/) |> `ast.literal_eval`
+        value: (/(?s)(\"\"\"([^\\\\]|\\\\.)*?\"\"\")/ | /(?s)('''([^\\\\]|\\\\.)*?''')/ | /("([^"\\\\]|\\\\.)*")/ | /('([^'\\\\]|\\\\.)*')/) |> `ast.literal_eval`
         ignore_case: Opt(IgnoreCaseFlag)
     }
     """
@@ -1059,7 +1059,7 @@ def _cont_StringLiteral(_text, _pos):
     start_pos1 = _pos
     while True:
         # <Apply>
-        # (@/(?s)("""([^\\\\]|\\\\.)*?""")/ | @/(?s)('''([^\\\\]|\\\\.)*?''')/ | @/("([^"\\\\]|\\\\.)*")/ | @/('([^'\\\\]|\\\\.)*')/) |> `ast.literal_eval`
+        # (/(?s)("""([^\\\\]|\\\\.)*?""")/ | /(?s)('''([^\\\\]|\\\\.)*?''')/ | /("([^"\\\\]|\\\\.)*")/ | /('([^'\\\\]|\\\\.)*')/) |> `ast.literal_eval`
         # <Choice>
         backtrack3 = farthest_pos3 = _pos
         farthest_err5 = 50
@@ -1175,7 +1175,7 @@ def _raise_error50(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'StringLiteral' rule, at the expression:\n"
-    '    @/(?s)("""([^\\\\\\\\]|\\\\\\\\.)*?""")/ | @/(?s)(\'\'\'([^\\\\\\\\]|\\\\\\\\.)*?\'\'\')/ | @/("([^"\\\\\\\\]|\\\\\\\\.)*")/ | @/(\'([^\'\\\\\\\\]|\\\\\\\\.)*\')/\n\n'
+    '    /(?s)("""([^\\\\\\\\]|\\\\\\\\.)*?""")/ | /(?s)(\'\'\'([^\\\\\\\\]|\\\\\\\\.)*?\'\'\')/ | /("([^"\\\\\\\\]|\\\\\\\\.)*")/ | /(\'([^\'\\\\\\\\]|\\\\\\\\.)*\')/\n\n'
     'Unexpected input'
     )
     raise ParseError((title + details), _pos, line, col)
@@ -1192,7 +1192,7 @@ def _raise_error51(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'StringLiteral' rule, at the expression:\n"
-    '    @/(?s)("""([^\\\\\\\\]|\\\\\\\\.)*?""")/\n\n'
+    '    /(?s)("""([^\\\\\\\\]|\\\\\\\\.)*?""")/\n\n'
     'Expected to match the regular expression /(?s)("""([^\\\\]|\\\\.)*?""")/'
     )
     raise ParseError((title + details), _pos, line, col)
@@ -1209,7 +1209,7 @@ def _raise_error52(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'StringLiteral' rule, at the expression:\n"
-    "    @/(?s)('''([^\\\\\\\\]|\\\\\\\\.)*?''')/\n\n"
+    "    /(?s)('''([^\\\\\\\\]|\\\\\\\\.)*?''')/\n\n"
     "Expected to match the regular expression /(?s)('''([^\\\\]|\\\\.)*?''')/"
     )
     raise ParseError((title + details), _pos, line, col)
@@ -1226,7 +1226,7 @@ def _raise_error53(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'StringLiteral' rule, at the expression:\n"
-    '    @/("([^"\\\\\\\\]|\\\\\\\\.)*")/\n\n'
+    '    /("([^"\\\\\\\\]|\\\\\\\\.)*")/\n\n'
     'Expected to match the regular expression /("([^"\\\\]|\\\\.)*")/'
     )
     raise ParseError((title + details), _pos, line, col)
@@ -1243,7 +1243,7 @@ def _raise_error54(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'StringLiteral' rule, at the expression:\n"
-    "    @/('([^'\\\\\\\\]|\\\\\\\\.)*')/\n\n"
+    "    /('([^'\\\\\\\\]|\\\\\\\\.)*')/\n\n"
     "Expected to match the regular expression /('([^'\\\\]|\\\\.)*')/"
     )
     raise ParseError((title + details), _pos, line, col)
@@ -1252,7 +1252,7 @@ def _raise_error54(_text, _pos):
 class RegexLiteral(Node):
     """
     class RegexLiteral {
-        value: @/\\@\\/([^\\/\\\\]|\\\\.)*\\// |> `lambda x: x[2:-1]`
+        value: /\\/([^\\/\\\\]|\\\\.)*\\// |> `lambda x: x[1:-1]`
         ignore_case: Opt(IgnoreCaseFlag)
     }
     """
@@ -1277,8 +1277,8 @@ def _cont_RegexLiteral(_text, _pos):
     start_pos2 = _pos
     while True:
         # <Apply>
-        # @/\\@\\/([^\\/\\\\]|\\\\.)*\\// |> `lambda x: x[2:-1]`
-        # <Regex pattern='\\@\\/([^\\/\\\\]|\\\\.)*\\/'>
+        # /\\/([^\\/\\\\]|\\\\.)*\\// |> `lambda x: x[1:-1]`
+        # <Regex pattern='\\/([^\\/\\\\]|\\\\.)*\\/'>
         match9 = matcher9(_text, _pos)
         if match9:
             _pos = (yield (3, _cont__ignored, match9.end(),))[2]
@@ -1290,7 +1290,7 @@ def _cont_RegexLiteral(_text, _pos):
         # </Regex>
         if _status:
             arg5 = _result
-            _result = lambda x: x[2:-1]
+            _result = lambda x: x[1:-1]
             _status = True
             _result = _result(arg5)
         # </Apply>
@@ -1327,8 +1327,8 @@ def _raise_error63(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'RegexLiteral' rule, at the expression:\n"
-    '    @/\\\\@\\\\/([^\\\\/\\\\\\\\]|\\\\\\\\.)*\\\\//\n\n'
-    'Expected to match the regular expression /\\@\\/([^\\/\\\\]|\\\\.)*\\//'
+    '    /\\\\/([^\\\\/\\\\\\\\]|\\\\\\\\.)*\\\\//\n\n'
+    'Expected to match the regular expression /\\/([^\\/\\\\]|\\\\.)*\\//'
     )
     raise ParseError((title + details), _pos, line, col)
 
@@ -1336,7 +1336,7 @@ def _raise_error63(_text, _pos):
 class PythonSection(Node):
     """
     class PythonSection {
-        value: @/(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
+        value: /(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
     }
     """
     _fields = ('value',)
@@ -1359,7 +1359,7 @@ def _cont_PythonSection(_text, _pos):
     start_pos3 = _pos
     while True:
         # <Apply>
-        # @/(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
+        # /(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
         # <Regex pattern='(?s)```.*?```'>
         match10 = matcher10(_text, _pos)
         if match10:
@@ -1397,7 +1397,7 @@ def _raise_error72(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'PythonSection' rule, at the expression:\n"
-    '    @/(?s)```.*?```/\n\n'
+    '    /(?s)```.*?```/\n\n'
     'Expected to match the regular expression /(?s)```.*?```/'
     )
     raise ParseError((title + details), _pos, line, col)
@@ -1406,7 +1406,7 @@ def _raise_error72(_text, _pos):
 class PythonExpression(Node):
     """
     class PythonExpression {
-        value: @/`.*?`/ |> `lambda x: x[1:-1]`
+        value: /`.*?`/ |> `lambda x: x[1:-1]`
     }
     """
     _fields = ('value',)
@@ -1429,7 +1429,7 @@ def _cont_PythonExpression(_text, _pos):
     start_pos4 = _pos
     while True:
         # <Apply>
-        # @/`.*?`/ |> `lambda x: x[1:-1]`
+        # /`.*?`/ |> `lambda x: x[1:-1]`
         # <Regex pattern='`.*?`'>
         match11 = matcher11(_text, _pos)
         if match11:
@@ -1467,7 +1467,7 @@ def _raise_error78(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'PythonExpression' rule, at the expression:\n"
-    '    @/`.*?`/\n\n'
+    '    /`.*?`/\n\n'
     'Expected to match the regular expression /`.*?`/'
     )
     raise ParseError((title + details), _pos, line, col)
@@ -1820,7 +1820,7 @@ class ClassDef(Node):
     class ClassDef {
         name: kw('class') >> Name
         params: Opt(Params)
-        fields: (wrap('{') >> (RuleDef / Sep)) << '}'
+        fields: (wrap('{') >> (RuleDef /? Sep)) << '}'
     }
     """
     _fields = ('name', 'params', 'fields',)
@@ -1906,10 +1906,10 @@ def _cont_ClassDef(_text, _pos):
         # </Opt>
         params = _result
         # <Discard>
-        # (wrap('{') >> (RuleDef / Sep)) << '}'
+        # (wrap('{') >> (RuleDef /? Sep)) << '}'
         while True:
             # <Discard>
-            # wrap('{') >> (RuleDef / Sep)
+            # wrap('{') >> (RuleDef /? Sep)
             while True:
                 # <Call>
                 # wrap('{')
@@ -1920,7 +1920,7 @@ def _cont_ClassDef(_text, _pos):
                 if (not _status):
                     break
                 # <Alt>
-                # RuleDef / Sep
+                # RuleDef /? Sep
                 staging6 = []
                 checkpoint5 = _pos
                 while True:
@@ -2345,7 +2345,7 @@ def _cont_Ref(_text, _pos):
 class ListLiteral(Node):
     """
     class ListLiteral {
-        elements: ('[' >> (wrap(Expr) / Comma)) << ']'
+        elements: ('[' >> (wrap(Expr) /? Comma)) << ']'
     }
     """
     _fields = ('elements',)
@@ -2368,10 +2368,10 @@ def _cont_ListLiteral(_text, _pos):
     start_pos9 = _pos
     while True:
         # <Discard>
-        # ('[' >> (wrap(Expr) / Comma)) << ']'
+        # ('[' >> (wrap(Expr) /? Comma)) << ']'
         while True:
             # <Discard>
-            # '[' >> (wrap(Expr) / Comma)
+            # '[' >> (wrap(Expr) /? Comma)
             while True:
                 # <String value='['>
                 value18 = '['
@@ -2387,7 +2387,7 @@ def _cont_ListLiteral(_text, _pos):
                 if (not _status):
                     break
                 # <Alt>
-                # wrap(Expr) / Comma
+                # wrap(Expr) /? Comma
                 staging10 = []
                 checkpoint6 = _pos
                 while True:
@@ -2811,7 +2811,7 @@ def _raise_error194(_text, _pos):
 class ArgList(Node):
     """
     class ArgList {
-        args: ('(' >> (wrap(KeywordArg | Expr) / Comma)) << ')'
+        args: ('(' >> (wrap(KeywordArg | Expr) /? Comma)) << ')'
     }
     """
     _fields = ('args',)
@@ -2866,10 +2866,10 @@ def _cont_ArgList(_text, _pos):
     start_pos11 = _pos
     while True:
         # <Discard>
-        # ('(' >> (wrap(KeywordArg | Expr) / Comma)) << ')'
+        # ('(' >> (wrap(KeywordArg | Expr) /? Comma)) << ')'
         while True:
             # <Discard>
-            # '(' >> (wrap(KeywordArg | Expr) / Comma)
+            # '(' >> (wrap(KeywordArg | Expr) /? Comma)
             while True:
                 # <String value='('>
                 value24 = '('
@@ -2885,7 +2885,7 @@ def _cont_ArgList(_text, _pos):
                 if (not _status):
                     break
                 # <Alt>
-                # wrap(KeywordArg | Expr) / Comma
+                # wrap(KeywordArg | Expr) /? Comma
                 staging14 = []
                 checkpoint7 = _pos
                 while True:
@@ -3014,9 +3014,9 @@ def _parse_function_224(_text, _pos):
             farthest_err20 = _result
         _pos = backtrack15
         # Option 2:
-        # <String value='/'>
-        value27 = '/'
-        end27 = (_pos + 1)
+        # <String value='/?'>
+        value27 = '/?'
+        end27 = (_pos + 2)
         if (_text[_pos : end27] == value27):
             _pos = (yield (3, _cont__ignored, end27,))[2]
             _status = True
@@ -3174,7 +3174,7 @@ def _cont_Expr(_text, _pos):
         Atom,
         Postfix(ArgList),
         Postfix('?' | '*' | '+'),
-        LeftAssoc(wrap('//' | '/')),
+        LeftAssoc(wrap('//' | '/?')),
         LeftAssoc(wrap('<<' | '>>')),
         LeftAssoc(wrap('<|' | '|>' | 'where')),
         LeftAssoc(wrap('|'))
@@ -3196,7 +3196,7 @@ def _cont_Expr(_text, _pos):
             staging18 = None
             while True:
                 # <LeftAssoc>
-                # LeftAssoc(wrap('//' | '/'))
+                # LeftAssoc(wrap('//' | '/?'))
                 is_first4 = True
                 staging19 = None
                 while True:
@@ -3307,7 +3307,7 @@ def _cont_Expr(_text, _pos):
                     else:
                         staging19 = Infix(staging19, operator1, _result)
                     # <Call>
-                    # wrap('//' | '/')
+                    # wrap('//' | '/?')
                     func16 = _ParseFunction(_cont_wrap, (_parse_function_224,), ())
                     (_status, _result, _pos,) = (yield (3, func16, _pos,))
                     # </Call>
@@ -3396,7 +3396,7 @@ Expr = Rule('Expr', _parse_Expr, """
         Atom,
         Postfix(ArgList),
         Postfix('?' | '*' | '+'),
-        LeftAssoc(wrap('//' | '/')),
+        LeftAssoc(wrap('//' | '/?')),
         LeftAssoc(wrap('<<' | '>>')),
         LeftAssoc(wrap('<|' | '|>' | 'where')),
         LeftAssoc(wrap('|'))
@@ -3482,7 +3482,7 @@ def _raise_error224(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'Expr' rule, at the expression:\n"
-    "    '//' | '/'\n\n"
+    "    '//' | '/?'\n\n"
     'Unexpected input'
     )
     raise ParseError((title + details), _pos, line, col)
@@ -3516,8 +3516,8 @@ def _raise_error226(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'Expr' rule, at the expression:\n"
-    "    '/'\n\n"
-    "Expected to match the string '/'"
+    "    '/?'\n\n"
+    "Expected to match the string '/?'"
     )
     raise ParseError((title + details), _pos, line, col)
 
@@ -3661,7 +3661,7 @@ def _raise_error243(_text, _pos):
 def _cont_start(_text, _pos):
     # Rule 'start'
     # <Discard>
-    # _cont__ignored >> (Skip(Newline) >> (Stmt / Sep))
+    # _cont__ignored >> (Skip(Newline) >> (Stmt /? Sep))
     while True:
         # <Ref name='_cont__ignored'>
         (_status, _result, _pos,) = (yield (3, _cont__ignored, _pos,))
@@ -3669,7 +3669,7 @@ def _cont_start(_text, _pos):
         if (not _status):
             break
         # <Discard>
-        # Skip(Newline) >> (Stmt / Sep)
+        # Skip(Newline) >> (Stmt /? Sep)
         while True:
             # <Skip>
             # Skip(Newline)
@@ -3687,7 +3687,7 @@ def _cont_start(_text, _pos):
             _result = None
             # </Skip>
             # <Alt>
-            # Stmt / Sep
+            # Stmt /? Sep
             staging22 = []
             checkpoint15 = _pos
             while True:
@@ -3720,7 +3720,7 @@ def _parse_start(text, pos=0, fullparse=True):
 
 
 start = Rule('start', _parse_start, """
-    start = _cont__ignored >> (Skip(Newline) >> (Stmt / Sep))
+    start = _cont__ignored >> (Skip(Newline) >> (Stmt /? Sep))
 """)
 
 def _cont__ignored(_text, _pos):
