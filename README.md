@@ -387,88 +387,88 @@ For now, here's a list of the supported expressions:
 - Alternation:
 
     - `foo / bar` -- parses a list of foo separated by bar, consuming
-      an optional trailing separator
+      an optional trailing separator.
     - `foo // bar` -- parses a list of foo separated by bar, and does
-      not consume a trailing separator
+      not consume a trailing separator.
     - In both cases, returns the list of foo values and discards the bar
-      values
+      values.
 
 - Application:
 
-    - `foo |> bar` -- parses foo then parses bar, then returns `bar(foo)`
-    - `foo <| bar` -- parses foo then parses bar, then returns `foo(bar)`
+    - `foo |> bar` -- parses foo then parses bar, then returns `bar(foo)`.
+    - `foo <| bar` -- parses foo then parses bar, then returns `foo(bar)`.
 
 - Binding:
 
     - `let foo = bar in baz` -- parses bar, binding the result to foo, then
-      parses baz
+      parses baz.
 
 - Class:
 
-    - `class Foo { bar: Bar; baz: Baz }` -- defines a sequence of named elements
+    - `class Foo { bar: Bar; baz: Baz }` -- defines a sequence of named elements.
 
 - Expectation:
 
-    - `Expect(foo)` -- parses foo without consuming any input
-    - `ExpectNot(foo)` -- fails if it can parse foo
+    - `Expect(foo)` -- parses foo without consuming any input.
+    - `ExpectNot(foo)` -- fails if it can parse foo.
 
 - Failure:
 
-    - `Fail(message)` -- fails with the provided error message
+    - `Fail(message)` -- fails with the provided error message.
 
 - Invocation:
 
-    - `foo(bar)` -- parses the rule foo using the parsing expression bar
+    - `foo(bar)` -- parses the rule foo using the parsing expression bar.
 
 - OperatorPrecedence:
 
-    - `OperatorPrecedence(...)` -- defines an operator precedence table
+    - `OperatorPrecedence(...)` -- defines an operator precedence table.
 
 - Option:
 
-    - `foo?` -- parse foo, if that fails then return `None`
-    - `Opt(foo)` -- verbose form of `foo?`
+    - `foo?` -- parse foo, if that fails then return `None`.
+    - `Opt(foo)` -- verbose form of `foo?`.
 
 - Ordered Choice:
 
-    - `foo | bar` -- parses foo, and if that fails, then tries bar
+    - `foo | bar` -- parses foo, and if that fails, then tries bar.
 
 - Python Expression:
 
-    - `` `foo` `` -- returns the Python value `foo`
+    - `` `foo` `` -- returns the Python value `foo`, without consuming any input.
 
 - Predicate:
 
     - `foo where bar` -- parses foo, then bar, returning foo only if
-      `bar(foo)` returns `True` (or some other truthy value)
+      `bar(foo)` returns `True` (or some other truthy value).
 
 - Projection:
 
-    - `foo >> bar` -- parses foo, then parses bar, returning only bar
-    - `foo << bar` -- parses foo, then parses bar, returning only foo
+    - `foo >> bar` -- parses foo, then parses bar, returning only bar.
+    - `foo << bar` -- parses foo, then parses bar, returning only foo.
 
 - Regular Expression:
 
-    - `@/foo/` -- matches the regular expression foo
-    - `@/foo/i` -- matches the regular expression foo, ignoring case
-    - `@/(?i)foo/` -- matches the regular expression foo, also ignoring case
+    - `@/foo/` -- matches the regular expression foo.
+    - `@/foo/i` -- matches the regular expression foo, ignoring case.
+    - `@/(?i)foo/` -- matches the regular expression foo, also ignoring case.
 
 - Repetition:
 
-    - `foo*` -- parses foo zero or more times, returning the results in a list
-    - `foo+` -- parses foo one or more times
-    - `List(foo)` -- verbose form of `foo*`
-    - `Some(foo)` -- verbose form of `foo+`
+    - `foo*` -- parses foo zero or more times, returning the results in a list.
+    - `foo+` -- parses foo one or more times.
+    - `List(foo)` -- verbose form of `foo*`.
+    - `Some(foo)` -- verbose form of `foo+`.
 
 - Sequence:
 
     - `[foo, bar, baz]` -- parses foo, then bar, then baz, returning the
-      results in a list
+      results in a list.
 
 - String Matching:
 
-    - `'foo'` -- matches the string 'foo'
-    - `'foo'i` -- matches the string 'foo', ignoring case
+    - `'foo'` -- matches the string "foo".
+    - `'foo'i` -- matches the string "foo", ignoring case.
 
 
 ### Alternation

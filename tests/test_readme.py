@@ -14,7 +14,7 @@ def test_readme():
 
     for i, m in enumerate(pattern.finditer(content)):
         code = m.group(1).strip()
-        print(f'#  Running example {i + 1}')
+        print(f'#  Running example {i + 1}:')
 
         preview = []
         for line in code.split('\n'):
@@ -27,5 +27,6 @@ def test_readme():
                 break
 
         print('\n'.join(preview))
-        print()
+        print('...')
+
         exec(code)
