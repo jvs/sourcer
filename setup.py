@@ -2,7 +2,7 @@ import setuptools
 
 def long_description():
     try:
-        with open('README.rst') as f:
+        with open('README.md') as f:
             return f.read()
     except:
         return ''
@@ -10,13 +10,13 @@ def long_description():
 
 setuptools.setup(
     name = 'sourcer',
-    version = '0.3.4',
+    version = '0.3.5',
     author = 'John K. Von Seggern',
     author_email = 'vonseg@protonmail.com',
     url = 'https://github.com/jvs/sourcer',
     description = 'simple parsing library',
     long_description = long_description(),
-    long_description_content_type = 'text/x-rst',
+    long_description_content_type = 'text/markdown',
     python_requires = '>=3.6',
     install_requires = [],
     packages = ['sourcer'],

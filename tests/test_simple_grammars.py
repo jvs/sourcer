@@ -25,6 +25,7 @@ def test_arithmetic_expressions():
             Int | Parens,
             Prefix('+' | '-'),
             RightAssoc('^'),
+            Postfix('%'),
             LeftAssoc('*' | '/'),
             LeftAssoc('+' | '-'),
         )
@@ -51,6 +52,14 @@ def test_arithmetic_expressions():
 
     result = g.parse('+-12--34++56')
     assert result == I(I(P('+', P('-', 12)), '-', P('-', 34)), '+', P('+', 56))
+
+    # Right associativity:
+    result = g.parse('10 ^ 11 ^ 12')
+    assert result == g.Infix(10, '^', g.Infix(11, '^', 12))
+
+    # Postfix operator:
+    result = g.parse('12 * 34%')
+    assert result == g.Infix(12, '*', g.Postfix(34, '%'))
 
 
 def test_simple_json_grammar():
