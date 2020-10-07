@@ -1,6 +1,6 @@
 # Sourcer
 
-A parsing library for Python (version 3.6 and later).
+A parsing library for Python.
 
 ```python
 from sourcer import Grammar
@@ -12,12 +12,8 @@ g = Grammar(r'''
     ignore Punctuation = "," | "." | "!" | "?"
 ''')
 
-# Try it out:
-result = g.parse('Hello, World!')
-assert result == 'World'
-
-result = g.parse('Hello Chief?!?!!')
-assert result == 'Chief'
+assert 'World' == g.parse('Hello, World!')
+assert 'Chief' == g.parse('Hello Chief?!?!!')
 ```
 
 Notes:
@@ -28,12 +24,19 @@ Notes:
 
 ## Installation
 
+Use pip:
+
 ```console
 $ python3 -m pip install sourcer
 ```
 
+Notes:
 
-## Why Use Sourcer?
+* Sourcer requires Python version 3.6 or later.
+* Sourcer is a pure Python library, and has no dependencies.
+
+
+## Why does this exist?
 
 Sometimes you have to parse things, and sometimes a regex won't cut it.
 
@@ -53,11 +56,14 @@ So that's what this library is for. It's for when you have to take some text
 and turn it into a tree of Python objects.
 
 
-#### Aren't there a ton of parsing libraries for Python already?
+#### But aren't there a ton of parsing libraries for Python already?
 
-Yes. But there's always so much ceremony involved. The main point of
-Sourcer is that you can just define the thing that you really want, and then get
-on with your life. &lt;/rant&gt;
+Yes, there are. Most of them focus on different problems. Sourcer focuses on the
+output of parsing, rather than the means.
+
+The main point of Sourcer is that you can just define the thing that you really
+want, and then get on with your life. For example, Sourcer doesn't have a
+API for parse trees, because it doesn't need one -- as you'll see in the examples.
 
 
 ## Features
