@@ -62,8 +62,7 @@ Yes, there are. Most of them focus on different problems. Sourcer focuses on the
 output of parsing, rather than the means.
 
 The main point of Sourcer is that you can just define the thing that you really
-want, and then get on with your life. For example, Sourcer doesn't have a
-API for parse trees, because it doesn't need one -- as you'll see in the examples.
+want, and then get on with your life.
 
 
 ## Features
@@ -89,8 +88,7 @@ API for parse trees, because it doesn't need one -- as you'll see in the example
 
 ### Arithmetic Expressions
 
-Here's a barebones grammar for arithmetic expressions. You can build it up with
-your own operators, say if you're parsing equations of some sort.
+Here's a simple grammar for arithmetic expressions.
 
 ```python
 from sourcer import Grammar
