@@ -100,7 +100,7 @@ evaluators = {
 
 
 def evaluate(node, bindings):
-    # Lookup identifiers.
+    # Look up identifiers.
     if isinstance(node, g.Identifier):
         if node.name in bindings:
             return bindings[node.name]
@@ -108,7 +108,7 @@ def evaluate(node, bindings):
         name = node.name.upper()
         return bindings.get(name, name)
 
-    # Lookup fields.
+    # Look up fields.
     if isinstance(node, g.Postfix) and isinstance(node.operator, g.FieldAccess):
         obj, field = node.left, node.operator.field
         if hasattr(obj, field):
