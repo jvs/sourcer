@@ -5,7 +5,7 @@ description = r'''
     `from ast import literal_eval`
 
     start = Formula
-    Formula = "="? >> Expr # << End
+    Formula = "="? >> Expr
 
     ignored Space = @/[ \t\n\r]+/
 

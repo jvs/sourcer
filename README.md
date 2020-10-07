@@ -55,9 +55,9 @@ and turn it into a tree of Python objects.
 
 #### Aren't there a ton of parsing libraries for Python already?
 
-&lt;rant&gt;Yes. But there's always so much ceremony involved. The main point of
+Yes. But there's always so much ceremony involved. The main point of
 Sourcer is that you can just define the thing that you really want, and then get
-on with your life. (Hopefully the examples will drive this home.)&lt;/rant&gt;
+on with your life. &lt;/rant&gt;
 
 
 ## Features
@@ -112,19 +112,15 @@ g = Grammar(r'''
     ignore Space = @/\s+/
 ''')
 
-# Note: The Grammar is compiled to a Python modulea and assigned to "g".
+# Note: The Grammar is compiled to a Python module and assigned to "g".
 
-# Left associativity:
-result = g.parse('1 + 2 + 3')
-assert result == g.Infix(g.Infix(1, '+', 2), '+', 3)
+# Some examples:
 
-# Operator precedence:
-result = g.parse('4 + -5 / 6')
-assert result == g.Infix(4, '+', g.Infix(g.Prefix('-', 5), '/', 6))
+assert g.parse('1 + 2 + 3') == g.Infix(g.Infix(1, '+', 2), '+', 3)
 
-# Parentheses:
-result = g.parse('7 * (8 + 9)')
-assert result == g.Infix(7, '*', g.Infix(8, '+', 9))
+assert g.parse('4 + -5 / 6') == g.Infix(4, '+', g.Infix(g.Prefix('-', 5), '/', 6))
+
+assert g.parse('7 * (8 + 9)') == g.Infix(7, '*', g.Infix(8, '+', 9))
 ```
 
 
