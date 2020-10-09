@@ -388,3 +388,15 @@ def test_case_insensitivity():
 
     result = g.command.parse('print')
     assert result == 'print'
+
+
+def test_fail_expression():
+    g = Grammar(r'''
+        start = "a" | "b" | Fail("must be 'a' or 'b'")
+    ''')
+    try:
+        g.parse('c')
+        assert False
+    except Exception as exc:
+        assert "must be 'a' or 'b'" in str(exc)
+        assert "'a' | 'b'" in str(exc)

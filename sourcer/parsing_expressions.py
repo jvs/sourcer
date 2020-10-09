@@ -266,7 +266,12 @@ class Choice(Expr):
                 with _if_succeeds(pb, expr):
                     pb(BREAK)
 
-                with pb.IF(farthest_pos < POS):
+                if isinstance(expr, Fail):
+                    condition = farthest_pos <= POS
+                else:
+                    condition = farthest_pos < POS
+
+                with pb.IF(condition):
                     pb(farthest_pos << POS)
                     pb(farthest_err << RESULT)
 
@@ -431,6 +436,8 @@ class Fail(Expr):
     num_blocks = 0
 
     def __init__(self, message=None):
+        if isinstance(message, StringLiteral):
+            message = message.value
         self.message = message
 
     def __str__(self):
@@ -1123,6 +1130,24 @@ def generate_source_code(docstring, nodes):
         start=_cont_name(default_rule.name),
     )))
 
+    error_delegates = {}
+    def set_error_delegate(expr):
+        if not isinstance(expr, Choice):
+            return
+        real, fail = [], []
+        for option in expr.exprs:
+            if isinstance(option, Fail):
+                fail.append(option)
+            else:
+                real.append(option)
+        if not real or not fail:
+            return
+        delegate = Choice(*real)
+        error_delegates[fail[-1].program_id] = Choice(*real)
+
+    for rule in rules:
+        visit(set_error_delegate, rule)
+
     visited = set()
     def maybe_compile_error_message(rule, expr):
         if not hasattr(expr, 'complain') or expr.program_id in visited:
@@ -1149,10 +1174,11 @@ def generate_source_code(docstring, nodes):
                     ),
                 )
 
+            delegate = error_delegates.get(expr.program_id, expr)
             pb(
                 raw.details << Raw('('),
                 Val(f'Failed to parse the {rule.name!r} rule, at the expression:\n'),
-                Val(f'    {str(expr)}\n\n'),
+                Val(f'    {str(delegate)}\n\n'),
                 Val(expr.complain()),
                 Raw(')'),
                 Raise(raw.ParseError(raw.title + raw.details, POS, raw.line, raw.col)),
