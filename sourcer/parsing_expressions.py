@@ -101,9 +101,17 @@ def visit(previsit, expr, postvisit=None):
 class Alt(Expr):
     num_blocks = 2
 
-    def __init__(self, expr, separator, allow_trailer=False, allow_empty=True):
+    def __init__(
+            self,
+            expr,
+            separator,
+            discard_separators=True,
+            allow_trailer=False,
+            allow_empty=True,
+        ):
         self.expr = expr
         self.separator = separator
+        self.discard_separators = discard_separators
         self.allow_trailer = allow_trailer
         self.allow_empty = allow_empty
 
@@ -123,6 +131,13 @@ class Alt(Expr):
 
         with pb.loop():
             with _if_fails(pb, self.expr):
+                # If we're not discarding separators, and if we're also not
+                # allowing a trailing separator, then we need to pop the last
+                # separator off of our list.
+                if not self.discard_separators and not self.allow_trailer:
+                    # But only pop if staging is not empty.
+                    with pb.IF(staging):
+                        pb(staging.pop())
                 pb(BREAK)
 
             pb(staging.append(RESULT))
@@ -130,6 +145,9 @@ class Alt(Expr):
 
             with _if_fails(pb, self.separator):
                 pb(BREAK)
+
+            if not self.discard_separators:
+                pb(staging.append(RESULT))
 
             if self.allow_trailer:
                 pb(checkpoint << POS)

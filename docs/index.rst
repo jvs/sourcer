@@ -98,9 +98,8 @@ Write tests to make sure the Sourcer is actually doing what you want.
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Examples
-   :hidden:
    :glob:
 
    examples/*
@@ -109,7 +108,6 @@ Write tests to make sure the Sourcer is actually doing what you want.
 .. toctree::
    :maxdepth: 3
    :caption: Parsing Expressions
-   :hidden:
    :glob:
 
    expressions/*

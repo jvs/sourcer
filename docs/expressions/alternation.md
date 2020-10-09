@@ -7,7 +7,8 @@ Sourcer gives you a few ways to use alternation:
 
 * `foo // bar` -- does not consume a trailing separator
 * `foo /? bar` -- consumes an optional trailing separator
-* ``Alt(foo, bar, allow_trailer=`False`, allow_empty=`True`)`` -- verbose form
+* ``Alt(foo, bar, discard_separators=`True`, allow_trailer=`False`, allow_empty=`True`)``
+  -- verbose form, supports additional options.
 
 
 ## Alternation without a trailing separator
@@ -84,18 +85,10 @@ except g.PartialParseError as exc:
 
 ## Keeping the separators instead of discarding them
 
-If you don't want to discard the separators, then you'd also use repetition.
-For example, the expression `[foo, [bar, foo]*] | []` gets you most of the way
-there, but you may also want to flatten the result into one list.
-
 ```python
 from sourcer import Grammar
 
-g = Grammar(r'''
-    start = ["zam", [";", "zam"]*]
-        |> `lambda a: [a[0]] + [c for b in a[1] for c in b]`
-        | []
-''')
+g = Grammar('start = Alt("zam", ";", discard_separators=`False`)')
 
 assert g.parse('zam;zam;zam') == ['zam', ';', 'zam', ';', 'zam']
 ```
