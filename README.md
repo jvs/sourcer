@@ -13,7 +13,7 @@ g = Grammar(r'''
 ''')
 
 assert g.parse('Hello, World!') == 'World'
-assert g.parse('Hello Chief?!?!!') == 'Chief'
+assert g.parse('Hello?! Anybody?!') == 'Anybody'
 ```
 
 Notes:
@@ -32,8 +32,8 @@ $ python3 -m pip install sourcer
 
 Notes:
 
+* Sourcer is a pure Python library, with no dependencies beyond the standard library.
 * Sourcer requires Python version 3.6 or later.
-* Sourcer is a pure Python library, and has no dependencies.
 
 
 ## Why does this exist?
@@ -394,11 +394,6 @@ For now, here's a list of the supported expressions:
     - In both cases, returns the list of foo values and discards the bar
       values.
 
-- Application:
-
-    - `foo |> bar` -- parses foo then parses bar, then returns `bar(foo)`.
-    - `foo <| bar` -- parses foo then parses bar, then returns `foo(bar)`.
-
 - Binding:
 
     - `let foo = bar in baz` -- parses bar, binding the result to foo, then
@@ -408,7 +403,7 @@ For now, here's a list of the supported expressions:
 
     - `class Foo { bar: Bar; baz: Baz }` -- defines a sequence of named elements.
 
-- Expectation:
+- Expectation (Lookahead):
 
     - `Expect(foo)` -- parses foo without consuming any input.
     - `ExpectNot(foo)` -- fails if it can parse foo.
@@ -417,9 +412,10 @@ For now, here's a list of the supported expressions:
 
     - `Fail(message)` -- fails with the provided error message.
 
-- Invocation:
+- Function Application:
 
-    - `foo(bar)` -- parses the rule foo using the parsing expression bar.
+    - `foo |> bar` -- parses foo then parses bar, then returns `bar(foo)`.
+    - `foo <| bar` -- parses foo then parses bar, then returns `foo(bar)`.
 
 - OperatorPrecedence:
 
@@ -470,6 +466,10 @@ For now, here's a list of the supported expressions:
 
     - `'foo'` -- matches the string "foo".
     - `'foo'i` -- matches the string "foo", ignoring case.
+
+- Template Instatiation:
+
+    - `foo(bar)` -- parses the rule foo using the parsing expression bar.
 
 
 ### Alternation

@@ -1,3 +1,6 @@
 black
 coverage
 pytest
+recommonmark
+sphinx
+sphinx-rtd-theme

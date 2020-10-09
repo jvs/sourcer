@@ -20,8 +20,6 @@ def test_readme():
         for line in code.split('\n'):
             if not line.strip():
                 continue
-            if not preview and 'Grammar(' not in line:
-                continue
             preview.append(line)
             if len(preview) > 4:
                 break

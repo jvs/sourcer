@@ -17,6 +17,7 @@ clean:
 		.pytest_cache \
 		**/__pycache__ \
 		**/*.pyc \
+		docs/_build/* \
 		dist \
 		htmlcov \
 		MANIFEST
@@ -31,6 +32,10 @@ coverage: clean image
 		&& coverage report \
 		&& coverage html"
 	open "htmlcov/index.html"
+
+# Build the documentation.
+docs:
+	$(MAKE) -C docs html
 
 # Run the code-formatter, but skip the generated python file.
 black: image
@@ -53,3 +58,5 @@ test_upload: dist
 # Upload the library to pypi.
 real_upload: dist
 	twine upload --repository pypi dist/*
+
+.PHONY: clean docs test coverage black wip dist test_upload real_upload

@@ -1,0 +1,36 @@
+
+expressions to document:
+   binding
+   classes
+   comments
+   explicit_failure
+   function_application
+   ignore
+   inline_python
+   lookahead
+   operator_precedence
+   option
+   ordered_choice
+   parameterized_rules
+   predicate
+   projection
+   python_section
+   regular_expression
+   repetition
+   sequence
+   string_matching
+
+
+
+.. toctree::
+   :maxdepth 2
+   :caption: Using Sourcer
+   :hidden:
+
+   grammar_api
+   source_code_api
+   class_api
+   rule_api
+   visit_api
+   transform_api
+   position_api

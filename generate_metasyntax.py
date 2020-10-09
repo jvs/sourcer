@@ -1,11 +1,15 @@
 import importlib
 import os
+import re
 import subprocess
 
 import sourcer
 
 
-def run(description):
+project_home = os.path.dirname(__file__)
+
+
+def generate_meta_module(description):
     grammar = sourcer.Grammar(description, include_source=True)
 
     # Make sure that the grammar describes itself.
@@ -36,9 +40,28 @@ def run(description):
         raise
 
 
+def update_metasyntax_example(description):
+    print('Updating metasyntax example.')
+    path = os.path.join(project_home, 'docs', 'examples', 'metasyntax.md')
+
+    with open(path) as f:
+        contents = f.read()
+
+    section = '~~~\n' + description.strip().replace('\\', '\\\\') + '\n~~~'
+    contents = re.sub('~~~(.|\n)*?~~~', section, contents)
+
+    with open(path, 'w') as f:
+        f.write(contents)
+
+
 def read_metasyntax():
-    with open(os.path.join(os.path.dirname(__file__), 'metasyntax.txt')) as f:
+    with open(os.path.join(project_home, 'metasyntax.txt')) as f:
         return f.read()
+
+
+def run(description):
+    generate_meta_module(description)
+    update_metasyntax_example(description)
 
 
 if __name__ == '__main__':
