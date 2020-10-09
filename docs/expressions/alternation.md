@@ -62,6 +62,18 @@ except g.ParseError:
 ```
 
 
+## Keeping the separators instead of discarding them
+
+```python
+from sourcer import Grammar
+
+g = Grammar('start = Alt("zam", ";", discard_separators=`False`)')
+
+assert g.parse('zam;zam;zam') == ['zam', ';', 'zam', ';', 'zam']
+```
+
+
+
 ## Requiring a trailing separator
 
 If you want to require a trailing separator, then you can use a repetition
@@ -80,15 +92,4 @@ try:
     assert False
 except g.PartialParseError as exc:
     assert exc.partial_result == ['zim', 'zim']
-```
-
-
-## Keeping the separators instead of discarding them
-
-```python
-from sourcer import Grammar
-
-g = Grammar('start = Alt("zam", ";", discard_separators=`False`)')
-
-assert g.parse('zam;zam;zam') == ['zam', ';', 'zam', ';', 'zam']
 ```
