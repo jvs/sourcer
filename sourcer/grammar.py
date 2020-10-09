@@ -58,11 +58,14 @@ def _create_parsing_expression(node):
         return node
 
     if isinstance(node, meta.Postfix) and isinstance(node.operator, meta.ArgList):
-        left = node.left
+        left, args = node.left, node.operator.args
         if isinstance(left, Ref) and hasattr(parsing_expressions, left.name):
-            return getattr(parsing_expressions, left.name)(*node.operator.args)
+            return getattr(parsing_expressions, left.name)(
+                *[unwrap(x) for x in args if not isinstance(x, KeywordArg)],
+                **{x.name: unwrap(x.expr) for x in args if isinstance(x, KeywordArg)},
+            )
         else:
-            return Call(left, node.operator.args)
+            return Call(left, args)
 
     if isinstance(node, meta.Postfix):
         classes = {
@@ -105,3 +108,7 @@ def _create_parsing_expression(node):
 
     # Otherwise, fail if we don't know what to do with this node.
     raise Exception(f'Unexpected expression: {node!r}')
+
+
+def unwrap(x):
+    return eval(x.source_code) if isinstance(x, PythonExpression) else x

@@ -1254,13 +1254,17 @@ class Rule:
 
 
 _main_template = r'''
-class ParseError(Exception):
+class SourcerError(Exception):
+    """Common superclass for ParseError and PartialParseError."""
+
+
+class ParseError(SourcerError):
     def __init__(self, message, index, line, column):
         super().__init__(message)
         self.position = _Position(index, line, column)
 
 
-class PartialParseError(Exception):
+class PartialParseError(SourcerError):
     def __init__(self, partial_result, last_position, excerpt):
         super().__init__('Incomplete parse. Unexpected input on line'
             f' {last_position.line}, column {last_position.column}:\n{excerpt}')
