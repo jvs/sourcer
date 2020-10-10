@@ -5,7 +5,6 @@ Sourcer's grammar, using Sourcer's grammar, if that makes any sense.)
 
 ~~~
 ```
-import ast
 import textwrap
 ```
 
@@ -25,23 +24,19 @@ wrap(x) => Skip(Newline) >> x << Skip(Newline)
 kw(word) => Name where `lambda x: x == word`
 
 Params = wrap("(") >> (wrap(Name) /? Comma) << ")"
-IgnoreCaseFlag = "i" | "I"
 IgnoreKeyword = kw("ignored") | kw("ignore")
 
 class StringLiteral {
     value: (
-        /(?s)("""([^\\]|\\.)*?""")/
-        | /(?s)('''([^\\]|\\.)*?''')/
-        | /("([^"\\]|\\.)*")/
-        | /('([^'\\]|\\.)*')/
-    ) |> `ast.literal_eval`
-    ignore_case: IgnoreCaseFlag?
+        /(?s)[bB]?("""([^\\]|\\.)*?""")[iI]?/
+        | /(?s)[bB]?('''([^\\]|\\.)*?''')[iI]?/
+        | /[bB]?("([^"\\]|\\.)*")[iI]?/
+        | /[bB]?('([^'\\]|\\.)*')[iI]?/
+    )
 }
 
 class RegexLiteral {
-    # Remove the leading and trailing slashes.
-    value: /\/([^\/\\]|\\.)*\// |> `lambda x: x[1:-1]`
-    ignore_case: IgnoreCaseFlag?
+    value: /[bB]?\/([^\/\\]|\\.)*\/[iI]?/
 }
 
 class PythonSection {
@@ -92,10 +87,10 @@ class ListLiteral {
 }
 
 Atom = ("(" >> wrap(Expr) << ")")
-    | LetExpression
-    | Ref
     | StringLiteral
     | RegexLiteral
+    | LetExpression
+    | Ref
     | ListLiteral
     | PythonExpression
 

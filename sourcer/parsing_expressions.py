@@ -754,21 +754,21 @@ def Some(expr):
 
 class StringLiteral(Expr):
     def __init__(self, value):
-        if not isinstance(value, str):
-            raise TypeError(f'Expected str. Received: {type(value)}.')
+        if not isinstance(value, (bytes, str)):
+            raise TypeError(f'Expected bytes or str. Received: {type(value)}.')
         self.value = value
         self.skip_ignored = False
-        self.num_blocks = 0 if self.value == '' else 1
+        self.num_blocks = 0 if not self.value else 1
 
     def __str__(self):
         return repr(self.value)
 
     def always_succeeds(self):
-        return self.value == ''
+        return not self.value
 
     def _compile(self, pb):
         pb(Raw(f'# <String value={self.value!r}>'))
-        if self.value == '':
+        if not self.value:
             pb(STATUS << Val(True), RESULT << Val(''))
             pb(Raw('# </String>'))
             return

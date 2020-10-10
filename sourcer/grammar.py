@@ -1,3 +1,4 @@
+import ast
 import re
 import types
 
@@ -31,13 +32,17 @@ def Grammar(description, name='grammar', include_source=False):
 
 def _create_parsing_expression(node):
     if isinstance(node, meta.StringLiteral):
-        if node.ignore_case:
-            return RegexLiteral(re.escape(node.value), ignore_case=True)
+        ignore_case = node.value.endswith(('i', 'I'))
+        value = ast.literal_eval(node.value[:-1] if ignore_case else node.value)
+        if ignore_case:
+            return RegexLiteral(re.escape(value), ignore_case=True)
         else:
-            return StringLiteral(node.value)
+            return StringLiteral(value)
 
     if isinstance(node, meta.RegexLiteral):
-        return RegexLiteral(node.value, ignore_case=node.ignore_case)
+        ignore_case = node.value.endswith(('i', 'I'))
+        value = (node.value[:-1] if ignore_case else node.value)[1:-1]
+        return RegexLiteral(value, ignore_case=ignore_case)
 
     if isinstance(node, meta.PythonExpression):
         return PythonExpression(node.value)
