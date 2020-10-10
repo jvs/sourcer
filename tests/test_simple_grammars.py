@@ -400,3 +400,12 @@ def test_fail_expression():
     except Exception as exc:
         assert "must be 'a' or 'b'" in str(exc)
         assert "'a' | 'b'" in str(exc)
+
+
+def test_binary_strings_and_regexes():
+    g = Grammar(r'start = b"magic:" >> (b/[0-9A-F]{2}/ // b".")')
+    assert g.parse(b'magic:01.23.AB') == [b'01', b'23', b'AB']
+
+    g = Grammar(r'start = b"\x01\x02\x03" >> (b/[\x00-\x0F]{2}/ // b"\xFF")')
+    result = g.parse(b'\x01\x02\x03\x0F\x0F\xFF\x0E\x0E\xFF\x0D\x0D')
+    assert result == [b'\x0F\x0F', b'\x0E\x0E', b'\x0D\x0D']

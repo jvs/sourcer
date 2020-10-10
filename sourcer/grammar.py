@@ -40,8 +40,25 @@ def _create_parsing_expression(node):
             return StringLiteral(value)
 
     if isinstance(node, meta.RegexLiteral):
+        is_binary = node.value.startswith('b')
         ignore_case = node.value.endswith(('i', 'I'))
-        value = (node.value[:-1] if ignore_case else node.value)[1:-1]
+        value = node.value
+
+        # Remove leading 'b'.
+        if is_binary:
+            value = value[1:]
+
+        # Remove trailing 'i'.
+        if ignore_case:
+            value = value[:-1]
+
+        # Remove backslashes.
+        value = value[1:-1]
+
+        # Enocde binary string.
+        if is_binary:
+            value = value.encode('ascii')
+
         return RegexLiteral(value, ignore_case=ignore_case)
 
     if isinstance(node, meta.PythonExpression):

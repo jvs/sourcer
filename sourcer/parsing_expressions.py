@@ -588,14 +588,18 @@ class RegexLiteral(Expr):
     def __init__(self, pattern, ignore_case=False):
         if isinstance(pattern, typing.Pattern):
             pattern = pattern.pattern
-        if not isinstance(pattern, str):
-            raise TypeError('Expected str')
+        if not isinstance(pattern, (bytes, str)):
+            raise TypeError('Expected bytes or str')
         self.pattern = pattern
         self.skip_ignored = False
         self.ignore_case = ignore_case
 
     def __str__(self):
-        pattern = self.pattern.replace('\\', '\\\\')
+        pattern = self.pattern
+        if isinstance(pattern, bytes):
+            pattern = pattern.decode('ascii')
+
+        pattern = pattern.replace('\\', '\\\\')
         flag = 'i' if self.ignore_case else ''
         return f'/{pattern}/{flag}'
 
@@ -1475,6 +1479,9 @@ def _finalize_parse_info(text, nodes, pos, fullparse):
 
 
 def _extract_excerpt(text, pos, col):
+    if isinstance(text, bytes):
+        return repr(text[max(0, pos - 1) : pos + 2])
+
     start = pos - (col - 1)
     match = _compile_re('\n').search(text, pos + 1)
     end = len(text) if match is None else match.start()
