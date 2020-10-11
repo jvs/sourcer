@@ -495,17 +495,25 @@ class LetExpression(Expr):
 class List(Expr):
     num_blocks = 2
 
-    def __init__(self, expr, allow_empty=True):
+    def __init__(self, expr, min_len=None, max_len=None):
         self.expr = expr
-        self.allow_empty = allow_empty
+        self.min_len = min_len
+        self.max_len = max_len
 
     def __str__(self):
         x = f'({self.expr})' if isinstance(self.expr, BinaryOp) else self.expr
-        op = '*' if self.allow_empty else '+'
+        if self.min_len is None and self.max_len is None:
+            op = '*'
+        elif self.min_len == 1 and self.max_len is None:
+            op = '+'
+        elif self.min_len == self.max_len:
+            op = f'{{{self.min_len}}}'
+        else:
+            op = f'{{{self.min_len},{self.max_len}}}'
         return f'{x}{op}'
 
     def always_succeeds(self):
-        return self.allow_empty
+        return not self.min_len
 
     def _compile(self, pb):
         pb(Raw(f'# <{self.__class__.__name__}>'))
@@ -518,6 +526,10 @@ class List(Expr):
             with _if_fails(pb, self.expr):
                 pb(POS << checkpoint, BREAK)
 
+            if self.max_len is not None:
+                with pb.IF(raw.len(staging) == Val(self.max_len)):
+                    pb(BREAK)
+
             pb(staging.append(RESULT))
 
         success = [
@@ -525,10 +537,14 @@ class List(Expr):
             STATUS << True,
         ]
 
-        if self.allow_empty:
+        if not self.min_len:
             pb(*success)
         else:
-            with pb.IF(staging):
+            if self.min_len == 1:
+                condition = staging
+            else:
+                condition = raw.len(staging) >= Val(self.min_len)
+            with pb.IF(condition):
                 pb(*success)
 
         pb(Raw(f'# </{self.__class__.__name__}>'))
@@ -753,7 +769,7 @@ class Skip(Expr):
 
 
 def Some(expr):
-    return List(expr, allow_empty=False)
+    return List(expr, min_len=1)
 
 
 class StringLiteral(Expr):
