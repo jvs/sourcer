@@ -44,6 +44,10 @@ class PythonSection {
 class PythonExpression {
     # Strip the backticks.
     value: /`.*?`/ |> `lambda x: x[1:-1]`
+        | /\\d+/
+        | "True"
+        | "False"
+        | "None"
 }
 
 class RuleDef {
@@ -87,9 +91,9 @@ Atom = ("(" >> wrap(Expr) << ")")
     | StringLiteral
     | RegexLiteral
     | LetExpression
-    | Ref
     | ListLiteral
     | PythonExpression
+    | Ref
 
 class KeywordArg {
     name: Name << ("=" | ":")
@@ -103,12 +107,17 @@ class ArgList {
 Expr = OperatorPrecedence(
     Atom,
     Postfix(ArgList),
-    Postfix("?" | "*" | "+"),
+    Postfix("?" | "*" | "+" | Repeat),
     LeftAssoc(wrap("//" | "/?")),
     LeftAssoc(wrap("<<" | ">>")),
     LeftAssoc(wrap("<|" | "|>" | "where")),
     LeftAssoc(wrap("|")),
 )
+
+class Repeat {
+    left: "{" >> Expr
+    right: Opt("," >> Expr) << "}"
+}
 
 start = Skip(Newline) >> (Stmt /? Sep)
 
@@ -333,6 +342,9 @@ def _finalize_parse_info(text, nodes, pos, fullparse):
 
 
 def _extract_excerpt(text, pos, col):
+    if isinstance(text, bytes):
+        return repr(text[max(0, pos - 1) : pos + 2])
+
     start = pos - (col - 1)
     match = _compile_re('\n').search(text, pos + 1)
     end = len(text) if match is None else match.start()
@@ -393,6 +405,7 @@ matcher8 = _compile_re("[bB]?('([^'\\\\]|\\\\.)*')[iI]?", flags=0).match
 matcher9 = _compile_re('[bB]?\\/([^\\/\\\\]|\\\\.)*\\/[iI]?', flags=0).match
 matcher10 = _compile_re('(?s)```.*?```', flags=0).match
 matcher11 = _compile_re('`.*?`', flags=0).match
+matcher12 = _compile_re('\\d+', flags=0).match
 
 
 def _cont_Space(_text, _pos):
@@ -1386,7 +1399,7 @@ def _raise_error66(_text, _pos):
 class PythonExpression(Node):
     """
     class PythonExpression {
-        value: /`.*?`/ |> `lambda x: x[1:-1]`
+        value: /`.*?`/ |> `lambda x: x[1:-1]` | /\\d+/ | 'True' | 'False' | 'None'
     }
     """
     _fields = ('value',)
@@ -1408,24 +1421,110 @@ def _cont_PythonExpression(_text, _pos):
     # <Seq>
     start_pos4 = _pos
     while True:
-        # <Apply>
-        # /`.*?`/ |> `lambda x: x[1:-1]`
-        # <Regex pattern='`.*?`'>
-        match11 = matcher11(_text, _pos)
-        if match11:
-            _pos = (yield (3, _cont__ignored, match11.end(),))[2]
-            _status = True
-            _result = match11.group(0)
-        else:
-            _status = False
-            _result = _raise_error72
-        # </Regex>
-        if _status:
-            arg7 = _result
-            _result = lambda x: x[1:-1]
-            _status = True
-            _result = _result(arg7)
-        # </Apply>
+        # <Choice>
+        backtrack4 = farthest_pos4 = _pos
+        farthest_err7 = 71
+        farthest_err8 = _raise_error71
+        while True:
+            # Option 1:
+            # <Apply>
+            # /`.*?`/ |> `lambda x: x[1:-1]`
+            # <Regex pattern='`.*?`'>
+            match11 = matcher11(_text, _pos)
+            if match11:
+                _pos = (yield (3, _cont__ignored, match11.end(),))[2]
+                _status = True
+                _result = match11.group(0)
+            else:
+                _status = False
+                _result = _raise_error73
+            # </Regex>
+            if _status:
+                arg7 = _result
+                _result = lambda x: x[1:-1]
+                _status = True
+                _result = _result(arg7)
+            # </Apply>
+            if _status:
+                break
+            if (farthest_pos4 < _pos):
+                farthest_pos4 = _pos
+                farthest_err8 = _result
+            _pos = backtrack4
+            # Option 2:
+            # <Regex pattern='\\d+'>
+            match12 = matcher12(_text, _pos)
+            if match12:
+                _pos = (yield (3, _cont__ignored, match12.end(),))[2]
+                _status = True
+                _result = match12.group(0)
+            else:
+                _status = False
+                _result = _raise_error75
+            # </Regex>
+            if _status:
+                break
+            if (farthest_pos4 < _pos):
+                farthest_pos4 = _pos
+                farthest_err8 = _result
+            _pos = backtrack4
+            # Option 3:
+            # <String value='True'>
+            value7 = 'True'
+            end7 = (_pos + 4)
+            if (_text[_pos : end7] == value7):
+                _pos = (yield (3, _cont__ignored, end7,))[2]
+                _status = True
+                _result = value7
+            else:
+                _status = False
+                _result = _raise_error76
+            # </String>
+            if _status:
+                break
+            if (farthest_pos4 < _pos):
+                farthest_pos4 = _pos
+                farthest_err8 = _result
+            _pos = backtrack4
+            # Option 4:
+            # <String value='False'>
+            value8 = 'False'
+            end8 = (_pos + 5)
+            if (_text[_pos : end8] == value8):
+                _pos = (yield (3, _cont__ignored, end8,))[2]
+                _status = True
+                _result = value8
+            else:
+                _status = False
+                _result = _raise_error77
+            # </String>
+            if _status:
+                break
+            if (farthest_pos4 < _pos):
+                farthest_pos4 = _pos
+                farthest_err8 = _result
+            _pos = backtrack4
+            # Option 5:
+            # <String value='None'>
+            value9 = 'None'
+            end9 = (_pos + 4)
+            if (_text[_pos : end9] == value9):
+                _pos = (yield (3, _cont__ignored, end9,))[2]
+                _status = True
+                _result = value9
+            else:
+                _status = False
+                _result = _raise_error78
+            # </String>
+            if _status:
+                break
+            if (farthest_pos4 < _pos):
+                farthest_pos4 = _pos
+                farthest_err8 = _result
+            _pos = farthest_pos4
+            _result = farthest_err8
+            break
+        # </Choice>
         if (not _status):
             break
         value = _result
@@ -1436,7 +1535,24 @@ def _cont_PythonExpression(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _raise_error72(_text, _pos):
+def _raise_error71(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'PythonExpression' rule, at the expression:\n"
+    "    /`.*?`/ |> `lambda x: x[1:-1]` | /\\\\d+/ | 'True' | 'False' | 'None'\n\n"
+    'Unexpected input'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+
+def _raise_error73(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1449,6 +1565,74 @@ def _raise_error72(_text, _pos):
     "Failed to parse the 'PythonExpression' rule, at the expression:\n"
     '    /`.*?`/\n\n'
     'Expected to match the regular expression /`.*?`/'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+
+def _raise_error75(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'PythonExpression' rule, at the expression:\n"
+    '    /\\\\d+/\n\n'
+    'Expected to match the regular expression /\\d+/'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+
+def _raise_error76(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'PythonExpression' rule, at the expression:\n"
+    "    'True'\n\n"
+    "Expected to match the string 'True'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+
+def _raise_error77(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'PythonExpression' rule, at the expression:\n"
+    "    'False'\n\n"
+    "Expected to match the string 'False'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+
+def _raise_error78(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'PythonExpression' rule, at the expression:\n"
+    "    'None'\n\n"
+    "Expected to match the string 'None'"
     )
     raise ParseError((title + details), _pos, line, col)
 
@@ -1480,67 +1664,67 @@ class RuleDef(Node):
 
 
 
-def _parse_function_89(_text, _pos):
+def _parse_function_94(_text, _pos):
     # <Choice>
-    backtrack4 = farthest_pos4 = _pos
-    farthest_err7 = 89
-    farthest_err8 = _raise_error89
+    backtrack5 = farthest_pos5 = _pos
+    farthest_err9 = 94
+    farthest_err10 = _raise_error94
     while True:
         # Option 1:
         # <String value='=>'>
-        value7 = '=>'
-        end7 = (_pos + 2)
-        if (_text[_pos : end7] == value7):
-            _pos = (yield (3, _cont__ignored, end7,))[2]
+        value10 = '=>'
+        end10 = (_pos + 2)
+        if (_text[_pos : end10] == value10):
+            _pos = (yield (3, _cont__ignored, end10,))[2]
             _status = True
-            _result = value7
+            _result = value10
         else:
             _status = False
-            _result = _raise_error90
+            _result = _raise_error95
         # </String>
         if _status:
             break
-        if (farthest_pos4 < _pos):
-            farthest_pos4 = _pos
-            farthest_err8 = _result
-        _pos = backtrack4
+        if (farthest_pos5 < _pos):
+            farthest_pos5 = _pos
+            farthest_err10 = _result
+        _pos = backtrack5
         # Option 2:
         # <String value='='>
-        value8 = '='
-        end8 = (_pos + 1)
-        if (_text[_pos : end8] == value8):
-            _pos = (yield (3, _cont__ignored, end8,))[2]
+        value11 = '='
+        end11 = (_pos + 1)
+        if (_text[_pos : end11] == value11):
+            _pos = (yield (3, _cont__ignored, end11,))[2]
             _status = True
-            _result = value8
+            _result = value11
         else:
             _status = False
-            _result = _raise_error91
+            _result = _raise_error96
         # </String>
         if _status:
             break
-        if (farthest_pos4 < _pos):
-            farthest_pos4 = _pos
-            farthest_err8 = _result
-        _pos = backtrack4
+        if (farthest_pos5 < _pos):
+            farthest_pos5 = _pos
+            farthest_err10 = _result
+        _pos = backtrack5
         # Option 3:
         # <String value=':'>
-        value9 = ':'
-        end9 = (_pos + 1)
-        if (_text[_pos : end9] == value9):
-            _pos = (yield (3, _cont__ignored, end9,))[2]
+        value12 = ':'
+        end12 = (_pos + 1)
+        if (_text[_pos : end12] == value12):
+            _pos = (yield (3, _cont__ignored, end12,))[2]
             _status = True
-            _result = value9
+            _result = value12
         else:
             _status = False
-            _result = _raise_error92
+            _result = _raise_error97
         # </String>
         if _status:
             break
-        if (farthest_pos4 < _pos):
-            farthest_pos4 = _pos
-            farthest_err8 = _result
-        _pos = farthest_pos4
-        _result = farthest_err8
+        if (farthest_pos5 < _pos):
+            farthest_pos5 = _pos
+            farthest_err10 = _result
+        _pos = farthest_pos5
+        _result = farthest_err10
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -1554,13 +1738,13 @@ def _cont_RuleDef(_text, _pos):
         # Opt(IgnoreKeyword) |> `bool`
         # <Opt>
         # Opt(IgnoreKeyword)
-        backtrack5 = _pos
+        backtrack6 = _pos
         # <Ref name='IgnoreKeyword'>
         (_status, _result, _pos,) = (yield (3, _cont_IgnoreKeyword, _pos,))
         # </Ref>
         if (not _status):
             _status = True
-            _pos = backtrack5
+            _pos = backtrack6
             _result = None
         # </Opt>
         arg8 = _result
@@ -1580,19 +1764,19 @@ def _cont_RuleDef(_text, _pos):
         while True:
             # <Opt>
             # Opt(Params)
-            backtrack6 = _pos
+            backtrack7 = _pos
             # <Ref name='Params'>
             (_status, _result, _pos,) = (yield (3, _cont_Params, _pos,))
             # </Ref>
             if (not _status):
                 _status = True
-                _pos = backtrack6
+                _pos = backtrack7
                 _result = None
             # </Opt>
             staging5 = _result
             # <Call>
             # wrap('=>' | '=' | ':')
-            func6 = _ParseFunction(_cont_wrap, (_parse_function_89,), ())
+            func6 = _ParseFunction(_cont_wrap, (_parse_function_94,), ())
             (_status, _result, _pos,) = (yield (3, func6, _pos,))
             # </Call>
             if _status:
@@ -1615,7 +1799,7 @@ def _cont_RuleDef(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _raise_error89(_text, _pos):
+def _raise_error94(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1632,7 +1816,7 @@ def _raise_error89(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error90(_text, _pos):
+def _raise_error95(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1649,7 +1833,7 @@ def _raise_error90(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error91(_text, _pos):
+def _raise_error96(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1666,7 +1850,7 @@ def _raise_error91(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error92(_text, _pos):
+def _raise_error97(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1708,32 +1892,32 @@ class ClassDef(Node):
 
 
 
-def _parse_function_101(_text, _pos):
+def _parse_function_106(_text, _pos):
     # <String value='class'>
-    value10 = 'class'
-    end10 = (_pos + 5)
-    if (_text[_pos : end10] == value10):
-        _pos = (yield (3, _cont__ignored, end10,))[2]
+    value13 = 'class'
+    end13 = (_pos + 5)
+    if (_text[_pos : end13] == value13):
+        _pos = (yield (3, _cont__ignored, end13,))[2]
         _status = True
-        _result = value10
+        _result = value13
     else:
         _status = False
-        _result = _raise_error101
+        _result = _raise_error106
     # </String>
     (yield (_status, _result, _pos,))
 
 
-def _parse_function_111(_text, _pos):
+def _parse_function_116(_text, _pos):
     # <String value='{'>
-    value11 = '{'
-    end11 = (_pos + 1)
-    if (_text[_pos : end11] == value11):
-        _pos = (yield (3, _cont__ignored, end11,))[2]
+    value14 = '{'
+    end14 = (_pos + 1)
+    if (_text[_pos : end14] == value14):
+        _pos = (yield (3, _cont__ignored, end14,))[2]
         _status = True
-        _result = value11
+        _result = value14
     else:
         _status = False
-        _result = _raise_error111
+        _result = _raise_error116
     # </String>
     (yield (_status, _result, _pos,))
 
@@ -1747,7 +1931,7 @@ def _cont_ClassDef(_text, _pos):
         while True:
             # <Call>
             # kw('class')
-            arg9 = _wrap_string_literal('class', _parse_function_101)
+            arg9 = _wrap_string_literal('class', _parse_function_106)
             func7 = _ParseFunction(_cont_kw, (arg9,), ())
             (_status, _result, _pos,) = (yield (3, func7, _pos,))
             # </Call>
@@ -1763,13 +1947,13 @@ def _cont_ClassDef(_text, _pos):
         name = _result
         # <Opt>
         # Opt(Params)
-        backtrack7 = _pos
+        backtrack8 = _pos
         # <Ref name='Params'>
         (_status, _result, _pos,) = (yield (3, _cont_Params, _pos,))
         # </Ref>
         if (not _status):
             _status = True
-            _pos = backtrack7
+            _pos = backtrack8
             _result = None
         # </Opt>
         params = _result
@@ -1781,7 +1965,7 @@ def _cont_ClassDef(_text, _pos):
             while True:
                 # <Call>
                 # wrap('{')
-                arg10 = _wrap_string_literal('{', _parse_function_111)
+                arg10 = _wrap_string_literal('{', _parse_function_116)
                 func8 = _ParseFunction(_cont_wrap, (arg10,), ())
                 (_status, _result, _pos,) = (yield (3, func8, _pos,))
                 # </Call>
@@ -1815,15 +1999,15 @@ def _cont_ClassDef(_text, _pos):
                 break
             staging7 = _result
             # <String value='}'>
-            value12 = '}'
-            end12 = (_pos + 1)
-            if (_text[_pos : end12] == value12):
-                _pos = (yield (3, _cont__ignored, end12,))[2]
+            value15 = '}'
+            end15 = (_pos + 1)
+            if (_text[_pos : end15] == value15):
+                _pos = (yield (3, _cont__ignored, end15,))[2]
                 _status = True
-                _result = value12
+                _result = value15
             else:
                 _status = False
-                _result = _raise_error115
+                _result = _raise_error120
             # </String>
             if _status:
                 _result = staging7
@@ -1839,7 +2023,7 @@ def _cont_ClassDef(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _raise_error101(_text, _pos):
+def _raise_error106(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1856,7 +2040,7 @@ def _raise_error101(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error111(_text, _pos):
+def _raise_error116(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1873,7 +2057,7 @@ def _raise_error111(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error115(_text, _pos):
+def _raise_error120(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1941,9 +2125,9 @@ def _cont_IgnoreStmt(_text, _pos):
 def _cont_Stmt(_text, _pos):
     # Rule 'Stmt'
     # <Choice>
-    backtrack8 = farthest_pos5 = _pos
-    farthest_err9 = 123
-    farthest_err10 = _raise_error123
+    backtrack9 = farthest_pos6 = _pos
+    farthest_err11 = 128
+    farthest_err12 = _raise_error128
     while True:
         # Option 1:
         # <Ref name='ClassDef'>
@@ -1951,51 +2135,51 @@ def _cont_Stmt(_text, _pos):
         # </Ref>
         if _status:
             break
-        if (farthest_pos5 < _pos):
-            farthest_pos5 = _pos
-            farthest_err10 = _result
-        _pos = backtrack8
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = backtrack9
         # Option 2:
         # <Ref name='RuleDef'>
         (_status, _result, _pos,) = (yield (3, _cont_RuleDef, _pos,))
         # </Ref>
         if _status:
             break
-        if (farthest_pos5 < _pos):
-            farthest_pos5 = _pos
-            farthest_err10 = _result
-        _pos = backtrack8
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = backtrack9
         # Option 3:
         # <Ref name='IgnoreStmt'>
         (_status, _result, _pos,) = (yield (3, _cont_IgnoreStmt, _pos,))
         # </Ref>
         if _status:
             break
-        if (farthest_pos5 < _pos):
-            farthest_pos5 = _pos
-            farthest_err10 = _result
-        _pos = backtrack8
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = backtrack9
         # Option 4:
         # <Ref name='PythonSection'>
         (_status, _result, _pos,) = (yield (3, _cont_PythonSection, _pos,))
         # </Ref>
         if _status:
             break
-        if (farthest_pos5 < _pos):
-            farthest_pos5 = _pos
-            farthest_err10 = _result
-        _pos = backtrack8
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = backtrack9
         # Option 5:
         # <Ref name='PythonExpression'>
         (_status, _result, _pos,) = (yield (3, _cont_PythonExpression, _pos,))
         # </Ref>
         if _status:
             break
-        if (farthest_pos5 < _pos):
-            farthest_pos5 = _pos
-            farthest_err10 = _result
-        _pos = farthest_pos5
-        _result = farthest_err10
+        if (farthest_pos6 < _pos):
+            farthest_pos6 = _pos
+            farthest_err12 = _result
+        _pos = farthest_pos6
+        _result = farthest_err12
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -2009,7 +2193,7 @@ Stmt = Rule('Stmt', _parse_Stmt, """
     Stmt = ClassDef | RuleDef | IgnoreStmt | PythonSection | PythonExpression
 """)
 
-def _raise_error123(_text, _pos):
+def _raise_error128(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2051,55 +2235,55 @@ class LetExpression(Node):
 
 
 
-def _parse_function_136(_text, _pos):
+def _parse_function_141(_text, _pos):
     # <String value='let'>
-    value13 = 'let'
-    end13 = (_pos + 3)
-    if (_text[_pos : end13] == value13):
-        _pos = (yield (3, _cont__ignored, end13,))[2]
+    value16 = 'let'
+    end16 = (_pos + 3)
+    if (_text[_pos : end16] == value16):
+        _pos = (yield (3, _cont__ignored, end16,))[2]
         _status = True
-        _result = value13
+        _result = value16
     else:
         _status = False
-        _result = _raise_error136
+        _result = _raise_error141
     # </String>
     (yield (_status, _result, _pos,))
 
 
-def _parse_function_140(_text, _pos):
+def _parse_function_145(_text, _pos):
     # <String value='='>
-    value14 = '='
-    end14 = (_pos + 1)
-    if (_text[_pos : end14] == value14):
-        _pos = (yield (3, _cont__ignored, end14,))[2]
+    value17 = '='
+    end17 = (_pos + 1)
+    if (_text[_pos : end17] == value17):
+        _pos = (yield (3, _cont__ignored, end17,))[2]
         _status = True
-        _result = value14
+        _result = value17
     else:
         _status = False
-        _result = _raise_error140
+        _result = _raise_error145
     # </String>
     (yield (_status, _result, _pos,))
 
 
-def _parse_function_148(_text, _pos):
+def _parse_function_153(_text, _pos):
     # <String value='in'>
-    value15 = 'in'
-    end15 = (_pos + 2)
-    if (_text[_pos : end15] == value15):
-        _pos = (yield (3, _cont__ignored, end15,))[2]
+    value18 = 'in'
+    end18 = (_pos + 2)
+    if (_text[_pos : end18] == value18):
+        _pos = (yield (3, _cont__ignored, end18,))[2]
         _status = True
-        _result = value15
+        _result = value18
     else:
         _status = False
-        _result = _raise_error148
+        _result = _raise_error153
     # </String>
     (yield (_status, _result, _pos,))
 
 
-def _parse_function_146(_text, _pos):
+def _parse_function_151(_text, _pos):
     # <Call>
     # kw('in')
-    arg11 = _wrap_string_literal('in', _parse_function_148)
+    arg11 = _wrap_string_literal('in', _parse_function_153)
     func9 = _ParseFunction(_cont_kw, (arg11,), ())
     (_status, _result, _pos,) = (yield (3, func9, _pos,))
     # </Call>
@@ -2118,7 +2302,7 @@ def _cont_LetExpression(_text, _pos):
             while True:
                 # <Call>
                 # kw('let')
-                arg12 = _wrap_string_literal('let', _parse_function_136)
+                arg12 = _wrap_string_literal('let', _parse_function_141)
                 func10 = _ParseFunction(_cont_kw, (arg12,), ())
                 (_status, _result, _pos,) = (yield (3, func10, _pos,))
                 # </Call>
@@ -2134,7 +2318,7 @@ def _cont_LetExpression(_text, _pos):
             staging8 = _result
             # <Call>
             # wrap('=')
-            arg13 = _wrap_string_literal('=', _parse_function_140)
+            arg13 = _wrap_string_literal('=', _parse_function_145)
             func11 = _ParseFunction(_cont_wrap, (arg13,), ())
             (_status, _result, _pos,) = (yield (3, func11, _pos,))
             # </Call>
@@ -2156,7 +2340,7 @@ def _cont_LetExpression(_text, _pos):
             staging9 = _result
             # <Call>
             # wrap(kw('in'))
-            func12 = _ParseFunction(_cont_wrap, (_parse_function_146,), ())
+            func12 = _ParseFunction(_cont_wrap, (_parse_function_151,), ())
             (_status, _result, _pos,) = (yield (3, func12, _pos,))
             # </Call>
             if _status:
@@ -2179,7 +2363,7 @@ def _cont_LetExpression(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _raise_error136(_text, _pos):
+def _raise_error141(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2196,7 +2380,7 @@ def _raise_error136(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error140(_text, _pos):
+def _raise_error145(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2213,7 +2397,7 @@ def _raise_error140(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error148(_text, _pos):
+def _raise_error153(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2300,15 +2484,15 @@ def _cont_ListLiteral(_text, _pos):
             # '[' >> (wrap(Expr) /? Comma)
             while True:
                 # <String value='['>
-                value16 = '['
-                end16 = (_pos + 1)
-                if (_text[_pos : end16] == value16):
-                    _pos = (yield (3, _cont__ignored, end16,))[2]
+                value19 = '['
+                end19 = (_pos + 1)
+                if (_text[_pos : end19] == value19):
+                    _pos = (yield (3, _cont__ignored, end19,))[2]
                     _status = True
-                    _result = value16
+                    _result = value19
                 else:
                     _status = False
-                    _result = _raise_error160
+                    _result = _raise_error165
                 # </String>
                 if (not _status):
                     break
@@ -2342,15 +2526,15 @@ def _cont_ListLiteral(_text, _pos):
                 break
             staging11 = _result
             # <String value=']'>
-            value17 = ']'
-            end17 = (_pos + 1)
-            if (_text[_pos : end17] == value17):
-                _pos = (yield (3, _cont__ignored, end17,))[2]
+            value20 = ']'
+            end20 = (_pos + 1)
+            if (_text[_pos : end20] == value20):
+                _pos = (yield (3, _cont__ignored, end20,))[2]
                 _status = True
-                _result = value17
+                _result = value20
             else:
                 _status = False
-                _result = _raise_error166
+                _result = _raise_error171
             # </String>
             if _status:
                 _result = staging11
@@ -2366,7 +2550,7 @@ def _cont_ListLiteral(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _raise_error160(_text, _pos):
+def _raise_error165(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2383,7 +2567,7 @@ def _raise_error160(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error166(_text, _pos):
+def _raise_error171(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2403,9 +2587,9 @@ def _raise_error166(_text, _pos):
 def _cont_Atom(_text, _pos):
     # Rule 'Atom'
     # <Choice>
-    backtrack9 = farthest_pos6 = _pos
-    farthest_err11 = 168
-    farthest_err12 = _raise_error168
+    backtrack10 = farthest_pos7 = _pos
+    farthest_err13 = 173
+    farthest_err14 = _raise_error173
     while True:
         # Option 1:
         # <Discard>
@@ -2415,15 +2599,15 @@ def _cont_Atom(_text, _pos):
             # '(' >> wrap(Expr)
             while True:
                 # <String value='('>
-                value18 = '('
-                end18 = (_pos + 1)
-                if (_text[_pos : end18] == value18):
-                    _pos = (yield (3, _cont__ignored, end18,))[2]
+                value21 = '('
+                end21 = (_pos + 1)
+                if (_text[_pos : end21] == value21):
+                    _pos = (yield (3, _cont__ignored, end21,))[2]
                     _status = True
-                    _result = value18
+                    _result = value21
                 else:
                     _status = False
-                    _result = _raise_error171
+                    _result = _raise_error176
                 # </String>
                 if (not _status):
                     break
@@ -2438,15 +2622,15 @@ def _cont_Atom(_text, _pos):
                 break
             staging12 = _result
             # <String value=')'>
-            value19 = ')'
-            end19 = (_pos + 1)
-            if (_text[_pos : end19] == value19):
-                _pos = (yield (3, _cont__ignored, end19,))[2]
+            value22 = ')'
+            end22 = (_pos + 1)
+            if (_text[_pos : end22] == value22):
+                _pos = (yield (3, _cont__ignored, end22,))[2]
                 _status = True
-                _result = value19
+                _result = value22
             else:
                 _status = False
-                _result = _raise_error175
+                _result = _raise_error180
             # </String>
             if _status:
                 _result = staging12
@@ -2454,71 +2638,71 @@ def _cont_Atom(_text, _pos):
         # </Discard>
         if _status:
             break
-        if (farthest_pos6 < _pos):
-            farthest_pos6 = _pos
-            farthest_err12 = _result
-        _pos = backtrack9
+        if (farthest_pos7 < _pos):
+            farthest_pos7 = _pos
+            farthest_err14 = _result
+        _pos = backtrack10
         # Option 2:
         # <Ref name='StringLiteral'>
         (_status, _result, _pos,) = (yield (3, _cont_StringLiteral, _pos,))
         # </Ref>
         if _status:
             break
-        if (farthest_pos6 < _pos):
-            farthest_pos6 = _pos
-            farthest_err12 = _result
-        _pos = backtrack9
+        if (farthest_pos7 < _pos):
+            farthest_pos7 = _pos
+            farthest_err14 = _result
+        _pos = backtrack10
         # Option 3:
         # <Ref name='RegexLiteral'>
         (_status, _result, _pos,) = (yield (3, _cont_RegexLiteral, _pos,))
         # </Ref>
         if _status:
             break
-        if (farthest_pos6 < _pos):
-            farthest_pos6 = _pos
-            farthest_err12 = _result
-        _pos = backtrack9
+        if (farthest_pos7 < _pos):
+            farthest_pos7 = _pos
+            farthest_err14 = _result
+        _pos = backtrack10
         # Option 4:
         # <Ref name='LetExpression'>
         (_status, _result, _pos,) = (yield (3, _cont_LetExpression, _pos,))
         # </Ref>
         if _status:
             break
-        if (farthest_pos6 < _pos):
-            farthest_pos6 = _pos
-            farthest_err12 = _result
-        _pos = backtrack9
+        if (farthest_pos7 < _pos):
+            farthest_pos7 = _pos
+            farthest_err14 = _result
+        _pos = backtrack10
         # Option 5:
-        # <Ref name='Ref'>
-        (_status, _result, _pos,) = (yield (3, _cont_Ref, _pos,))
-        # </Ref>
-        if _status:
-            break
-        if (farthest_pos6 < _pos):
-            farthest_pos6 = _pos
-            farthest_err12 = _result
-        _pos = backtrack9
-        # Option 6:
         # <Ref name='ListLiteral'>
         (_status, _result, _pos,) = (yield (3, _cont_ListLiteral, _pos,))
         # </Ref>
         if _status:
             break
-        if (farthest_pos6 < _pos):
-            farthest_pos6 = _pos
-            farthest_err12 = _result
-        _pos = backtrack9
-        # Option 7:
+        if (farthest_pos7 < _pos):
+            farthest_pos7 = _pos
+            farthest_err14 = _result
+        _pos = backtrack10
+        # Option 6:
         # <Ref name='PythonExpression'>
         (_status, _result, _pos,) = (yield (3, _cont_PythonExpression, _pos,))
         # </Ref>
         if _status:
             break
-        if (farthest_pos6 < _pos):
-            farthest_pos6 = _pos
-            farthest_err12 = _result
-        _pos = farthest_pos6
-        _result = farthest_err12
+        if (farthest_pos7 < _pos):
+            farthest_pos7 = _pos
+            farthest_err14 = _result
+        _pos = backtrack10
+        # Option 7:
+        # <Ref name='Ref'>
+        (_status, _result, _pos,) = (yield (3, _cont_Ref, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos7 < _pos):
+            farthest_pos7 = _pos
+            farthest_err14 = _result
+        _pos = farthest_pos7
+        _result = farthest_err14
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -2529,10 +2713,10 @@ def _parse_Atom(text, pos=0, fullparse=True):
 
 
 Atom = Rule('Atom', _parse_Atom, """
-    Atom = ('(' >> wrap(Expr)) << ')' | StringLiteral | RegexLiteral | LetExpression | Ref | ListLiteral | PythonExpression
+    Atom = ('(' >> wrap(Expr)) << ')' | StringLiteral | RegexLiteral | LetExpression | ListLiteral | PythonExpression | Ref
 """)
 
-def _raise_error168(_text, _pos):
+def _raise_error173(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2543,13 +2727,13 @@ def _raise_error168(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'Atom' rule, at the expression:\n"
-    "    ('(' >> wrap(Expr)) << ')' | StringLiteral | RegexLiteral | LetExpression | Ref | ListLiteral | PythonExpression\n\n"
+    "    ('(' >> wrap(Expr)) << ')' | StringLiteral | RegexLiteral | LetExpression | ListLiteral | PythonExpression | Ref\n\n"
     'Unexpected input'
     )
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error171(_text, _pos):
+def _raise_error176(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2566,7 +2750,7 @@ def _raise_error171(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error175(_text, _pos):
+def _raise_error180(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2620,47 +2804,47 @@ def _cont_KeywordArg(_text, _pos):
                 break
             staging13 = _result
             # <Choice>
-            backtrack10 = farthest_pos7 = _pos
-            farthest_err13 = 187
-            farthest_err14 = _raise_error187
+            backtrack11 = farthest_pos8 = _pos
+            farthest_err15 = 192
+            farthest_err16 = _raise_error192
             while True:
                 # Option 1:
                 # <String value='='>
-                value20 = '='
-                end20 = (_pos + 1)
-                if (_text[_pos : end20] == value20):
-                    _pos = (yield (3, _cont__ignored, end20,))[2]
+                value23 = '='
+                end23 = (_pos + 1)
+                if (_text[_pos : end23] == value23):
+                    _pos = (yield (3, _cont__ignored, end23,))[2]
                     _status = True
-                    _result = value20
+                    _result = value23
                 else:
                     _status = False
-                    _result = _raise_error188
+                    _result = _raise_error193
                 # </String>
                 if _status:
                     break
-                if (farthest_pos7 < _pos):
-                    farthest_pos7 = _pos
-                    farthest_err14 = _result
-                _pos = backtrack10
+                if (farthest_pos8 < _pos):
+                    farthest_pos8 = _pos
+                    farthest_err16 = _result
+                _pos = backtrack11
                 # Option 2:
                 # <String value=':'>
-                value21 = ':'
-                end21 = (_pos + 1)
-                if (_text[_pos : end21] == value21):
-                    _pos = (yield (3, _cont__ignored, end21,))[2]
+                value24 = ':'
+                end24 = (_pos + 1)
+                if (_text[_pos : end24] == value24):
+                    _pos = (yield (3, _cont__ignored, end24,))[2]
                     _status = True
-                    _result = value21
+                    _result = value24
                 else:
                     _status = False
-                    _result = _raise_error189
+                    _result = _raise_error194
                 # </String>
                 if _status:
                     break
-                if (farthest_pos7 < _pos):
-                    farthest_pos7 = _pos
-                    farthest_err14 = _result
-                _pos = farthest_pos7
-                _result = farthest_err14
+                if (farthest_pos8 < _pos):
+                    farthest_pos8 = _pos
+                    farthest_err16 = _result
+                _pos = farthest_pos8
+                _result = farthest_err16
                 break
             # </Choice>
             if _status:
@@ -2683,7 +2867,7 @@ def _cont_KeywordArg(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _raise_error187(_text, _pos):
+def _raise_error192(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2700,7 +2884,7 @@ def _raise_error187(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error188(_text, _pos):
+def _raise_error193(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2717,7 +2901,7 @@ def _raise_error188(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error189(_text, _pos):
+def _raise_error194(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2755,11 +2939,11 @@ class ArgList(Node):
 
 
 
-def _parse_function_201(_text, _pos):
+def _parse_function_206(_text, _pos):
     # <Choice>
-    backtrack11 = farthest_pos8 = _pos
-    farthest_err15 = 201
-    farthest_err16 = _raise_error201
+    backtrack12 = farthest_pos9 = _pos
+    farthest_err17 = 206
+    farthest_err18 = _raise_error206
     while True:
         # Option 1:
         # <Ref name='KeywordArg'>
@@ -2767,21 +2951,21 @@ def _parse_function_201(_text, _pos):
         # </Ref>
         if _status:
             break
-        if (farthest_pos8 < _pos):
-            farthest_pos8 = _pos
-            farthest_err16 = _result
-        _pos = backtrack11
+        if (farthest_pos9 < _pos):
+            farthest_pos9 = _pos
+            farthest_err18 = _result
+        _pos = backtrack12
         # Option 2:
         # <Ref name='Expr'>
         (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
         # </Ref>
         if _status:
             break
-        if (farthest_pos8 < _pos):
-            farthest_pos8 = _pos
-            farthest_err16 = _result
-        _pos = farthest_pos8
-        _result = farthest_err16
+        if (farthest_pos9 < _pos):
+            farthest_pos9 = _pos
+            farthest_err18 = _result
+        _pos = farthest_pos9
+        _result = farthest_err18
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -2798,15 +2982,15 @@ def _cont_ArgList(_text, _pos):
             # '(' >> (wrap(KeywordArg | Expr) /? Comma)
             while True:
                 # <String value='('>
-                value22 = '('
-                end22 = (_pos + 1)
-                if (_text[_pos : end22] == value22):
-                    _pos = (yield (3, _cont__ignored, end22,))[2]
+                value25 = '('
+                end25 = (_pos + 1)
+                if (_text[_pos : end25] == value25):
+                    _pos = (yield (3, _cont__ignored, end25,))[2]
                     _status = True
-                    _result = value22
+                    _result = value25
                 else:
                     _status = False
-                    _result = _raise_error197
+                    _result = _raise_error202
                 # </String>
                 if (not _status):
                     break
@@ -2817,7 +3001,7 @@ def _cont_ArgList(_text, _pos):
                 while True:
                     # <Call>
                     # wrap(KeywordArg | Expr)
-                    func15 = _ParseFunction(_cont_wrap, (_parse_function_201,), ())
+                    func15 = _ParseFunction(_cont_wrap, (_parse_function_206,), ())
                     (_status, _result, _pos,) = (yield (3, func15, _pos,))
                     # </Call>
                     if (not _status):
@@ -2840,15 +3024,15 @@ def _cont_ArgList(_text, _pos):
                 break
             staging15 = _result
             # <String value=')'>
-            value23 = ')'
-            end23 = (_pos + 1)
-            if (_text[_pos : end23] == value23):
-                _pos = (yield (3, _cont__ignored, end23,))[2]
+            value26 = ')'
+            end26 = (_pos + 1)
+            if (_text[_pos : end26] == value26):
+                _pos = (yield (3, _cont__ignored, end26,))[2]
                 _status = True
-                _result = value23
+                _result = value26
             else:
                 _status = False
-                _result = _raise_error205
+                _result = _raise_error210
             # </String>
             if _status:
                 _result = staging15
@@ -2864,7 +3048,7 @@ def _cont_ArgList(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _raise_error197(_text, _pos):
+def _raise_error202(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2881,7 +3065,7 @@ def _raise_error197(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error201(_text, _pos):
+def _raise_error206(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2898,7 +3082,7 @@ def _raise_error201(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error205(_text, _pos):
+def _raise_error210(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2915,54 +3099,6 @@ def _raise_error205(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _parse_function_219(_text, _pos):
-    # <Choice>
-    backtrack12 = farthest_pos9 = _pos
-    farthest_err17 = 219
-    farthest_err18 = _raise_error219
-    while True:
-        # Option 1:
-        # <String value='//'>
-        value24 = '//'
-        end24 = (_pos + 2)
-        if (_text[_pos : end24] == value24):
-            _pos = (yield (3, _cont__ignored, end24,))[2]
-            _status = True
-            _result = value24
-        else:
-            _status = False
-            _result = _raise_error220
-        # </String>
-        if _status:
-            break
-        if (farthest_pos9 < _pos):
-            farthest_pos9 = _pos
-            farthest_err18 = _result
-        _pos = backtrack12
-        # Option 2:
-        # <String value='/?'>
-        value25 = '/?'
-        end25 = (_pos + 2)
-        if (_text[_pos : end25] == value25):
-            _pos = (yield (3, _cont__ignored, end25,))[2]
-            _status = True
-            _result = value25
-        else:
-            _status = False
-            _result = _raise_error221
-        # </String>
-        if _status:
-            break
-        if (farthest_pos9 < _pos):
-            farthest_pos9 = _pos
-            farthest_err18 = _result
-        _pos = farthest_pos9
-        _result = farthest_err18
-        break
-    # </Choice>
-    (yield (_status, _result, _pos,))
-
-
 def _parse_function_225(_text, _pos):
     # <Choice>
     backtrack13 = farthest_pos10 = _pos
@@ -2970,13 +3106,13 @@ def _parse_function_225(_text, _pos):
     farthest_err20 = _raise_error225
     while True:
         # Option 1:
-        # <String value='<<'>
-        value26 = '<<'
-        end26 = (_pos + 2)
-        if (_text[_pos : end26] == value26):
-            _pos = (yield (3, _cont__ignored, end26,))[2]
+        # <String value='//'>
+        value27 = '//'
+        end27 = (_pos + 2)
+        if (_text[_pos : end27] == value27):
+            _pos = (yield (3, _cont__ignored, end27,))[2]
             _status = True
-            _result = value26
+            _result = value27
         else:
             _status = False
             _result = _raise_error226
@@ -2988,13 +3124,13 @@ def _parse_function_225(_text, _pos):
             farthest_err20 = _result
         _pos = backtrack13
         # Option 2:
-        # <String value='>>'>
-        value27 = '>>'
-        end27 = (_pos + 2)
-        if (_text[_pos : end27] == value27):
-            _pos = (yield (3, _cont__ignored, end27,))[2]
+        # <String value='/?'>
+        value28 = '/?'
+        end28 = (_pos + 2)
+        if (_text[_pos : end28] == value28):
+            _pos = (yield (3, _cont__ignored, end28,))[2]
             _status = True
-            _result = value27
+            _result = value28
         else:
             _status = False
             _result = _raise_error227
@@ -3018,13 +3154,13 @@ def _parse_function_231(_text, _pos):
     farthest_err22 = _raise_error231
     while True:
         # Option 1:
-        # <String value='<|'>
-        value28 = '<|'
-        end28 = (_pos + 2)
-        if (_text[_pos : end28] == value28):
-            _pos = (yield (3, _cont__ignored, end28,))[2]
+        # <String value='<<'>
+        value29 = '<<'
+        end29 = (_pos + 2)
+        if (_text[_pos : end29] == value29):
+            _pos = (yield (3, _cont__ignored, end29,))[2]
             _status = True
-            _result = value28
+            _result = value29
         else:
             _status = False
             _result = _raise_error232
@@ -3036,34 +3172,16 @@ def _parse_function_231(_text, _pos):
             farthest_err22 = _result
         _pos = backtrack14
         # Option 2:
-        # <String value='|>'>
-        value29 = '|>'
-        end29 = (_pos + 2)
-        if (_text[_pos : end29] == value29):
-            _pos = (yield (3, _cont__ignored, end29,))[2]
-            _status = True
-            _result = value29
-        else:
-            _status = False
-            _result = _raise_error233
-        # </String>
-        if _status:
-            break
-        if (farthest_pos11 < _pos):
-            farthest_pos11 = _pos
-            farthest_err22 = _result
-        _pos = backtrack14
-        # Option 3:
-        # <String value='where'>
-        value30 = 'where'
-        end30 = (_pos + 5)
+        # <String value='>>'>
+        value30 = '>>'
+        end30 = (_pos + 2)
         if (_text[_pos : end30] == value30):
             _pos = (yield (3, _cont__ignored, end30,))[2]
             _status = True
             _result = value30
         else:
             _status = False
-            _result = _raise_error234
+            _result = _raise_error233
         # </String>
         if _status:
             break
@@ -3077,17 +3195,83 @@ def _parse_function_231(_text, _pos):
     (yield (_status, _result, _pos,))
 
 
-def _parse_function_238(_text, _pos):
+def _parse_function_237(_text, _pos):
+    # <Choice>
+    backtrack15 = farthest_pos12 = _pos
+    farthest_err23 = 237
+    farthest_err24 = _raise_error237
+    while True:
+        # Option 1:
+        # <String value='<|'>
+        value31 = '<|'
+        end31 = (_pos + 2)
+        if (_text[_pos : end31] == value31):
+            _pos = (yield (3, _cont__ignored, end31,))[2]
+            _status = True
+            _result = value31
+        else:
+            _status = False
+            _result = _raise_error238
+        # </String>
+        if _status:
+            break
+        if (farthest_pos12 < _pos):
+            farthest_pos12 = _pos
+            farthest_err24 = _result
+        _pos = backtrack15
+        # Option 2:
+        # <String value='|>'>
+        value32 = '|>'
+        end32 = (_pos + 2)
+        if (_text[_pos : end32] == value32):
+            _pos = (yield (3, _cont__ignored, end32,))[2]
+            _status = True
+            _result = value32
+        else:
+            _status = False
+            _result = _raise_error239
+        # </String>
+        if _status:
+            break
+        if (farthest_pos12 < _pos):
+            farthest_pos12 = _pos
+            farthest_err24 = _result
+        _pos = backtrack15
+        # Option 3:
+        # <String value='where'>
+        value33 = 'where'
+        end33 = (_pos + 5)
+        if (_text[_pos : end33] == value33):
+            _pos = (yield (3, _cont__ignored, end33,))[2]
+            _status = True
+            _result = value33
+        else:
+            _status = False
+            _result = _raise_error240
+        # </String>
+        if _status:
+            break
+        if (farthest_pos12 < _pos):
+            farthest_pos12 = _pos
+            farthest_err24 = _result
+        _pos = farthest_pos12
+        _result = farthest_err24
+        break
+    # </Choice>
+    (yield (_status, _result, _pos,))
+
+
+def _parse_function_244(_text, _pos):
     # <String value='|'>
-    value31 = '|'
-    end31 = (_pos + 1)
-    if (_text[_pos : end31] == value31):
-        _pos = (yield (3, _cont__ignored, end31,))[2]
+    value34 = '|'
+    end34 = (_pos + 1)
+    if (_text[_pos : end34] == value34):
+        _pos = (yield (3, _cont__ignored, end34,))[2]
         _status = True
-        _result = value31
+        _result = value34
     else:
         _status = False
-        _result = _raise_error238
+        _result = _raise_error244
     # </String>
     (yield (_status, _result, _pos,))
 
@@ -3099,7 +3283,7 @@ def _cont_Expr(_text, _pos):
     OperatorPrecedence(
         Atom,
         Postfix(ArgList),
-        Postfix('?' | '*' | '+'),
+        Postfix('?' | '*' | '+' | Repeat),
         LeftAssoc(wrap('//' | '/?')),
         LeftAssoc(wrap('<<' | '>>')),
         LeftAssoc(wrap('<|' | '|>' | 'where')),
@@ -3127,7 +3311,7 @@ def _cont_Expr(_text, _pos):
                 staging19 = None
                 while True:
                     # <Postfix>
-                    # Postfix('?' | '*' | '+')
+                    # Postfix('?' | '*' | '+' | Repeat)
                     # <Postfix>
                     # Postfix(ArgList)
                     # <Ref name='Atom'>
@@ -3154,65 +3338,75 @@ def _cont_Expr(_text, _pos):
                         checkpoint9 = _pos
                         while True:
                             # <Choice>
-                            backtrack15 = farthest_pos12 = _pos
-                            farthest_err23 = 212
-                            farthest_err24 = _raise_error212
+                            backtrack16 = farthest_pos13 = _pos
+                            farthest_err25 = 217
+                            farthest_err26 = _raise_error217
                             while True:
                                 # Option 1:
                                 # <String value='?'>
-                                value32 = '?'
-                                end32 = (_pos + 1)
-                                if (_text[_pos : end32] == value32):
-                                    _pos = (yield (3, _cont__ignored, end32,))[2]
+                                value35 = '?'
+                                end35 = (_pos + 1)
+                                if (_text[_pos : end35] == value35):
+                                    _pos = (yield (3, _cont__ignored, end35,))[2]
                                     _status = True
-                                    _result = value32
+                                    _result = value35
                                 else:
                                     _status = False
-                                    _result = _raise_error213
+                                    _result = _raise_error218
                                 # </String>
                                 if _status:
                                     break
-                                if (farthest_pos12 < _pos):
-                                    farthest_pos12 = _pos
-                                    farthest_err24 = _result
-                                _pos = backtrack15
+                                if (farthest_pos13 < _pos):
+                                    farthest_pos13 = _pos
+                                    farthest_err26 = _result
+                                _pos = backtrack16
                                 # Option 2:
                                 # <String value='*'>
-                                value33 = '*'
-                                end33 = (_pos + 1)
-                                if (_text[_pos : end33] == value33):
-                                    _pos = (yield (3, _cont__ignored, end33,))[2]
+                                value36 = '*'
+                                end36 = (_pos + 1)
+                                if (_text[_pos : end36] == value36):
+                                    _pos = (yield (3, _cont__ignored, end36,))[2]
                                     _status = True
-                                    _result = value33
+                                    _result = value36
                                 else:
                                     _status = False
-                                    _result = _raise_error214
+                                    _result = _raise_error219
                                 # </String>
                                 if _status:
                                     break
-                                if (farthest_pos12 < _pos):
-                                    farthest_pos12 = _pos
-                                    farthest_err24 = _result
-                                _pos = backtrack15
+                                if (farthest_pos13 < _pos):
+                                    farthest_pos13 = _pos
+                                    farthest_err26 = _result
+                                _pos = backtrack16
                                 # Option 3:
                                 # <String value='+'>
-                                value34 = '+'
-                                end34 = (_pos + 1)
-                                if (_text[_pos : end34] == value34):
-                                    _pos = (yield (3, _cont__ignored, end34,))[2]
+                                value37 = '+'
+                                end37 = (_pos + 1)
+                                if (_text[_pos : end37] == value37):
+                                    _pos = (yield (3, _cont__ignored, end37,))[2]
                                     _status = True
-                                    _result = value34
+                                    _result = value37
                                 else:
                                     _status = False
-                                    _result = _raise_error215
+                                    _result = _raise_error220
                                 # </String>
                                 if _status:
                                     break
-                                if (farthest_pos12 < _pos):
-                                    farthest_pos12 = _pos
-                                    farthest_err24 = _result
-                                _pos = farthest_pos12
-                                _result = farthest_err24
+                                if (farthest_pos13 < _pos):
+                                    farthest_pos13 = _pos
+                                    farthest_err26 = _result
+                                _pos = backtrack16
+                                # Option 4:
+                                # <Ref name='Repeat'>
+                                (_status, _result, _pos,) = (yield (3, _cont_Repeat, _pos,))
+                                # </Ref>
+                                if _status:
+                                    break
+                                if (farthest_pos13 < _pos):
+                                    farthest_pos13 = _pos
+                                    farthest_err26 = _result
+                                _pos = farthest_pos13
+                                _result = farthest_err26
                                 break
                             # </Choice>
                             if _status:
@@ -3234,7 +3428,7 @@ def _cont_Expr(_text, _pos):
                         staging19 = Infix(staging19, operator1, _result)
                     # <Call>
                     # wrap('//' | '/?')
-                    func16 = _ParseFunction(_cont_wrap, (_parse_function_219,), ())
+                    func16 = _ParseFunction(_cont_wrap, (_parse_function_225,), ())
                     (_status, _result, _pos,) = (yield (3, func16, _pos,))
                     # </Call>
                     if (not _status):
@@ -3255,7 +3449,7 @@ def _cont_Expr(_text, _pos):
                     staging18 = Infix(staging18, operator2, _result)
                 # <Call>
                 # wrap('<<' | '>>')
-                func17 = _ParseFunction(_cont_wrap, (_parse_function_225,), ())
+                func17 = _ParseFunction(_cont_wrap, (_parse_function_231,), ())
                 (_status, _result, _pos,) = (yield (3, func17, _pos,))
                 # </Call>
                 if (not _status):
@@ -3276,7 +3470,7 @@ def _cont_Expr(_text, _pos):
                 staging17 = Infix(staging17, operator3, _result)
             # <Call>
             # wrap('<|' | '|>' | 'where')
-            func18 = _ParseFunction(_cont_wrap, (_parse_function_231,), ())
+            func18 = _ParseFunction(_cont_wrap, (_parse_function_237,), ())
             (_status, _result, _pos,) = (yield (3, func18, _pos,))
             # </Call>
             if (not _status):
@@ -3297,7 +3491,7 @@ def _cont_Expr(_text, _pos):
             staging16 = Infix(staging16, operator4, _result)
         # <Call>
         # wrap('|')
-        arg14 = _wrap_string_literal('|', _parse_function_238)
+        arg14 = _wrap_string_literal('|', _parse_function_244)
         func19 = _ParseFunction(_cont_wrap, (arg14,), ())
         (_status, _result, _pos,) = (yield (3, func19, _pos,))
         # </Call>
@@ -3321,7 +3515,7 @@ Expr = Rule('Expr', _parse_Expr, """
     Expr = OperatorPrecedence(
         Atom,
         Postfix(ArgList),
-        Postfix('?' | '*' | '+'),
+        Postfix('?' | '*' | '+' | Repeat),
         LeftAssoc(wrap('//' | '/?')),
         LeftAssoc(wrap('<<' | '>>')),
         LeftAssoc(wrap('<|' | '|>' | 'where')),
@@ -3329,7 +3523,7 @@ Expr = Rule('Expr', _parse_Expr, """
     )
 """)
 
-def _raise_error212(_text, _pos):
+def _raise_error217(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3340,13 +3534,13 @@ def _raise_error212(_text, _pos):
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
     "Failed to parse the 'Expr' rule, at the expression:\n"
-    "    '?' | '*' | '+'\n\n"
+    "    '?' | '*' | '+' | Repeat\n\n"
     'Unexpected input'
     )
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error213(_text, _pos):
+def _raise_error218(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3363,7 +3557,7 @@ def _raise_error213(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error214(_text, _pos):
+def _raise_error219(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3380,7 +3574,7 @@ def _raise_error214(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error215(_text, _pos):
+def _raise_error220(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3397,7 +3591,7 @@ def _raise_error215(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error219(_text, _pos):
+def _raise_error225(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3414,7 +3608,7 @@ def _raise_error219(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error220(_text, _pos):
+def _raise_error226(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3431,7 +3625,7 @@ def _raise_error220(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error221(_text, _pos):
+def _raise_error227(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3448,7 +3642,7 @@ def _raise_error221(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error225(_text, _pos):
+def _raise_error231(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3465,7 +3659,7 @@ def _raise_error225(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error226(_text, _pos):
+def _raise_error232(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3482,7 +3676,7 @@ def _raise_error226(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error227(_text, _pos):
+def _raise_error233(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3499,7 +3693,7 @@ def _raise_error227(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error231(_text, _pos):
+def _raise_error237(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3516,7 +3710,7 @@ def _raise_error231(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error232(_text, _pos):
+def _raise_error238(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3533,7 +3727,7 @@ def _raise_error232(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error233(_text, _pos):
+def _raise_error239(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3550,7 +3744,7 @@ def _raise_error233(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error234(_text, _pos):
+def _raise_error240(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3567,7 +3761,7 @@ def _raise_error234(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error238(_text, _pos):
+def _raise_error244(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3580,6 +3774,166 @@ def _raise_error238(_text, _pos):
     "Failed to parse the 'Expr' rule, at the expression:\n"
     "    '|'\n\n"
     "Expected to match the string '|'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+
+class Repeat(Node):
+    """
+    class Repeat {
+        left: '{' >> Expr
+        right: Opt(',' >> Expr) << '}'
+    }
+    """
+    _fields = ('left', 'right',)
+
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+        self._position_info = None
+
+    def __repr__(self):
+        return f'Repeat(left={self.left!r}, right={self.right!r})'
+
+    @staticmethod
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _cont_Repeat, fullparse)
+
+
+
+def _cont_Repeat(_text, _pos):
+    # <Seq>
+    start_pos13 = _pos
+    while True:
+        # <Discard>
+        # '{' >> Expr
+        while True:
+            # <String value='{'>
+            value38 = '{'
+            end38 = (_pos + 1)
+            if (_text[_pos : end38] == value38):
+                _pos = (yield (3, _cont__ignored, end38,))[2]
+                _status = True
+                _result = value38
+            else:
+                _status = False
+                _result = _raise_error249
+            # </String>
+            if (not _status):
+                break
+            # <Ref name='Expr'>
+            (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
+            # </Ref>
+            break
+        # </Discard>
+        if (not _status):
+            break
+        left = _result
+        # <Discard>
+        # Opt(',' >> Expr) << '}'
+        while True:
+            # <Opt>
+            # Opt(',' >> Expr)
+            backtrack17 = _pos
+            # <Discard>
+            # ',' >> Expr
+            while True:
+                # <String value=','>
+                value39 = ','
+                end39 = (_pos + 1)
+                if (_text[_pos : end39] == value39):
+                    _pos = (yield (3, _cont__ignored, end39,))[2]
+                    _status = True
+                    _result = value39
+                else:
+                    _status = False
+                    _result = _raise_error255
+                # </String>
+                if (not _status):
+                    break
+                # <Ref name='Expr'>
+                (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
+                # </Ref>
+                break
+            # </Discard>
+            if (not _status):
+                _status = True
+                _pos = backtrack17
+                _result = None
+            # </Opt>
+            staging22 = _result
+            # <String value='}'>
+            value40 = '}'
+            end40 = (_pos + 1)
+            if (_text[_pos : end40] == value40):
+                _pos = (yield (3, _cont__ignored, end40,))[2]
+                _status = True
+                _result = value40
+            else:
+                _status = False
+                _result = _raise_error257
+            # </String>
+            if _status:
+                _result = staging22
+            break
+        # </Discard>
+        if (not _status):
+            break
+        right = _result
+        _result = Repeat(left, right)
+        _result._position_info = (start_pos13, _pos,)
+        break
+    # </Seq>
+    (yield (_status, _result, _pos,))
+
+
+def _raise_error249(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Repeat' rule, at the expression:\n"
+    "    '{'\n\n"
+    "Expected to match the string '{'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+
+def _raise_error255(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Repeat' rule, at the expression:\n"
+    "    ','\n\n"
+    "Expected to match the string ','"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+
+def _raise_error257(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Repeat' rule, at the expression:\n"
+    "    '}'\n\n"
+    "Expected to match the string '}'"
     )
     raise ParseError((title + details), _pos, line, col)
 
@@ -3614,7 +3968,7 @@ def _cont_start(_text, _pos):
             # </Skip>
             # <Alt>
             # Stmt /? Sep
-            staging22 = []
+            staging23 = []
             checkpoint15 = _pos
             while True:
                 # <Ref name='Stmt'>
@@ -3622,7 +3976,7 @@ def _cont_start(_text, _pos):
                 # </Ref>
                 if (not _status):
                     break
-                staging22.append(_result)
+                staging23.append(_result)
                 checkpoint15 = _pos
                 # <Ref name='Sep'>
                 (_status, _result, _pos,) = (yield (3, _cont_Sep, _pos,))
@@ -3630,7 +3984,7 @@ def _cont_start(_text, _pos):
                 if (not _status):
                     break
                 checkpoint15 = _pos
-            _result = staging22
+            _result = staging23
             _status = True
             _pos = checkpoint15
             # </Alt>

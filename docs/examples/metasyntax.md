@@ -47,6 +47,10 @@ class PythonSection {
 class PythonExpression {
     # Strip the backticks.
     value: /`.*?`/ |> `lambda x: x[1:-1]`
+        | /\d+/
+        | "True"
+        | "False"
+        | "None"
 }
 
 class RuleDef {
@@ -90,9 +94,9 @@ Atom = ("(" >> wrap(Expr) << ")")
     | StringLiteral
     | RegexLiteral
     | LetExpression
-    | Ref
     | ListLiteral
     | PythonExpression
+    | Ref
 
 class KeywordArg {
     name: Name << ("=" | ":")
@@ -106,12 +110,17 @@ class ArgList {
 Expr = OperatorPrecedence(
     Atom,
     Postfix(ArgList),
-    Postfix("?" | "*" | "+"),
+    Postfix("?" | "*" | "+" | Repeat),
     LeftAssoc(wrap("//" | "/?")),
     LeftAssoc(wrap("<<" | ">>")),
     LeftAssoc(wrap("<|" | "|>" | "where")),
     LeftAssoc(wrap("|")),
 )
+
+class Repeat {
+    left: "{" >> Expr
+    right: Opt("," >> Expr) << "}"
+}
 
 start = Skip(Newline) >> (Stmt /? Sep)
 ~~~

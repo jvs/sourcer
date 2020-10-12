@@ -75,8 +75,8 @@ description = r'''
         LeftAssoc("=" | "!=" | "<>" | "<=" | ">=" | "<" | ">"),
     )
 
-    Expr = Operators(allow_union=`True`)
-    ExprList = Operators(allow_union=`False`)? /? ","
+    Expr = Operators(allow_union=True)
+    ExprList = Operators(allow_union=False)? /? ","
 '''
 
 grammar = Grammar(description, include_source=True)

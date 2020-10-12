@@ -7,7 +7,7 @@ Sourcer gives you a few ways to use alternation:
 
 * `foo // bar` -- does not consume a trailing separator
 * `foo /? bar` -- consumes an optional trailing separator
-* ``Alt(foo, bar, discard_separators=`True`, allow_trailer=`False`, allow_empty=`True`)``
+* ``Alt(foo, bar, discard_separators=True, allow_trailer=False, allow_empty=True)``
   -- verbose form, supports additional options.
 
 
@@ -50,7 +50,7 @@ require the list to be non-empty, then you can use the verbose form:
 ```python
 from sourcer import Grammar
 
-g = Grammar('start = Alt("bif", "$", allow_empty=`False`)')
+g = Grammar('start = Alt("bif", "$", allow_empty=False)')
 
 assert g.parse('bif$bif') == ['bif', 'bif']
 
@@ -67,7 +67,7 @@ except g.ParseError:
 ```python
 from sourcer import Grammar
 
-g = Grammar('start = Alt("zam", ";", discard_separators=`False`)')
+g = Grammar('start = Alt("zam", ";", discard_separators=False)')
 
 assert g.parse('zam;zam;zam') == ['zam', ';', 'zam', ';', 'zam']
 ```

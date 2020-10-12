@@ -80,8 +80,8 @@ g = Grammar(r'''
         LeftAssoc("=" | "!=" | "<>" | "<=" | ">=" | "<" | ">"),
     )
 
-    Expr = Operators(allow_union=`True`)
-    ExprList = Operators(allow_union=`False`)? /? ","
+    Expr = Operators(allow_union=True)
+    ExprList = Operators(allow_union=False)? /? ","
 ''')
 ```
 
