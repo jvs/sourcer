@@ -181,6 +181,12 @@ class Expr:
     def __rshift__(self, other):
         return Slice(self, other)
 
+    def __gt__(self, other):
+        return Binop(self, '>', other)
+
+    def __ge__(self, other):
+        return Binop(self, '>=', other)
+
     def __lt__(self, other):
         return Binop(self, '<', other)
 

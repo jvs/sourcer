@@ -252,12 +252,15 @@ class Choice(Expr):
     def _compile(self, pb):
         pb(Raw(f'# <{self.__class__.__name__}>'))
         backtrack = Var('backtrack')
-        farthest_pos = Var('farthest_pos')
 
-        pb(backtrack << farthest_pos << POS)
+        needs_err = not self.always_succeeds()
 
-        farthest_err = pb.var('farthest_err', Val(self.program_id))
-        farthest_err = pb.var('farthest_err', Raw(_error_func_name(self)))
+        if needs_err:
+            farthest_pos = Var('farthest_pos')
+            pb(backtrack << farthest_pos << POS)
+            farthest_err = pb.var('farthest_err', Raw(_error_func_name(self)))
+        else:
+            pb(backtrack << POS)
 
         with pb.breakable():
             for i, expr in enumerate(self.exprs):
@@ -266,20 +269,22 @@ class Choice(Expr):
                 with _if_succeeds(pb, expr):
                     pb(BREAK)
 
-                if isinstance(expr, Fail):
-                    condition = farthest_pos <= POS
-                else:
-                    condition = farthest_pos < POS
+                if needs_err:
+                    if isinstance(expr, Fail):
+                        condition = farthest_pos <= POS
+                    else:
+                        condition = farthest_pos < POS
 
-                with pb.IF(condition):
-                    pb(farthest_pos << POS)
-                    pb(farthest_err << RESULT)
+                    with pb.IF(condition):
+                        pb(farthest_pos << POS)
+                        pb(farthest_err << RESULT)
 
                 if i + 1 < len(self.exprs):
                     pb(POS << backtrack)
 
-            pb(POS << farthest_pos)
-            pb(RESULT << farthest_err)
+            if needs_err:
+                pb(POS << farthest_pos)
+                pb(RESULT << farthest_err)
         pb(Raw(f'# </{self.__class__.__name__}>'))
 
     def complain(self):
@@ -501,7 +506,11 @@ class List(Expr):
         self.max_len = max_len
 
     def __str__(self):
-        x = f'({self.expr})' if isinstance(self.expr, BinaryOp) else self.expr
+        if isinstance(self.expr, (BinaryOp, LetExpression)):
+            x = f'({self.expr})'
+        else:
+            x = self.expr
+
         if self.min_len is None and self.max_len is None:
             op = '*'
         elif self.min_len == 1 and self.max_len is None:
@@ -513,7 +522,7 @@ class List(Expr):
         return f'{x}{op}'
 
     def always_succeeds(self):
-        return not self.min_len
+        return not self.min_len or self.min_len == '0'
 
     def _compile(self, pb):
         pb(Raw(f'# <{self.__class__.__name__}>'))
@@ -526,24 +535,24 @@ class List(Expr):
             with _if_fails(pb, self.expr):
                 pb(POS << checkpoint, BREAK)
 
-            if self.max_len is not None:
-                with pb.IF(raw.len(staging) == Val(self.max_len)):
-                    pb(BREAK)
-
             pb(staging.append(RESULT))
+
+            if self.max_len is not None:
+                with pb.IF(raw.len(staging) == Raw(self.max_len)):
+                    pb(BREAK)
 
         success = [
             RESULT << staging,
             STATUS << True,
         ]
 
-        if not self.min_len:
+        if not self.min_len or self.min_len == '0':
             pb(*success)
         else:
-            if self.min_len == 1:
+            if self.min_len == 1 or self.min_len == '1':
                 condition = staging
             else:
-                condition = raw.len(staging) >= Val(self.min_len)
+                condition = raw.len(staging) >= Raw(self.min_len)
             with pb.IF(condition):
                 pb(*success)
 

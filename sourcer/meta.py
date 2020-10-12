@@ -115,9 +115,13 @@ Expr = OperatorPrecedence(
 )
 
 class Repeat {
-    left: "{" >> Expr
-    right: Opt("," >> Expr) << "}"
+    open: "{"
+    start: RepeatArg?
+    stop: ("," >> RepeatArg) | ("," >> None) | `start`
+    close: "}"
 }
+
+RepeatArg = PythonExpression | Ref
 
 start = Skip(Newline) >> (Stmt /? Sep)
 
@@ -537,8 +541,7 @@ def _cont_Sep(_text, _pos):
         checkpoint1 = _pos
         # <Choice>
         backtrack1 = farthest_pos1 = _pos
-        farthest_err1 = 9
-        farthest_err2 = _raise_error9
+        farthest_err1 = _raise_error9
         while True:
             # Option 1:
             # <Ref name='Newline'>
@@ -548,7 +551,7 @@ def _cont_Sep(_text, _pos):
                 break
             if (farthest_pos1 < _pos):
                 farthest_pos1 = _pos
-                farthest_err2 = _result
+                farthest_err1 = _result
             _pos = backtrack1
             # Option 2:
             # <String value=';'>
@@ -566,9 +569,9 @@ def _cont_Sep(_text, _pos):
                 break
             if (farthest_pos1 < _pos):
                 farthest_pos1 = _pos
-                farthest_err2 = _result
+                farthest_err1 = _result
             _pos = farthest_pos1
-            _result = farthest_err2
+            _result = farthest_err1
             break
         # </Choice>
         if (not _status):
@@ -974,8 +977,7 @@ def _cont_IgnoreKeyword(_text, _pos):
     # Rule 'IgnoreKeyword'
     # <Choice>
     backtrack2 = farthest_pos2 = _pos
-    farthest_err3 = 43
-    farthest_err4 = _raise_error43
+    farthest_err2 = _raise_error43
     while True:
         # Option 1:
         # <Call>
@@ -988,7 +990,7 @@ def _cont_IgnoreKeyword(_text, _pos):
             break
         if (farthest_pos2 < _pos):
             farthest_pos2 = _pos
-            farthest_err4 = _result
+            farthest_err2 = _result
         _pos = backtrack2
         # Option 2:
         # <Call>
@@ -1001,9 +1003,9 @@ def _cont_IgnoreKeyword(_text, _pos):
             break
         if (farthest_pos2 < _pos):
             farthest_pos2 = _pos
-            farthest_err4 = _result
+            farthest_err2 = _result
         _pos = farthest_pos2
-        _result = farthest_err4
+        _result = farthest_err2
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -1095,8 +1097,7 @@ def _cont_StringLiteral(_text, _pos):
     while True:
         # <Choice>
         backtrack3 = farthest_pos3 = _pos
-        farthest_err5 = 53
-        farthest_err6 = _raise_error53
+        farthest_err3 = _raise_error53
         while True:
             # Option 1:
             # <Regex pattern='(?s)[bB]?("""([^\\\\]|\\\\.)*?""")[iI]?'>
@@ -1113,7 +1114,7 @@ def _cont_StringLiteral(_text, _pos):
                 break
             if (farthest_pos3 < _pos):
                 farthest_pos3 = _pos
-                farthest_err6 = _result
+                farthest_err3 = _result
             _pos = backtrack3
             # Option 2:
             # <Regex pattern="(?s)[bB]?('''([^\\\\]|\\\\.)*?''')[iI]?">
@@ -1130,7 +1131,7 @@ def _cont_StringLiteral(_text, _pos):
                 break
             if (farthest_pos3 < _pos):
                 farthest_pos3 = _pos
-                farthest_err6 = _result
+                farthest_err3 = _result
             _pos = backtrack3
             # Option 3:
             # <Regex pattern='[bB]?("([^"\\\\]|\\\\.)*")[iI]?'>
@@ -1147,7 +1148,7 @@ def _cont_StringLiteral(_text, _pos):
                 break
             if (farthest_pos3 < _pos):
                 farthest_pos3 = _pos
-                farthest_err6 = _result
+                farthest_err3 = _result
             _pos = backtrack3
             # Option 4:
             # <Regex pattern="[bB]?('([^'\\\\]|\\\\.)*')[iI]?">
@@ -1164,9 +1165,9 @@ def _cont_StringLiteral(_text, _pos):
                 break
             if (farthest_pos3 < _pos):
                 farthest_pos3 = _pos
-                farthest_err6 = _result
+                farthest_err3 = _result
             _pos = farthest_pos3
-            _result = farthest_err6
+            _result = farthest_err3
             break
         # </Choice>
         if (not _status):
@@ -1423,8 +1424,7 @@ def _cont_PythonExpression(_text, _pos):
     while True:
         # <Choice>
         backtrack4 = farthest_pos4 = _pos
-        farthest_err7 = 71
-        farthest_err8 = _raise_error71
+        farthest_err4 = _raise_error71
         while True:
             # Option 1:
             # <Apply>
@@ -1449,7 +1449,7 @@ def _cont_PythonExpression(_text, _pos):
                 break
             if (farthest_pos4 < _pos):
                 farthest_pos4 = _pos
-                farthest_err8 = _result
+                farthest_err4 = _result
             _pos = backtrack4
             # Option 2:
             # <Regex pattern='\\d+'>
@@ -1466,7 +1466,7 @@ def _cont_PythonExpression(_text, _pos):
                 break
             if (farthest_pos4 < _pos):
                 farthest_pos4 = _pos
-                farthest_err8 = _result
+                farthest_err4 = _result
             _pos = backtrack4
             # Option 3:
             # <String value='True'>
@@ -1484,7 +1484,7 @@ def _cont_PythonExpression(_text, _pos):
                 break
             if (farthest_pos4 < _pos):
                 farthest_pos4 = _pos
-                farthest_err8 = _result
+                farthest_err4 = _result
             _pos = backtrack4
             # Option 4:
             # <String value='False'>
@@ -1502,7 +1502,7 @@ def _cont_PythonExpression(_text, _pos):
                 break
             if (farthest_pos4 < _pos):
                 farthest_pos4 = _pos
-                farthest_err8 = _result
+                farthest_err4 = _result
             _pos = backtrack4
             # Option 5:
             # <String value='None'>
@@ -1520,9 +1520,9 @@ def _cont_PythonExpression(_text, _pos):
                 break
             if (farthest_pos4 < _pos):
                 farthest_pos4 = _pos
-                farthest_err8 = _result
+                farthest_err4 = _result
             _pos = farthest_pos4
-            _result = farthest_err8
+            _result = farthest_err4
             break
         # </Choice>
         if (not _status):
@@ -1667,8 +1667,7 @@ class RuleDef(Node):
 def _parse_function_94(_text, _pos):
     # <Choice>
     backtrack5 = farthest_pos5 = _pos
-    farthest_err9 = 94
-    farthest_err10 = _raise_error94
+    farthest_err5 = _raise_error94
     while True:
         # Option 1:
         # <String value='=>'>
@@ -1686,7 +1685,7 @@ def _parse_function_94(_text, _pos):
             break
         if (farthest_pos5 < _pos):
             farthest_pos5 = _pos
-            farthest_err10 = _result
+            farthest_err5 = _result
         _pos = backtrack5
         # Option 2:
         # <String value='='>
@@ -1704,7 +1703,7 @@ def _parse_function_94(_text, _pos):
             break
         if (farthest_pos5 < _pos):
             farthest_pos5 = _pos
-            farthest_err10 = _result
+            farthest_err5 = _result
         _pos = backtrack5
         # Option 3:
         # <String value=':'>
@@ -1722,9 +1721,9 @@ def _parse_function_94(_text, _pos):
             break
         if (farthest_pos5 < _pos):
             farthest_pos5 = _pos
-            farthest_err10 = _result
+            farthest_err5 = _result
         _pos = farthest_pos5
-        _result = farthest_err10
+        _result = farthest_err5
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -2126,8 +2125,7 @@ def _cont_Stmt(_text, _pos):
     # Rule 'Stmt'
     # <Choice>
     backtrack9 = farthest_pos6 = _pos
-    farthest_err11 = 128
-    farthest_err12 = _raise_error128
+    farthest_err6 = _raise_error128
     while True:
         # Option 1:
         # <Ref name='ClassDef'>
@@ -2137,7 +2135,7 @@ def _cont_Stmt(_text, _pos):
             break
         if (farthest_pos6 < _pos):
             farthest_pos6 = _pos
-            farthest_err12 = _result
+            farthest_err6 = _result
         _pos = backtrack9
         # Option 2:
         # <Ref name='RuleDef'>
@@ -2147,7 +2145,7 @@ def _cont_Stmt(_text, _pos):
             break
         if (farthest_pos6 < _pos):
             farthest_pos6 = _pos
-            farthest_err12 = _result
+            farthest_err6 = _result
         _pos = backtrack9
         # Option 3:
         # <Ref name='IgnoreStmt'>
@@ -2157,7 +2155,7 @@ def _cont_Stmt(_text, _pos):
             break
         if (farthest_pos6 < _pos):
             farthest_pos6 = _pos
-            farthest_err12 = _result
+            farthest_err6 = _result
         _pos = backtrack9
         # Option 4:
         # <Ref name='PythonSection'>
@@ -2167,7 +2165,7 @@ def _cont_Stmt(_text, _pos):
             break
         if (farthest_pos6 < _pos):
             farthest_pos6 = _pos
-            farthest_err12 = _result
+            farthest_err6 = _result
         _pos = backtrack9
         # Option 5:
         # <Ref name='PythonExpression'>
@@ -2177,9 +2175,9 @@ def _cont_Stmt(_text, _pos):
             break
         if (farthest_pos6 < _pos):
             farthest_pos6 = _pos
-            farthest_err12 = _result
+            farthest_err6 = _result
         _pos = farthest_pos6
-        _result = farthest_err12
+        _result = farthest_err6
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -2588,8 +2586,7 @@ def _cont_Atom(_text, _pos):
     # Rule 'Atom'
     # <Choice>
     backtrack10 = farthest_pos7 = _pos
-    farthest_err13 = 173
-    farthest_err14 = _raise_error173
+    farthest_err7 = _raise_error173
     while True:
         # Option 1:
         # <Discard>
@@ -2640,7 +2637,7 @@ def _cont_Atom(_text, _pos):
             break
         if (farthest_pos7 < _pos):
             farthest_pos7 = _pos
-            farthest_err14 = _result
+            farthest_err7 = _result
         _pos = backtrack10
         # Option 2:
         # <Ref name='StringLiteral'>
@@ -2650,7 +2647,7 @@ def _cont_Atom(_text, _pos):
             break
         if (farthest_pos7 < _pos):
             farthest_pos7 = _pos
-            farthest_err14 = _result
+            farthest_err7 = _result
         _pos = backtrack10
         # Option 3:
         # <Ref name='RegexLiteral'>
@@ -2660,7 +2657,7 @@ def _cont_Atom(_text, _pos):
             break
         if (farthest_pos7 < _pos):
             farthest_pos7 = _pos
-            farthest_err14 = _result
+            farthest_err7 = _result
         _pos = backtrack10
         # Option 4:
         # <Ref name='LetExpression'>
@@ -2670,7 +2667,7 @@ def _cont_Atom(_text, _pos):
             break
         if (farthest_pos7 < _pos):
             farthest_pos7 = _pos
-            farthest_err14 = _result
+            farthest_err7 = _result
         _pos = backtrack10
         # Option 5:
         # <Ref name='ListLiteral'>
@@ -2680,7 +2677,7 @@ def _cont_Atom(_text, _pos):
             break
         if (farthest_pos7 < _pos):
             farthest_pos7 = _pos
-            farthest_err14 = _result
+            farthest_err7 = _result
         _pos = backtrack10
         # Option 6:
         # <Ref name='PythonExpression'>
@@ -2690,7 +2687,7 @@ def _cont_Atom(_text, _pos):
             break
         if (farthest_pos7 < _pos):
             farthest_pos7 = _pos
-            farthest_err14 = _result
+            farthest_err7 = _result
         _pos = backtrack10
         # Option 7:
         # <Ref name='Ref'>
@@ -2700,9 +2697,9 @@ def _cont_Atom(_text, _pos):
             break
         if (farthest_pos7 < _pos):
             farthest_pos7 = _pos
-            farthest_err14 = _result
+            farthest_err7 = _result
         _pos = farthest_pos7
-        _result = farthest_err14
+        _result = farthest_err7
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -2805,8 +2802,7 @@ def _cont_KeywordArg(_text, _pos):
             staging13 = _result
             # <Choice>
             backtrack11 = farthest_pos8 = _pos
-            farthest_err15 = 192
-            farthest_err16 = _raise_error192
+            farthest_err8 = _raise_error192
             while True:
                 # Option 1:
                 # <String value='='>
@@ -2824,7 +2820,7 @@ def _cont_KeywordArg(_text, _pos):
                     break
                 if (farthest_pos8 < _pos):
                     farthest_pos8 = _pos
-                    farthest_err16 = _result
+                    farthest_err8 = _result
                 _pos = backtrack11
                 # Option 2:
                 # <String value=':'>
@@ -2842,9 +2838,9 @@ def _cont_KeywordArg(_text, _pos):
                     break
                 if (farthest_pos8 < _pos):
                     farthest_pos8 = _pos
-                    farthest_err16 = _result
+                    farthest_err8 = _result
                 _pos = farthest_pos8
-                _result = farthest_err16
+                _result = farthest_err8
                 break
             # </Choice>
             if _status:
@@ -2942,8 +2938,7 @@ class ArgList(Node):
 def _parse_function_206(_text, _pos):
     # <Choice>
     backtrack12 = farthest_pos9 = _pos
-    farthest_err17 = 206
-    farthest_err18 = _raise_error206
+    farthest_err9 = _raise_error206
     while True:
         # Option 1:
         # <Ref name='KeywordArg'>
@@ -2953,7 +2948,7 @@ def _parse_function_206(_text, _pos):
             break
         if (farthest_pos9 < _pos):
             farthest_pos9 = _pos
-            farthest_err18 = _result
+            farthest_err9 = _result
         _pos = backtrack12
         # Option 2:
         # <Ref name='Expr'>
@@ -2963,9 +2958,9 @@ def _parse_function_206(_text, _pos):
             break
         if (farthest_pos9 < _pos):
             farthest_pos9 = _pos
-            farthest_err18 = _result
+            farthest_err9 = _result
         _pos = farthest_pos9
-        _result = farthest_err18
+        _result = farthest_err9
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -3102,8 +3097,7 @@ def _raise_error210(_text, _pos):
 def _parse_function_225(_text, _pos):
     # <Choice>
     backtrack13 = farthest_pos10 = _pos
-    farthest_err19 = 225
-    farthest_err20 = _raise_error225
+    farthest_err10 = _raise_error225
     while True:
         # Option 1:
         # <String value='//'>
@@ -3121,7 +3115,7 @@ def _parse_function_225(_text, _pos):
             break
         if (farthest_pos10 < _pos):
             farthest_pos10 = _pos
-            farthest_err20 = _result
+            farthest_err10 = _result
         _pos = backtrack13
         # Option 2:
         # <String value='/?'>
@@ -3139,9 +3133,9 @@ def _parse_function_225(_text, _pos):
             break
         if (farthest_pos10 < _pos):
             farthest_pos10 = _pos
-            farthest_err20 = _result
+            farthest_err10 = _result
         _pos = farthest_pos10
-        _result = farthest_err20
+        _result = farthest_err10
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -3150,8 +3144,7 @@ def _parse_function_225(_text, _pos):
 def _parse_function_231(_text, _pos):
     # <Choice>
     backtrack14 = farthest_pos11 = _pos
-    farthest_err21 = 231
-    farthest_err22 = _raise_error231
+    farthest_err11 = _raise_error231
     while True:
         # Option 1:
         # <String value='<<'>
@@ -3169,7 +3162,7 @@ def _parse_function_231(_text, _pos):
             break
         if (farthest_pos11 < _pos):
             farthest_pos11 = _pos
-            farthest_err22 = _result
+            farthest_err11 = _result
         _pos = backtrack14
         # Option 2:
         # <String value='>>'>
@@ -3187,9 +3180,9 @@ def _parse_function_231(_text, _pos):
             break
         if (farthest_pos11 < _pos):
             farthest_pos11 = _pos
-            farthest_err22 = _result
+            farthest_err11 = _result
         _pos = farthest_pos11
-        _result = farthest_err22
+        _result = farthest_err11
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -3198,8 +3191,7 @@ def _parse_function_231(_text, _pos):
 def _parse_function_237(_text, _pos):
     # <Choice>
     backtrack15 = farthest_pos12 = _pos
-    farthest_err23 = 237
-    farthest_err24 = _raise_error237
+    farthest_err12 = _raise_error237
     while True:
         # Option 1:
         # <String value='<|'>
@@ -3217,7 +3209,7 @@ def _parse_function_237(_text, _pos):
             break
         if (farthest_pos12 < _pos):
             farthest_pos12 = _pos
-            farthest_err24 = _result
+            farthest_err12 = _result
         _pos = backtrack15
         # Option 2:
         # <String value='|>'>
@@ -3235,7 +3227,7 @@ def _parse_function_237(_text, _pos):
             break
         if (farthest_pos12 < _pos):
             farthest_pos12 = _pos
-            farthest_err24 = _result
+            farthest_err12 = _result
         _pos = backtrack15
         # Option 3:
         # <String value='where'>
@@ -3253,9 +3245,9 @@ def _parse_function_237(_text, _pos):
             break
         if (farthest_pos12 < _pos):
             farthest_pos12 = _pos
-            farthest_err24 = _result
+            farthest_err12 = _result
         _pos = farthest_pos12
-        _result = farthest_err24
+        _result = farthest_err12
         break
     # </Choice>
     (yield (_status, _result, _pos,))
@@ -3339,8 +3331,7 @@ def _cont_Expr(_text, _pos):
                         while True:
                             # <Choice>
                             backtrack16 = farthest_pos13 = _pos
-                            farthest_err25 = 217
-                            farthest_err26 = _raise_error217
+                            farthest_err13 = _raise_error217
                             while True:
                                 # Option 1:
                                 # <String value='?'>
@@ -3358,7 +3349,7 @@ def _cont_Expr(_text, _pos):
                                     break
                                 if (farthest_pos13 < _pos):
                                     farthest_pos13 = _pos
-                                    farthest_err26 = _result
+                                    farthest_err13 = _result
                                 _pos = backtrack16
                                 # Option 2:
                                 # <String value='*'>
@@ -3376,7 +3367,7 @@ def _cont_Expr(_text, _pos):
                                     break
                                 if (farthest_pos13 < _pos):
                                     farthest_pos13 = _pos
-                                    farthest_err26 = _result
+                                    farthest_err13 = _result
                                 _pos = backtrack16
                                 # Option 3:
                                 # <String value='+'>
@@ -3394,7 +3385,7 @@ def _cont_Expr(_text, _pos):
                                     break
                                 if (farthest_pos13 < _pos):
                                     farthest_pos13 = _pos
-                                    farthest_err26 = _result
+                                    farthest_err13 = _result
                                 _pos = backtrack16
                                 # Option 4:
                                 # <Ref name='Repeat'>
@@ -3404,9 +3395,9 @@ def _cont_Expr(_text, _pos):
                                     break
                                 if (farthest_pos13 < _pos):
                                     farthest_pos13 = _pos
-                                    farthest_err26 = _result
+                                    farthest_err13 = _result
                                 _pos = farthest_pos13
-                                _result = farthest_err26
+                                _result = farthest_err13
                                 break
                             # </Choice>
                             if _status:
@@ -3781,19 +3772,23 @@ def _raise_error244(_text, _pos):
 class Repeat(Node):
     """
     class Repeat {
-        left: '{' >> Expr
-        right: Opt(',' >> Expr) << '}'
+        open: '{'
+        start: Opt(RepeatArg)
+        stop: ',' >> RepeatArg | ',' >> `None` | `start`
+        close: '}'
     }
     """
-    _fields = ('left', 'right',)
+    _fields = ('open', 'start', 'stop', 'close',)
 
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    def __init__(self, open, start, stop, close):
+        self.open = open
+        self.start = start
+        self.stop = stop
+        self.close = close
         self._position_info = None
 
     def __repr__(self):
-        return f'Repeat(left={self.left!r}, right={self.right!r})'
+        return f'Repeat(open={self.open!r}, start={self.start!r}, stop={self.stop!r}, close={self.close!r})'
 
     @staticmethod
     def parse(text, pos=0, fullparse=True):
@@ -3805,38 +3800,38 @@ def _cont_Repeat(_text, _pos):
     # <Seq>
     start_pos13 = _pos
     while True:
-        # <Discard>
-        # '{' >> Expr
-        while True:
-            # <String value='{'>
-            value38 = '{'
-            end38 = (_pos + 1)
-            if (_text[_pos : end38] == value38):
-                _pos = (yield (3, _cont__ignored, end38,))[2]
-                _status = True
-                _result = value38
-            else:
-                _status = False
-                _result = _raise_error249
-            # </String>
-            if (not _status):
-                break
-            # <Ref name='Expr'>
-            (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
-            # </Ref>
-            break
-        # </Discard>
+        # <String value='{'>
+        value38 = '{'
+        end38 = (_pos + 1)
+        if (_text[_pos : end38] == value38):
+            _pos = (yield (3, _cont__ignored, end38,))[2]
+            _status = True
+            _result = value38
+        else:
+            _status = False
+            _result = _raise_error248
+        # </String>
         if (not _status):
             break
-        left = _result
-        # <Discard>
-        # Opt(',' >> Expr) << '}'
+        open = _result
+        # <Opt>
+        # Opt(RepeatArg)
+        backtrack17 = _pos
+        # <Ref name='RepeatArg'>
+        (_status, _result, _pos,) = (yield (3, _cont_RepeatArg, _pos,))
+        # </Ref>
+        if (not _status):
+            _status = True
+            _pos = backtrack17
+            _result = None
+        # </Opt>
+        start = _result
+        # <Choice>
+        backtrack18 = _pos
         while True:
-            # <Opt>
-            # Opt(',' >> Expr)
-            backtrack17 = _pos
+            # Option 1:
             # <Discard>
-            # ',' >> Expr
+            # ',' >> RepeatArg
             while True:
                 # <String value=','>
                 value39 = ','
@@ -3851,43 +3846,67 @@ def _cont_Repeat(_text, _pos):
                 # </String>
                 if (not _status):
                     break
-                # <Ref name='Expr'>
-                (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
+                # <Ref name='RepeatArg'>
+                (_status, _result, _pos,) = (yield (3, _cont_RepeatArg, _pos,))
                 # </Ref>
                 break
             # </Discard>
-            if (not _status):
-                _status = True
-                _pos = backtrack17
-                _result = None
-            # </Opt>
-            staging22 = _result
-            # <String value='}'>
-            value40 = '}'
-            end40 = (_pos + 1)
-            if (_text[_pos : end40] == value40):
-                _pos = (yield (3, _cont__ignored, end40,))[2]
-                _status = True
-                _result = value40
-            else:
-                _status = False
-                _result = _raise_error257
-            # </String>
             if _status:
-                _result = staging22
+                break
+            _pos = backtrack18
+            # Option 2:
+            # <Discard>
+            # ',' >> `None`
+            while True:
+                # <String value=','>
+                value40 = ','
+                end40 = (_pos + 1)
+                if (_text[_pos : end40] == value40):
+                    _pos = (yield (3, _cont__ignored, end40,))[2]
+                    _status = True
+                    _result = value40
+                else:
+                    _status = False
+                    _result = _raise_error258
+                # </String>
+                if (not _status):
+                    break
+                _result = None
+                _status = True
+                break
+            # </Discard>
+            if _status:
+                break
+            _pos = backtrack18
+            # Option 3:
+            _result = start
+            _status = True
             break
-        # </Discard>
+            break
+        # </Choice>
+        stop = _result
+        # <String value='}'>
+        value41 = '}'
+        end41 = (_pos + 1)
+        if (_text[_pos : end41] == value41):
+            _pos = (yield (3, _cont__ignored, end41,))[2]
+            _status = True
+            _result = value41
+        else:
+            _status = False
+            _result = _raise_error262
+        # </String>
         if (not _status):
             break
-        right = _result
-        _result = Repeat(left, right)
+        close = _result
+        _result = Repeat(open, start, stop, close)
         _result._position_info = (start_pos13, _pos,)
         break
     # </Seq>
     (yield (_status, _result, _pos,))
 
 
-def _raise_error249(_text, _pos):
+def _raise_error248(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3921,7 +3940,24 @@ def _raise_error255(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
-def _raise_error257(_text, _pos):
+def _raise_error258(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Repeat' rule, at the expression:\n"
+    "    ','\n\n"
+    "Expected to match the string ','"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+
+def _raise_error262(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3934,6 +3970,63 @@ def _raise_error257(_text, _pos):
     "Failed to parse the 'Repeat' rule, at the expression:\n"
     "    '}'\n\n"
     "Expected to match the string '}'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+
+def _cont_RepeatArg(_text, _pos):
+    # Rule 'RepeatArg'
+    # <Choice>
+    backtrack19 = farthest_pos14 = _pos
+    farthest_err14 = _raise_error264
+    while True:
+        # Option 1:
+        # <Ref name='PythonExpression'>
+        (_status, _result, _pos,) = (yield (3, _cont_PythonExpression, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos14 < _pos):
+            farthest_pos14 = _pos
+            farthest_err14 = _result
+        _pos = backtrack19
+        # Option 2:
+        # <Ref name='Ref'>
+        (_status, _result, _pos,) = (yield (3, _cont_Ref, _pos,))
+        # </Ref>
+        if _status:
+            break
+        if (farthest_pos14 < _pos):
+            farthest_pos14 = _pos
+            farthest_err14 = _result
+        _pos = farthest_pos14
+        _result = farthest_err14
+        break
+    # </Choice>
+    (yield (_status, _result, _pos,))
+
+
+def _parse_RepeatArg(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_RepeatArg, fullparse)
+
+
+RepeatArg = Rule('RepeatArg', _parse_RepeatArg, """
+    RepeatArg = PythonExpression | Ref
+""")
+
+def _raise_error264(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'RepeatArg' rule, at the expression:\n"
+    '    PythonExpression | Ref\n\n'
+    'Unexpected input'
     )
     raise ParseError((title + details), _pos, line, col)
 
@@ -3968,7 +4061,7 @@ def _cont_start(_text, _pos):
             # </Skip>
             # <Alt>
             # Stmt /? Sep
-            staging23 = []
+            staging22 = []
             checkpoint15 = _pos
             while True:
                 # <Ref name='Stmt'>
@@ -3976,7 +4069,7 @@ def _cont_start(_text, _pos):
                 # </Ref>
                 if (not _status):
                     break
-                staging23.append(_result)
+                staging22.append(_result)
                 checkpoint15 = _pos
                 # <Ref name='Sep'>
                 (_status, _result, _pos,) = (yield (3, _cont_Sep, _pos,))
@@ -3984,7 +4077,7 @@ def _cont_start(_text, _pos):
                 if (not _status):
                     break
                 checkpoint15 = _pos
-            _result = staging23
+            _result = staging22
             _status = True
             _pos = checkpoint15
             # </Alt>

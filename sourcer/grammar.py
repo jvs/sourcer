@@ -98,6 +98,14 @@ def _create_parsing_expression(node):
         if isinstance(node.operator, str) and node.operator in classes:
             return classes[node.operator](node.left)
 
+        if isinstance(node.operator, meta.Repeat):
+            start = uncook(node.operator.start)
+            stop = uncook(node.operator.stop)
+            return List(node.left, min_len=start, max_len=stop)
+
+    if isinstance(node, meta.Repeat):
+        return node
+
     if isinstance(node, meta.Infix) and node.operator == '|':
         left, right = node.left, node.right
         left = list(left.exprs) if isinstance(left, Choice) else [left]
@@ -134,3 +142,16 @@ def _create_parsing_expression(node):
 
 def unwrap(x):
     return eval(x.source_code) if isinstance(x, PythonExpression) else x
+
+
+def uncook(x):
+    if x is None:
+        return None
+    if isinstance(x, PythonExpression) and x.source_code == 'None':
+        return None
+    if isinstance(x, PythonExpression):
+        return x.source_code
+    if isinstance(x, Ref):
+        return x.name
+
+    raise Exception(f'Expected name or Python expression. Received: {x}')

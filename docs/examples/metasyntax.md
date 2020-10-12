@@ -118,9 +118,13 @@ Expr = OperatorPrecedence(
 )
 
 class Repeat {
-    left: "{" >> Expr
-    right: Opt("," >> Expr) << "}"
+    open: "{"
+    start: RepeatArg?
+    stop: ("," >> RepeatArg) | ("," >> None) | `start`
+    close: "}"
 }
+
+RepeatArg = PythonExpression | Ref
 
 start = Skip(Newline) >> (Stmt /? Sep)
 ~~~

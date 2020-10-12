@@ -409,3 +409,67 @@ def test_binary_strings_and_regexes():
     g = Grammar(r'start = b"\x01\x02\x03" >> (b/[\x00-\x0F]{2}/ // b"\xFF")')
     result = g.parse(b'\x01\x02\x03\x0F\x0F\xFF\x0E\x0E\xFF\x0D\x0D')
     assert result == [b'\x0F\x0F', b'\x0E\x0E', b'\x0D\x0D']
+
+
+def test_repeat_operator_with_fixed_length():
+    g = Grammar(r'''
+        start = (Digit{3})+
+        Digit = /\d/ |> `int`
+    ''')
+    assert g.parse('123456') == [[1, 2, 3], [4, 5, 6]]
+
+    # Now try reading the count from the input.
+    g = Grammar(r'''
+        start = (let count = Number in Number{count})+
+        Number = /\d+/ |> `int`
+        ignore /\s+/
+    ''')
+
+    assert g.parse(' 3 10 20 30 ') == [[10, 20, 30]]
+
+    try:
+        assert g.parse(' 3 10 20 30 2 40 50 ') == [[10, 20, 30], [40, 50]]
+    except g.PartialParseError as exc:
+        print(exc.partial_result)
+
+
+def test_repeat_operator_with_min_length():
+    g = Grammar(r'''
+        start = NumberSequence // ":"
+        NumberSequence = Digit{2,}
+        Digit = /\d/ |> `int`
+    ''')
+
+    assert g.parse('123:45:6789') == [[1, 2, 3], [4, 5], [6, 7, 8, 9]]
+
+    with pytest.raises(g.PartialParseError):
+        g.parse('123:45:6')
+
+
+def test_repeat_operator_with_max_length():
+    g = Grammar(r'''
+        start = NumberSequence // ":"
+        NumberSequence = Digit{,3}
+        Digit = /\d/ |> `int`
+    ''')
+
+    assert g.parse('123:45:6') == [[1, 2, 3], [4, 5], [6]]
+
+    with pytest.raises(g.PartialParseError):
+        assert g.parse('123:45:6789')
+
+
+def test_repeat_operator_with_min_and_max_length():
+    g = Grammar(r'''
+        start = NumberSequence // ":"
+        NumberSequence = Digit{2,3}
+        Digit = /\d/ |> `int`
+    ''')
+
+    assert g.parse('123:45:678') == [[1, 2, 3], [4, 5], [6, 7, 8]]
+
+    with pytest.raises(g.PartialParseError):
+        assert g.parse('123:45:6789')
+
+    with pytest.raises(g.PartialParseError):
+        assert g.parse('123:45:6')
