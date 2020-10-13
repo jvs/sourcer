@@ -22,7 +22,12 @@ def test_docs():
             preview = make_preview(python_code)
             print('# Running example:')
             print(preview)
-            exec(python_code, {})
+            try:
+                exec(python_code, {})
+            except Exception:
+                print('# FAILED:')
+                print(python_code)
+                raise
 
 
 def find_test_cases(sections):
