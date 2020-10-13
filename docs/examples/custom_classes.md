@@ -5,6 +5,7 @@ This is a short example to show how you can define classes within your grammars.
 Classes let you define the kinds of objects that you want to get back when you
 parse something.
 
+<!-- SETUP -->
 ```python
 from sourcer import Grammar
 
@@ -38,6 +39,7 @@ The grammar is compiled to a Python module, which is assigned to the variable ``
 
 The module defines a ``parse`` function, which you can use to parse strings:
 
+<!-- TEST -->
 ```python
 result = g.parse('Print [10, 20); Delete (33, 44];')
 assert result == [

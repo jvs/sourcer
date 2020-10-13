@@ -3,6 +3,7 @@
 This example shows how to parse Excel formula with Sourcer.
 
 
+<!-- SETUP -->
 ```python
 from sourcer import Grammar
 
@@ -89,6 +90,7 @@ The grammar is compiled to a Python module, which is assigned to the variable ``
 
 The module defines a ``parse`` function, which you can use to parse strings:
 
+<!-- TEST -->
 ```python
 result = g.parse('=SUM(B5:B15)')
 assert result == g.FunctionCall(

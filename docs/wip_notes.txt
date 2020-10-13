@@ -16,7 +16,7 @@ expressions to document:
    projection
    python_section
    regular_expression
-   repetition
+   repetition -- *, +, and {}
    sequence
    string_matching
 

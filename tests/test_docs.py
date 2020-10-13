@@ -1,41 +1,65 @@
 import glob
 import os
-import re
+
+import docutils
 
 
 def test_docs():
     project_home = os.path.dirname(os.path.dirname(__file__))
     mds = os.path.join(project_home, 'docs', '**', '*.md')
-    pattern = re.compile(r'```python\n((.|\n)+?)```')
 
     for md in glob.glob(mds, recursive=True):
+        # For now, just skip metasyntax.md
+        if md.endswith('metasyntax.md'):
+            continue
+
         print('# Scanning', md)
 
         with open(md) as f:
             content = f.read()
 
-        sections = []
-        for m in pattern.finditer(content):
-            section = m.group(1).strip()
-            if not sections:
-                sections.append(section)
-                continue
-            if 'Grammar(' in section:
-                sections.append(section)
-            else:
-                prev = sections.pop()
-                sections.append(f'{prev}\n\n{section}')
-
-        for section in sections:
-            preview = []
-            for line in section.split('\n'):
-                if not line.strip():
-                    continue
-                preview.append(line)
-                if len(preview) > 4:
-                    break
-
+        for python_code in find_test_cases(docutils.parse_doc(content)):
+            preview = make_preview(python_code)
             print('# Running example:')
-            print('\n'.join(preview))
-            print('...')
-            exec(section, {})
+            print(preview)
+            exec(python_code, {})
+
+
+def find_test_cases(sections):
+    buf = []
+    for section in sections:
+        if isinstance(section, str):
+            continue
+
+        if getattr(section, 'tag', '').upper() == 'HIDDEN TEST':
+            buf.append(section.body)
+            continue
+
+        tag = section.comment.tag.upper()
+
+        if tag in ['INPUT', 'OUTPUT', 'CONSOLE']:
+            continue
+
+        if tag == 'TEST':
+            buf.append(section.python.body)
+            continue
+
+        if tag == 'SETUP':
+            if buf:
+                yield '\n'.join(buf)
+            buf = [section.python.body]
+            continue
+
+    if buf:
+        yield '\n'.join(buf)
+
+
+def make_preview(python_code):
+    preview = []
+    for line in python_code.split('\n'):
+        if not line.strip() or 'import' in line:
+            continue
+        preview.append(line)
+        if len(preview) > 6:
+            break
+    return '\n'.join(preview)

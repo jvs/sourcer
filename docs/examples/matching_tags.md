@@ -5,6 +5,7 @@ Maybe you have to parse something where you have matching start and end tags.
 Here's a simple example that you can work from. It shows how Sourcer can handle
 some data-dependent grammars.
 
+<!-- SETUP -->
 ```python
 from sourcer import Grammar
 
@@ -44,6 +45,7 @@ The grammar is compiled to a Python module, which is assigned to the variable ``
 
 The module defines a ``Document`` object, which you can use to parse strings:
 
+<!-- TEST -->
 ```python
 result = g.Document.parse('To: <party><b>Second</b> Floor Only</party><br/>')
 
@@ -65,6 +67,7 @@ assert result == [
 Similarly, we can use any of our other rules directly, too. For example, maybe
 we just want to parse a single item:
 
+<!-- TEST -->
 ```python
 assert g.Item.parse('< span />') == g.EmptyElement('span')
 ```

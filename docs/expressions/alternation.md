@@ -13,6 +13,7 @@ Sourcer gives you a few ways to use alternation:
 
 ## Alternation without a trailing separator
 
+<!-- SETUP -->
 ```python
 from sourcer import Grammar
 
@@ -32,6 +33,7 @@ except g.PartialParseError as exc:
 
 ## Alternation with an optional trailing separator
 
+<!-- SETUP -->
 ```python
 from sourcer import Grammar
 
@@ -47,6 +49,7 @@ assert g.parse('buz!buz!') == ['buz', 'buz']
 The `//` and `/?` operators both accept an empty list of items. If you want to
 require the list to be non-empty, then you can use the verbose form:
 
+<!-- SETUP -->
 ```python
 from sourcer import Grammar
 
@@ -64,6 +67,7 @@ except g.ParseError:
 
 ## Keeping the separators instead of discarding them
 
+<!-- SETUP -->
 ```python
 from sourcer import Grammar
 
@@ -80,6 +84,7 @@ If you want to require a trailing separator, then you can use a repetition
 expression, like `(foo << bar)*`. This particular expression means, "Parse
 a list of pairs of `foo` and `bar`, discarding each `bar`."
 
+<!-- SETUP -->
 ```python
 from sourcer import Grammar
 

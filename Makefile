@@ -35,6 +35,7 @@ coverage: clean image
 
 # Build the documentation.
 docs:
+	$(RUN) python render_output_for_examples.py
 	$(MAKE) -C docs html
 
 # Run the code-formatter, but skip the generated python file.
