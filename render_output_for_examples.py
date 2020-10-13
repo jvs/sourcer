@@ -34,6 +34,10 @@ def run():
             sys.stdout = buf
             try:
                 exec(python_code, {})
+            except Exception:
+                print('\n# FAILED:')
+                print(python_code)
+                raise
             finally:
                 sys.stdout = old_stdout
 
@@ -109,9 +113,12 @@ def find_python_examples(sections):
             buf.append("\nprint('~~~~~ BEGIN CONSOLE OUTPUT ~~~~~')\n")
             for line in section.python.body.split('\n'):
                 if line.startswith('>>> '):
-                    expr = line[len('>>> '):]
-                    line = f'print({line!r})\nprint(repr({expr}))\nprint()\n'
-                    buf.append(line)
+                    buf.append(f'print({line!r})\n')
+                    stmt = line[len('>>> '):]
+                    if ' = ' in stmt:
+                        buf.append(stmt)
+                    else:
+                        buf.append(f'print(repr({stmt}))\nprint()\n')
             buf.append("print('~~~~~ END CONSOLE OUTPUT ~~~~~')\n")
             continue
 

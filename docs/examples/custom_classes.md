@@ -36,26 +36,52 @@ g = Grammar(r'''
 ```
 
 The grammar is compiled to a Python module, which is assigned to the variable ``g``.
-
 The module defines a ``parse`` function, which you can use to parse strings:
+
+<!-- CONSOLE -->
+```python
+>>> commands = g.parse('Print [10, 20); Delete (33, 44];')
+>>> len(commands)
+2
+
+>>> commands[0]
+Command(action='Print', range=Range(start='[', left=10, right=20, end=')'))
+
+>>> commands[1]
+Command(action='Delete', range=Range(start='(', left=33, right=44, end=']'))
+```
+
+The Command objects have position information:
+<!-- CONSOLE -->
+```python
+>>> info = commands[0]._position_info
+>>> info.start
+_Position(index=0, line=1, column=1)
+
+>>> info.end
+_Position(index=13, line=1, column=14)
+```
+
+
+The ``Command``, ``Range``, and ``_Position`` classes are defined in the grammar
+module, ``g``.
 
 <!-- TEST -->
 ```python
-result = g.parse('Print [10, 20); Delete (33, 44];')
-assert result == [
-    g.Command(action='Print', range=g.Range('[', 10, 20, ')')),
-    g.Command(action='Delete', range=g.Range('(', 33, 44, ']')),
+# The `g` module defines the `Command` and `Range` classes. For example:
+assert g.parse('Copy [1, 2]; Delete [3, 4]') == [
+    g.Command(action='Copy', range=g.Range('[', 1, 2, ']')),
+    g.Command(action='Delete', range=g.Range('[', 3, 4, ']')),
 ]
 
-cmd = result[1]
-assert cmd.action == 'Delete'
-
-# The Command objects have position information:
-info = cmd._position_info
-assert info.start == g._Position(index=16, line=1, column=17)
-assert info.end == g._Position(index=30, line=1, column=31)
+# The `g` module also defines the `_Position` class.
+command = g.parse('Print (5, 6)')
+assert command[0]._position_info.start == g._Position(index=0, line=1, column=1)
 ```
 
-The point of classes is to give you a way to name the things that you want.
-Instead of traversing some opaque tree structure to get what you want, Sourcer
-gives you normal Python objects, that you define.
+This means you can generate a Python source file for your grammar, and use it
+in projects, without having to depend on the Sourcer library in those other
+projects.
+
+Sourcer turns your grammar into a standalone Python module with zero dependencies
+outside of the standard library.

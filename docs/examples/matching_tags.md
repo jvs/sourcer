@@ -42,8 +42,50 @@ g = Grammar(r'''
 ```
 
 The grammar is compiled to a Python module, which is assigned to the variable ``g``.
-
 The module defines a ``Document`` object, which you can use to parse strings:
+
+<!-- CONSOLE -->
+```python
+>>> g.Document.parse('fiz')
+[Text(content='fiz')]
+
+>>> g.Document.parse('<buz/>')
+[EmptyElement(tag='buz')]
+
+>>> g.Document.parse('<foo>bar</foo>')
+[Element(open='foo', items=[Text(content='bar')], close='foo')]
+
+>>> g.Document.parse('zim <i>zam</i>')
+[Text(content='zim '), Element(open='i', items=[Text(content='zam')], close='i')]
+```
+
+You can use any of the rules defined in the grammar this way. For example:
+
+<!-- CONSOLE -->
+```python
+>>> g.Item.parse('<msg>hello <select/></msg>')
+Element(open='msg', items=[Text(content='hello '), EmptyElement(tag='select')], close='msg')
+
+>>> g.Item.parse('< input />')
+EmptyElement(tag='input')
+
+>>> g.Element.parse('<h1>OK</h1>')
+Element(open='h1', items=[Text(content='OK')], close='h1')
+
+>>> g.EmptyElement.parse('<br/>')
+EmptyElement(tag='br')
+
+>>> g.Text.parse('bim bam boz')
+Text(content='bim bam boz')
+
+>>> g.Tag.parse(' open ')
+'open'
+
+>>> g.Word.parse('here')
+'here'
+```
+
+We can uses the grammar's classes directly in our tests, to validate the parser:
 
 <!-- TEST -->
 ```python
@@ -61,13 +103,4 @@ assert result == [
     ),
     g.EmptyElement('br'),
 ]
-```
-
-
-Similarly, we can use any of our other rules directly, too. For example, maybe
-we just want to parse a single item:
-
-<!-- TEST -->
-```python
-assert g.Item.parse('< span />') == g.EmptyElement('span')
 ```

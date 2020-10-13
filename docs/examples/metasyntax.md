@@ -133,25 +133,3 @@ As part of Sourcer's build process, it reads
 [this definition](https://github.com/jvs/sourcer/blob/master/metasyntax.txt)
 and then generates a
 [Python parser for it](https://github.com/jvs/sourcer/blob/master/sourcer/meta.py).
-
-
-### Isn't this a chicken and egg problem?
-
-Yeah, totally!
-
-This isn't important to know, but if you ever run into a similar problem, here's
-how Sourcer tackled it: Early on, now buried somewhere in Sourcer's git history,
-Sourcer defined its metasyntax using its internal Python classes.
-
-So for example, take `start = Skip(Newline) >> (Stmt /? Sep)`. Using Sourcer's
-internal classes, that would be
-`start = Discard(Skip(Newline), Alt(Stmt, Sep, allow_trailer=True))`.
-
-Because the grammar rules are recursive, it also needed a way for rules to
-express "forward references" -- references to rules that would be defined later
-on in the Python code. So this isn't quite the whole story, but that's
-the gist of it: Source defined its grammar using its expression classes.
-
-(One quick note about recursion: This is why Sourcer needs a grammar, and not
-just a bunch of regexes. In some ways, you can think of Sourcer as just an engine
-for recursive regular expressions.)

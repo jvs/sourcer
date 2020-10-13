@@ -38,8 +38,7 @@ assert g.parse('10 * 20%') == g.Infix(10, '*', g.Postfix(20, '%'))
 -->
 
 The grammar is compiled to a Python module, which is assigned to the variable ``g``.
-
-The module defines a ``parse`` function, which you can use to parse strings.
+The module defines a ``parse`` function, which you can use to parse strings:
 
 <!-- CONSOLE -->
 ```python
@@ -50,7 +49,7 @@ Infix(Infix(1, '+', 2), '+', 3)
 Infix(4, '+', Infix(Prefix('-', 5), '/', 6))
 ```
 
-The grammar module defines classes named ``Infix``, ``Prefix``, and ``Postfix``
+The module defines classes named ``Infix``, ``Prefix``, and ``Postfix``
 to represent the parse tree.
 (Note that these classes are defined in the compiled grammar module, and not in
 the Sourcer module.)

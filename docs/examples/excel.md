@@ -15,7 +15,7 @@ g = Grammar(r'''
 
     ignored Space = /[ \t\n\r]+/
 
-    Offset = /\d+|\[\-?\d+\]/
+    Offset = /\d+|\[\-?\d+\]/ |> `literal_eval`
 
     class R1C1Ref {
         row = "R" >> Offset
@@ -87,8 +87,24 @@ g = Grammar(r'''
 ```
 
 The grammar is compiled to a Python module, which is assigned to the variable ``g``.
-
 The module defines a ``parse`` function, which you can use to parse strings:
+
+<!-- CONSOLE -->
+```python
+>>> g.parse('={1, 2; 3, 4}')
+[[1, 2], [3, 4]]
+
+>>> g.parse('1 + R2C3')
+Infix(1, '+', CellRef(book=None, sheet=None, cell=R1C1Ref(row=2, col=3)))
+```
+
+Sourcer takes the classes that you define in your grammar
+(like `CellRef` and `R1C1Ref` in this case),
+and turns them into Python classes.
+The classes are defined in your grammar module.
+(In this case, the grammar module assigned to the variable `g`.)
+
+Here's an example of how to use these classes in a test:
 
 <!-- TEST -->
 ```python

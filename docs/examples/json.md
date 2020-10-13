@@ -40,13 +40,30 @@ g = Grammar(r'''
 ```
 
 The grammar is compiled to a Python module, which is assigned to the variable ``g``.
-
 The module defines a ``parse`` function, which you can use to parse strings:
 
+<!-- CONSOLE -->
+```python
+>>> g.parse('123')
+123.0
+
+>>> g.parse('{}')
+{}
+
+>>> g.parse('[123, -456, [], [789, "ten-eleven"]]')
+[123.0, -456.0, [], [789.0, 'ten-eleven']]
+
+>>> g.parse('{"foo": true, "bar": false}')
+{'foo': True, 'bar': False}
+
+>>> g.parse('{"name": "Foobar", "counts": [10, 25], "active": true, "parent": null}')
+{'name': 'Foobar', 'counts': [10.0, 25.0], 'active': True, 'parent': None}
+```
+
+Notice that this parser returns native Python dicts, lists, strings, booleans, etc:
 
 <!-- TEST -->
 ```python
-# Notice that we get back Python dicts, lists, strings, booleans, etc.
 result = g.parse('{"foo": "bar", "baz": true}')
 assert result == {'foo': 'bar', 'baz': True}
 
