@@ -123,7 +123,10 @@ class Repeat {
 
 RepeatArg = PythonExpression | Ref
 
-start = Skip(Newline) >> (Stmt /? Sep)
+ManyStmts = Sep(Stmt, Sep, allow_trailer=True, allow_empty=False)
+SingleExpr = Expr << Opt(Sep)
+
+start = Skip(Newline) >> (ManyStmts | SingleExpr)
 
 """
 
@@ -854,7 +857,7 @@ def _cont_Params(_text, _pos):
             # </Call>
             if (not _status):
                 break
-            # <Alt>
+            # <Sep>
             # wrap(Name) /? Comma
             staging3 = []
             checkpoint4 = _pos
@@ -877,7 +880,7 @@ def _cont_Params(_text, _pos):
             _result = staging3
             _status = True
             _pos = checkpoint4
-            # </Alt>
+            # </Sep>
             break
         # </Discard>
         if (not _status):
@@ -1970,7 +1973,7 @@ def _cont_ClassDef(_text, _pos):
                 # </Call>
                 if (not _status):
                     break
-                # <Alt>
+                # <Sep>
                 # RuleDef /? Sep
                 staging6 = []
                 checkpoint5 = _pos
@@ -1991,7 +1994,7 @@ def _cont_ClassDef(_text, _pos):
                 _result = staging6
                 _status = True
                 _pos = checkpoint5
-                # </Alt>
+                # </Sep>
                 break
             # </Discard>
             if (not _status):
@@ -2494,7 +2497,7 @@ def _cont_ListLiteral(_text, _pos):
                 # </String>
                 if (not _status):
                     break
-                # <Alt>
+                # <Sep>
                 # wrap(Expr) /? Comma
                 staging10 = []
                 checkpoint6 = _pos
@@ -2517,7 +2520,7 @@ def _cont_ListLiteral(_text, _pos):
                 _result = staging10
                 _status = True
                 _pos = checkpoint6
-                # </Alt>
+                # </Sep>
                 break
             # </Discard>
             if (not _status):
@@ -2989,7 +2992,7 @@ def _cont_ArgList(_text, _pos):
                 # </String>
                 if (not _status):
                     break
-                # <Alt>
+                # <Sep>
                 # wrap(KeywordArg | Expr) /? Comma
                 staging14 = []
                 checkpoint7 = _pos
@@ -3012,7 +3015,7 @@ def _cont_ArgList(_text, _pos):
                 _result = staging14
                 _status = True
                 _pos = checkpoint7
-                # </Alt>
+                # </Sep>
                 break
             # </Discard>
             if (not _status):
@@ -4031,10 +4034,82 @@ def _raise_error264(_text, _pos):
     raise ParseError((title + details), _pos, line, col)
 
 
+def _cont_ManyStmts(_text, _pos):
+    # Rule 'ManyStmts'
+    # <Sep>
+    # Stmt /? Sep
+    staging22 = []
+    checkpoint14 = _pos
+    while True:
+        # <Ref name='Stmt'>
+        (_status, _result, _pos,) = (yield (3, _cont_Stmt, _pos,))
+        # </Ref>
+        if (not _status):
+            break
+        staging22.append(_result)
+        checkpoint14 = _pos
+        # <Ref name='Sep'>
+        (_status, _result, _pos,) = (yield (3, _cont_Sep, _pos,))
+        # </Ref>
+        if (not _status):
+            break
+        checkpoint14 = _pos
+    if staging22:
+        _result = staging22
+        _status = True
+        _pos = checkpoint14
+    # </Sep>
+    (yield (_status, _result, _pos,))
+
+
+def _parse_ManyStmts(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_ManyStmts, fullparse)
+
+
+ManyStmts = Rule('ManyStmts', _parse_ManyStmts, """
+    ManyStmts = Stmt /? Sep
+""")
+
+def _cont_SingleExpr(_text, _pos):
+    # Rule 'SingleExpr'
+    # <Discard>
+    # Expr << Opt(Sep)
+    while True:
+        # <Ref name='Expr'>
+        (_status, _result, _pos,) = (yield (3, _cont_Expr, _pos,))
+        # </Ref>
+        if (not _status):
+            break
+        staging23 = _result
+        # <Opt>
+        # Opt(Sep)
+        backtrack20 = _pos
+        # <Ref name='Sep'>
+        (_status, _result, _pos,) = (yield (3, _cont_Sep, _pos,))
+        # </Ref>
+        if (not _status):
+            _status = True
+            _pos = backtrack20
+            _result = None
+        # </Opt>
+        _result = staging23
+        break
+    # </Discard>
+    (yield (_status, _result, _pos,))
+
+
+def _parse_SingleExpr(text, pos=0, fullparse=True):
+    return _run(text, pos, _cont_SingleExpr, fullparse)
+
+
+SingleExpr = Rule('SingleExpr', _parse_SingleExpr, """
+    SingleExpr = Expr << Opt(Sep)
+""")
+
 def _cont_start(_text, _pos):
     # Rule 'start'
     # <Discard>
-    # _cont__ignored >> (Skip(Newline) >> (Stmt /? Sep))
+    # _cont__ignored >> (Skip(Newline) >> (ManyStmts | SingleExpr))
     while True:
         # <Ref name='_cont__ignored'>
         (_status, _result, _pos,) = (yield (3, _cont__ignored, _pos,))
@@ -4042,45 +4117,50 @@ def _cont_start(_text, _pos):
         if (not _status):
             break
         # <Discard>
-        # Skip(Newline) >> (Stmt /? Sep)
+        # Skip(Newline) >> (ManyStmts | SingleExpr)
         while True:
             # <Skip>
             # Skip(Newline)
             while True:
-                checkpoint14 = _pos
+                checkpoint15 = _pos
                 # <Ref name='Newline'>
                 (_status, _result, _pos,) = (yield (3, _cont_Newline, _pos,))
                 # </Ref>
                 if _status:
                     continue
                 else:
-                    _pos = checkpoint14
+                    _pos = checkpoint15
                 break
             _status = True
             _result = None
             # </Skip>
-            # <Alt>
-            # Stmt /? Sep
-            staging22 = []
-            checkpoint15 = _pos
+            # <Choice>
+            backtrack21 = farthest_pos15 = _pos
+            farthest_err15 = _raise_error282
             while True:
-                # <Ref name='Stmt'>
-                (_status, _result, _pos,) = (yield (3, _cont_Stmt, _pos,))
+                # Option 1:
+                # <Ref name='ManyStmts'>
+                (_status, _result, _pos,) = (yield (3, _cont_ManyStmts, _pos,))
                 # </Ref>
-                if (not _status):
+                if _status:
                     break
-                staging22.append(_result)
-                checkpoint15 = _pos
-                # <Ref name='Sep'>
-                (_status, _result, _pos,) = (yield (3, _cont_Sep, _pos,))
+                if (farthest_pos15 < _pos):
+                    farthest_pos15 = _pos
+                    farthest_err15 = _result
+                _pos = backtrack21
+                # Option 2:
+                # <Ref name='SingleExpr'>
+                (_status, _result, _pos,) = (yield (3, _cont_SingleExpr, _pos,))
                 # </Ref>
-                if (not _status):
+                if _status:
                     break
-                checkpoint15 = _pos
-            _result = staging22
-            _status = True
-            _pos = checkpoint15
-            # </Alt>
+                if (farthest_pos15 < _pos):
+                    farthest_pos15 = _pos
+                    farthest_err15 = _result
+                _pos = farthest_pos15
+                _result = farthest_err15
+                break
+            # </Choice>
             break
         # </Discard>
         break
@@ -4093,8 +4173,25 @@ def _parse_start(text, pos=0, fullparse=True):
 
 
 start = Rule('start', _parse_start, """
-    start = _cont__ignored >> (Skip(Newline) >> (Stmt /? Sep))
+    start = _cont__ignored >> (Skip(Newline) >> (ManyStmts | SingleExpr))
 """)
+
+def _raise_error282(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col,) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'start' rule, at the expression:\n"
+    '    ManyStmts | SingleExpr\n\n'
+    'Unexpected input'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
 
 def _cont__ignored(_text, _pos):
     # Rule '_ignored'

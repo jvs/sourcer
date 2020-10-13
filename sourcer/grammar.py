@@ -11,6 +11,10 @@ def Grammar(description, name='grammar', include_source=False):
     # Parse the grammar description.
     raw = meta.parse(description)
 
+    # If the grammar is just an expression, create an implicit 'start' rule.
+    if not isinstance(raw, list):
+        raw = [meta.RuleDef(is_ignored=False, name='start', params=None, expr=raw)]
+
     # Create the docstring for the module.
     docstring = '# Grammar definition:\n' + description
 
@@ -116,8 +120,8 @@ def _create_parsing_expression(node):
         classes = {
             '|>': lambda a, b: Apply(a, b, apply_left=False),
             '<|': lambda a, b: Apply(a, b, apply_left=True),
-            '/?': lambda a, b: Alt(a, b, allow_trailer=True),
-            '//': lambda a, b: Alt(a, b, allow_trailer=False),
+            '/?': lambda a, b: Sep(a, b, allow_trailer=True),
+            '//': lambda a, b: Sep(a, b, allow_trailer=False),
             '<<': Left,
             '>>': Right,
             'where': Where,

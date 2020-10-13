@@ -98,7 +98,7 @@ def visit(previsit, expr, postvisit=None):
             visit(previsit, child, postvisit)
 
 
-class Alt(Expr):
+class Sep(Expr):
     num_blocks = 2
 
     def __init__(
@@ -1070,7 +1070,7 @@ def _error_func_name(expr):
     return f'_raise_error{expr.program_id}'
 
 
-BinaryOp = (Alt, Apply, Choice, Discard, Where)
+BinaryOp = (Apply, Choice, Discard, Sep, Where)
 
 
 def generate_source_code(docstring, nodes):

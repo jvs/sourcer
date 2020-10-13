@@ -126,7 +126,10 @@ class Repeat {
 
 RepeatArg = PythonExpression | Ref
 
-start = Skip(Newline) >> (Stmt /? Sep)
+ManyStmts = Sep(Stmt, Sep, allow_trailer=True, allow_empty=False)
+SingleExpr = Expr << Opt(Sep)
+
+start = Skip(Newline) >> (ManyStmts | SingleExpr)
 ~~~
 
 As part of Sourcer's build process, it reads

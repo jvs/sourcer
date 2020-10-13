@@ -1,26 +1,28 @@
-# Alternation
+# Separated Lists
 
-Alternation is when you have a list of elements separated by a separator.
-Sourcer discards the separators and produces a list of the elements.
+Sometimes you may want to parse a list of elements that are separated by a
+separator, like "," or something.
+Sourcer has special operators for this, that discard the separators and produce
+the list of elements.
 
-Sourcer gives you a few ways to use alternation:
-
-* `foo // bar` -- does not consume a trailing separator
-* `foo /? bar` -- consumes an optional trailing separator
-* ``Alt(foo, bar, discard_separators=True, allow_trailer=False, allow_empty=True)``
-  -- verbose form, supports additional options.
+* `foo // bar` -- a list of `foo` separated by `bar`, with no trailing `bar`.
+* `foo /? bar` -- same as `foo // bar`, only allows an optional trailing `bar`.
+* ``Sep(foo, bar, discard_separators=True, allow_trailer=False, allow_empty=True)``
+  -- the verbose form, which supports additional options.
 
 
-## Alternation without a trailing separator
+## Separated list without a trailing separator
 
-Use the `//` operator for alternation without an optional trailing separator.
-This means that the parser fails when the input includes a trailing separator.
+Use the `//` operator to parse a separated list with no trailing separator. This
+means that the parser fails when the input includes a trailing separator.
 
 <!-- SETUP -->
 ```python
 from sourcer import Grammar
 
-g = Grammar('start = "fiz" // ","')
+g = Grammar('''
+    "fiz" // ","
+''')
 ```
 
 We can use this grammar to parse a list, as long as it doesn't end with a `,`
@@ -52,17 +54,19 @@ except g.PartialParseError as exc:
 ```
 
 
-## Alternation with an optional trailing separator
+## Separated list with optional trailing separator
 
-Use the `/?` operator for alternation with an optional trailing separator.
-This means that the input can include a final separator on the end of the list,
-but the final separator is not required.
+Use the `/?` operator to parse a separated list with an optional trailing
+separator. This means that the input can include a final separator on the end of
+the list, but the final separator is not required.
 
 <!-- SETUP -->
 ```python
 from sourcer import Grammar
 
-g = Grammar('start = "buz" /? "!"')
+g = Grammar('''
+    "buz" /? "!"
+''')
 ```
 
 The grammar allows lists to include trailing `!` character, but it does not
@@ -90,7 +94,9 @@ require the list to be non-empty, then you can use the verbose form:
 ```python
 from sourcer import Grammar
 
-g = Grammar('start = Alt("bif", "$", allow_empty=False)')
+g = Grammar('''
+    Sep("bif", "$", allow_empty=False)
+''')
 ```
 
 In this example, we can parse a non-empty list, of course:
@@ -116,13 +122,15 @@ except g.ParseError:
 ## Keeping the separators instead of discarding them
 
 By default, the `//` and `/?` operators discard the separators.
-If you want to keep the separators, you can use the `Alt` constructor:
+If you want to keep the separators, you can use the `Sep` constructor:
 
 <!-- SETUP -->
 ```python
 from sourcer import Grammar
 
-g = Grammar('start = Alt("zim" | "zam", ";" | "-", discard_separators=False)')
+g = Grammar('''
+    Sep("zim" | "zam", ";" | "-", discard_separators=False)
+''')
 ```
 
 When we parse a list, the result will include the `;` and `-` characters:
@@ -141,7 +149,7 @@ a string. Here's a more complex example:
 from sourcer import Grammar
 
 g = Grammar(r'''
-    start = Alt(Statement, Separator, discard_separators=False, allow_trailer=True)
+    start = Sep(Statement, Separator, discard_separators=False, allow_trailer=True)
 
     Statement = [Command, Location] |> `tuple`
 
@@ -183,7 +191,9 @@ a list of pairs of `foo` and `bar`, discarding each `bar`."
 ```python
 from sourcer import Grammar
 
-g = Grammar('start = ("zim" << ".")*')
+g = Grammar('''
+    ("zim" << ".")*
+''')
 ```
 
 <!-- CONSOLE -->
