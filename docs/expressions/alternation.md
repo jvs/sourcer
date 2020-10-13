@@ -23,7 +23,8 @@ from sourcer import Grammar
 g = Grammar('start = "fiz" // ","')
 ```
 
-We can parse a list, as long as it doesn't end with a `,` character:
+We can use this grammar to parse a list, as long as it doesn't end with a `,`
+character:
 
 <!-- CONSOLE -->
 ```python
@@ -64,8 +65,8 @@ from sourcer import Grammar
 g = Grammar('start = "buz" /? "!"')
 ```
 
-The grammar accepts lists that include a trailing `!` character, as well as
-lists that omit the trailing `!` character:
+The grammar allows lists to include trailing `!` character, but it does not
+require a trailing `!` character.
 
 <!-- CONSOLE -->
 ```python
