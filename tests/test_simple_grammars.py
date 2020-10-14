@@ -473,3 +473,15 @@ def test_repeat_operator_with_min_and_max_length():
 
     with pytest.raises(g.PartialParseError):
         assert g.parse('123:45:6')
+
+
+def test_length_prefix_on_number_list_in_byte_string():
+    g = Grammar(r'''
+        Section =>
+            let size = Length in
+            Byte{size} |> `lambda x: b''.join(x)`
+
+        Length = Byte |> `ord`
+        Byte = b/./
+    ''')
+    assert g.parse(b'\x03abc') == b'abc'
