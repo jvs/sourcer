@@ -280,15 +280,27 @@ def _run(text, pos, start, fullparse):
 
 
 def visit(node):
-    if isinstance(node, list):
-        yield from node
+    visited = set()
+    stack = [node]
+    while stack:
+        node = stack.pop()
 
-    elif isinstance(node, Node):
-        yield node
+        if isinstance(node, (list, tuple)):
+            stack.extend(node)
 
-        if hasattr(node, '_fields'):
-            for field in node._fields:
-                yield from visit(getattr(node, field))
+        elif isinstance(node, dict):
+            stack.extend(node.values())
+
+        elif isinstance(node, Node):
+            node_id = id(node)
+            if node_id in visited:
+                continue
+            visited.add(node_id)
+
+            yield node
+
+            if hasattr(node, '_fields'):
+                stack.extend(getattr(node, x) for x in node._fields)
 
 
 def transform(node, *callbacks):
@@ -330,9 +342,9 @@ def _finalize_parse_info(text, nodes, pos, fullparse):
     line_numbers, column_numbers = _map_index_to_line_and_column(text)
 
     for node in visit(nodes):
-        parse_info = getattr(node, '_position_info', None)
-        if parse_info:
-            start, end = parse_info
+        pos_info = getattr(node, '_position_info', None)
+        if pos_info:
+            start, end = pos_info
             end -= 1
             node._position_info = _PositionInfo(
                 start=_Position(start, line_numbers[start], column_numbers[start]),
