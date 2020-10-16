@@ -1435,16 +1435,21 @@ def _run(text, pos, start, fullparse):
 
 
 def visit(node):
-    if isinstance(node, list):
-        for item in node:
-            yield from visit(node)
+    stack = [node]
+    while stack:
+        node = stack.pop()
 
-    elif isinstance(node, Node):
-        yield node
+        if isinstance(node, (list, tuple)):
+            stack.extend(node)
 
-        if hasattr(node, '_fields'):
-            for field in node._fields:
-                yield from visit(getattr(node, field))
+        elif isinstance(node, dict):
+            stack.extend(node.values())
+
+        elif isinstance(node, Node):
+            yield node
+
+            if hasattr(node, '_fields'):
+                stack.extend(getattr(node, x) for x in node._fields)
 
 
 def transform(node, *callbacks):
