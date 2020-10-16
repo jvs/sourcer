@@ -1436,7 +1436,8 @@ def _run(text, pos, start, fullparse):
 
 def visit(node):
     if isinstance(node, list):
-        yield from node
+        for item in node:
+            yield from visit(node)
 
     elif isinstance(node, Node):
         yield node
