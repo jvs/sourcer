@@ -3,12 +3,19 @@
 A parsing library for Python.
 
 ```python
->>> from sourcer import Grammar
->>> g = Grammar(r'''
-...     start = "Hello" >> /[a-zA-Z]+/
-...     ignore /[ \t]+/
-...     ignore "," | "." | "!" | "?"
-... ''')
+from sourcer import Grammar
+
+g = Grammar(r'''
+    start = "Hello" >> /[a-zA-Z]+/
+    ignore /[ \t]+/
+    ignore "," | "." | "!" | "?"
+''')
+```
+
+Sourcer compiles your grammar to a Python module.
+You can use its `parse` function to parse strings:
+
+```python
 >>> g.parse('Hello, World!')
 'World'
 
