@@ -16,7 +16,7 @@ the list of elements.
 Use the `//` operator to parse a separated list with no trailing separator. This
 means that the parser fails when the input includes a trailing separator.
 
-<!-- SETUP -->
+<!-- fresh example -->
 ```python
 from sourcer import Grammar
 
@@ -28,7 +28,6 @@ g = Grammar('''
 We can use this grammar to parse a list, as long as it doesn't end with a `,`
 character:
 
-<!-- CONSOLE -->
 ```python
 >>> g.parse('fiz,fiz,fiz')
 ['fiz', 'fiz', 'fiz']
@@ -42,7 +41,6 @@ character:
 
 In this example, our `parse` function fails if it see a trailing comma:
 
-<!-- TEST -->
 ```python
 try:
     # This will raise a "PartialParseError", meaning it couldn't parse the whole input.
@@ -60,7 +58,7 @@ Use the `/?` operator to parse a separated list with an optional trailing
 separator. This means that the input can include a final separator on the end of
 the list, but the final separator is not required.
 
-<!-- SETUP -->
+<!-- fresh example -->
 ```python
 from sourcer import Grammar
 
@@ -72,7 +70,6 @@ g = Grammar('''
 The grammar allows lists to include trailing `!` character, but it does not
 require a trailing `!` character.
 
-<!-- CONSOLE -->
 ```python
 >>> g.parse('buz!buz')
 ['buz', 'buz']
@@ -90,7 +87,7 @@ require a trailing `!` character.
 The `//` and `/?` operators both accept an empty list of items. If you want to
 require the list to be non-empty, then you can use the verbose form:
 
-<!-- SETUP -->
+<!-- fresh example -->
 ```python
 from sourcer import Grammar
 
@@ -101,7 +98,6 @@ g = Grammar('''
 
 In this example, we can parse a non-empty list, of course:
 
-<!-- CONSOLE -->
 ```python
 >>> g.parse('bif$bif')
 ['bif', 'bif']
@@ -109,7 +105,6 @@ In this example, we can parse a non-empty list, of course:
 
 But we'll get a `ParseError` if we try to parse an empty list:
 
-<!-- TEST -->
 ```python
 try:
     g.parse('')
@@ -124,7 +119,7 @@ except g.ParseError:
 By default, the `//` and `/?` operators discard the separators.
 If you want to keep the separators, you can use the `Sep` constructor:
 
-<!-- SETUP -->
+<!-- fresh example -->
 ```python
 from sourcer import Grammar
 
@@ -135,7 +130,6 @@ g = Grammar('''
 
 When we parse a list, the result will include the `;` and `-` characters:
 
-<!-- CONSOLE -->
 ```python
 >>> g.parse('zim-zam;zim')
 ['zim', '-', 'zam', ';', 'zim']
@@ -144,7 +138,7 @@ When we parse a list, the result will include the `;` and `-` characters:
 Of course, a separator may be any parsing expression. It doesn't have to be
 a string. Here's a more complex example:
 
-<!-- SETUP -->
+<!-- fresh example -->
 ```python
 from sourcer import Grammar
 
@@ -168,7 +162,6 @@ g = Grammar(r'''
 
 This time, the results will include more interesting separators:
 
-<!-- TEST -->
 ```python
 commands = g.parse('go there -- now! stay here -- later.')
 
@@ -187,7 +180,7 @@ If you want to require a trailing separator, then you can use a repetition
 expression, like `(foo << bar)*`. This particular expression means, "Parse
 a list of pairs of `foo` and `bar`, discarding each `bar`."
 
-<!-- SETUP -->
+<!-- fresh example -->
 ```python
 from sourcer import Grammar
 
@@ -196,7 +189,6 @@ g = Grammar('''
 ''')
 ```
 
-<!-- CONSOLE -->
 ```python
 >>> g.parse('zim.zim.')
 ['zim', 'zim']
@@ -210,7 +202,6 @@ g = Grammar('''
 
 The parser fails if we omit the trailing `.` character:
 
-<!-- TEST -->
 ```python
 exc = None
 

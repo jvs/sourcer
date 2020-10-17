@@ -37,7 +37,8 @@ coverage: clean image
 
 # Build the documentation.
 docs:
-	$(RUN) python render_output_for_examples.py
+	$(RUN) python -c 'from glob import glob; import exemplary; \
+		exemplary.run(glob("**/*.md", recursive=True), render=True)'
 	$(MAKE) -C docs html
 
 # Run the code-formatter, but skip the generated python file.
