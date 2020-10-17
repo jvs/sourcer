@@ -11,7 +11,8 @@ image: Dockerfile
 
 # Remove random debris left around by python, pytest, and coverage.
 clean:
-	-rm -rf \
+	@echo "Removing generated files."
+	@rm -rf \
 		__pycache__ \
 		.coverage \
 		.pytest_cache \
@@ -20,7 +21,8 @@ clean:
 		docs/_build/* \
 		dist \
 		htmlcov \
-		MANIFEST
+		MANIFEST \
+		*.egg-info
 
 # Run the tests in a docker container.
 test: clean image
