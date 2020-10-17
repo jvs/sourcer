@@ -1,6 +1,6 @@
 black
 coverage
-exemplary==0.0.2
+exemplary
 pytest
 recommonmark
 sphinx
