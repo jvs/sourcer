@@ -2,18 +2,24 @@
 
 A parsing library for Python.
 
+
+## What's it look like?
+
+First, you define your grammar:
+
 ```python
 from sourcer import Grammar
 
 g = Grammar(r'''
-    start = "Hello" >> /[a-zA-Z]+/
-    ignore /[ \t]+/
-    ignore "," | "." | "!" | "?"
+    start = "Hello" >> /\w+/
+
+    ignore "," | "." | "!" | "?" | " "
 ''')
 ```
 
 Sourcer compiles your grammar to a Python module.
-You can use its `parse` function to parse strings:
+
+Then, you use your grammar to parse things:
 
 ```python
 >>> g.parse('Hello, World!')
@@ -22,11 +28,6 @@ You can use its `parse` function to parse strings:
 >>> g.parse('Hello?? Anybody?!')
 'Anybody'
 ```
-
-Notes:
-
-* `>>` means "discard the the left hand side"
-* `/.../` means "regular expression"
 
 
 ## Installation
