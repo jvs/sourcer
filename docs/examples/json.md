@@ -54,8 +54,8 @@ The module defines a ``parse`` function, which you can use to parse strings:
 >>> g.parse('{"foo": true, "bar": false}')
 {'foo': True, 'bar': False}
 
->>> g.parse('{"name": "Foobar", "counts": [10, 25], "active": true, "parent": null}')
-{'name': 'Foobar', 'counts': [10.0, 25.0], 'active': True, 'parent': None}
+>>> g.parse('{"name": "Foobar", "counts": [10, 25], "parent": null}')
+{'name': 'Foobar', 'counts': [10.0, 25.0], 'parent': None}
 ```
 
 Notice that this parser returns native Python dicts, lists, strings, booleans, etc:

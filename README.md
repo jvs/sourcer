@@ -3,17 +3,17 @@
 A parsing library for Python.
 
 ```python
-from sourcer import Grammar
+>>> from sourcer import Grammar
+>>> g = Grammar(r'''
+...     start = "Hello" >> /[a-zA-Z]+/
+...     ignore /[ \t]+/
+...     ignore "," | "." | "!" | "?"
+... ''')
+>>> g.parse('Hello, World!')
+'World'
 
-g = Grammar(r'''
-    start = "Hello" >> /[a-zA-Z]+/
-
-    ignore /[ \t]+/
-    ignore "," | "." | "!" | "?"
-''')
-
-assert g.parse('Hello, World!') == 'World'
-assert g.parse('Hello?! Anybody?!') == 'Anybody'
+>>> g.parse('Hello?? Anybody?!')
+'Anybody'
 ```
 
 Notes:
