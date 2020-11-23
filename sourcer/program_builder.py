@@ -13,8 +13,6 @@ class ProgramBuilder:
         self._buffer = []
         self._num_blocks = 1
         self._max_num_blocks = 19
-        self._num_stack_frames = 0
-        self._max_num_stack_frames = 800
 
     def generate_source_code(self):
         writer = ProgramWriter()
