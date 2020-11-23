@@ -13,7 +13,6 @@ class ProgramBuilder:
         self._buffer = []
         self._num_blocks = 1
         self._max_num_blocks = 19
-        self._id_counter = 0
         self._num_stack_frames = 0
         self._max_num_stack_frames = 800
 
@@ -49,10 +48,6 @@ class ProgramBuilder:
             writer.write_str('\n')
 
         return writer._out.getvalue()
-
-    def reserve_id(self):
-        self._id_counter += 1
-        return self._id_counter
 
     def has_available_blocks(self, num_blocks):
         return self._num_blocks + num_blocks <= self._max_num_blocks
