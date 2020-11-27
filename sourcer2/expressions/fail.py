@@ -15,7 +15,7 @@ class Fail(Expression):
         return 'Fail()' if self.message is None else f'Fail({self.message!r})'
 
     def _compile(self, out):
-        out += RESULT << self._error_func()
+        out += RESULT << self.error_func()
         out += STATUS << False
 
     def complain(self):

@@ -16,7 +16,7 @@ class Let(Expression):
     def __str__(self):
         return f'let {self.name} = {self.expr} in\n{self.body}'
 
-    def _operand_string(self):
+    def operand_string(self):
         return f'({self})'
 
     def always_succeeds(self):

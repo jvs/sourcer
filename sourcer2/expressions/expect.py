@@ -40,7 +40,7 @@ class ExpectNot(Expression):
 
         with out.IF(STATUS):
             out += STATUS << False
-            out += RESULT << self._error_func()
+            out += RESULT << self.error_func()
 
         with out.ELSE():
             out += STATUS << True

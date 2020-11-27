@@ -45,7 +45,7 @@ class Regex(Expression):
             out += STATUS << True
 
         with out.ELSE():
-            out += RESULT << self._error_func()
+            out += RESULT << self.error_func()
             out += STATUS << False
 
     def complain(self):

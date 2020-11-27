@@ -1,4 +1,5 @@
 from .base import Expression
+from .choice import Choice
 
 
 class OperatorPrecedence(Expression):

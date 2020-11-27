@@ -18,7 +18,7 @@ class List(Expression):
                 raise Exception('Expected min_len to be less than max_len')
 
     def __str__(self):
-        arg = self.expr._operand_string()
+        arg = self.expr.operand_string()
 
         if self.min_len is None and self.max_len is None:
             op = '*'

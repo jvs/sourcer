@@ -21,7 +21,7 @@ class Call(Expression):
         for arg in self.args:
             is_kw = isinstance(arg, KeywordArg)
             expr = arg.expr if is_kw else arg
-            value = expr._argumentize(out)
+            value = expr.argumentize(out)
 
             if is_kw:
                 kwargs.append((arg.name, value))

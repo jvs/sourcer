@@ -6,6 +6,7 @@ from .constants import CALL, POS, RESULT, STATUS
 
 class Ref(Expression):
     is_commented = False
+    is_reference = True
     num_blocks = 0
 
     def __init__(self, name):

@@ -24,8 +24,8 @@ class Str(Expression):
     def can_partially_succeed(self):
         return False
 
-    def _argumentize(self, out):
-        value = Expression._argumentize(self, out)
+    def argumentize(self, out):
+        value = Expression.argumentize(self, out)
         wrap = Code('_wrap_string_literal')
         return out.var('arg', wrap(expr.value, value))
 
@@ -44,7 +44,7 @@ class Str(Expression):
             out += STATUS << True
 
         with out.ELSE():
-            out += RESULT << self._error_func()
+            out += RESULT << self.error_func()
             out += STATUS << False
 
     def complain(self):

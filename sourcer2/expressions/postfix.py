@@ -1,23 +1,27 @@
+from outsourcer import Code
+
+from . import utils
+from .constants import BREAK, POS, RESULT, STATUS
+from .precedence import OperatorPrecedenceRule
+
 
 class Postfix(OperatorPrecedenceRule):
     num_blocks = 3
 
-    def _compile(self, pb):
-        with _if_succeeds(pb, self.operand):
-            staging = pb.var('staging', RESULT)
-            checkpoint = pb.var('checkpoint', POS)
+    def _compile(self, out):
+        with utils.if_succeeds(out, self.operand):
+            staging = out.var('staging', RESULT)
+            checkpoint = out.var('checkpoint', POS)
 
-            with pb.loop():
-                self.operators.compile(pb)
+            with out.WHILE(True):
+                self.operators.compile(out)
 
-                with pb.IF(STATUS):
-                    pb(staging << code.Postfix(staging, RESULT))
-                    pb(checkpoint << POS)
+                with out.IF(STATUS):
+                    out += staging << Code('Postfix')(staging, RESULT)
+                    out += checkpoint << POS
 
-                with pb.ELSE():
-                    pb(
-                        STATUS << Val(True),
-                        RESULT << staging,
-                        POS << checkpoint,
-                        BREAK,
-                    )
+                with out.ELSE():
+                    out += POS << checkpoint
+                    out += RESULT << staging
+                    out += STATUS << True
+                    out += BREAK

@@ -1,26 +1,35 @@
+from outsourcer import Code
+
+from . import utils
+from .constants import BREAK, POS, RESULT, STATUS
+from .precedence import OperatorPrecedenceRule
+
 
 class Prefix(OperatorPrecedenceRule):
     num_blocks = 2
 
-    def _compile(self, pb):
-        prev = pb.var('prev', Val(None))
-        checkpoint = pb.var('checkpoint', POS)
-        staging = pb.var('staging')
+    def _compile(self, out):
+        prev = out.var('prev', None)
+        checkpoint = out.var('checkpoint', POS)
+        staging = out.var('staging')
 
-        with pb.loop():
-            with _if_fails(pb, self.operators):
-                pb(POS << checkpoint, BREAK)
+        with out.WHILE(True):
+            with utils.if_fails(out, self.operators):
+                out += POS << checkpoint
+                out += BREAK
 
-            pb(checkpoint << POS)
-            step = pb.var('step', code.Prefix(RESULT, Val(None)))
+            out += checkpoint << POS
+            step = out.var('step', Code('Prefix')(RESULT, None))
 
-            with pb.IF(Code(prev, ' is ', Val(None))):
-                pb(prev << staging << step)
+            with out.IF(Code(prev, ' is ', None)):
+                out += prev << staging << step
 
-            with pb.ELSE():
-                pb(prev.right << step, prev << step)
+            with out.ELSE():
+                out += prev.right << step
+                out += prev << step
 
-        self.operand.compile(pb)
+        self.operand.compile(out)
 
-        with pb.IF(Code(STATUS, ' and ', prev)):
-            pb(prev.right << RESULT, RESULT << staging)
+        with out.IF(Code(STATUS, ' and ', prev)):
+            out += prev.right << RESULT
+            out += RESULT << staging

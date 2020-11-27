@@ -15,7 +15,7 @@ class Apply(Expression):
         op = '<|' if self.apply_left else '|>'
         return utils.infix_str(self.expr1, op, self.expr2)
 
-    def _operand_string(self):
+    def operand_string(self):
         return f'({self})'
 
     def always_succeeds(self):

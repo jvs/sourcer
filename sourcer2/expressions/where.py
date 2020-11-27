@@ -13,7 +13,7 @@ class Where(Expression):
     def __str__(self):
         return utils.infix_str(self.expr, 'where', self.predicate)
 
-    def _operand_string(self):
+    def operand_string(self):
         return f'({self})'
 
     def _compile(self, out):
@@ -25,7 +25,7 @@ class Where(Expression):
                     out += RESULT << arg
 
                 with out.ELSE():
-                    out += RESULT << self._error_func()
+                    out += RESULT << self.error_func()
                     out += STATUS << False
 
     def complain(self):

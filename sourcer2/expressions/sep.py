@@ -26,7 +26,7 @@ class Sep(Expression):
         op = '/?' if self.allow_trailer else '//'
         return utils.infix_str(self.expr, op, self.separator)
 
-    def _operand_string(self):
+    def operand_string(self):
         return f'({self})'
 
     def always_succeeds(self):

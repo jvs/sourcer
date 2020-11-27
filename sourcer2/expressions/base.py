@@ -1,11 +1,14 @@
+from collections import defaultdict
 from outsourcer import Code
-
 from .constants import STATUS, RESULT, POS
+
+
 class Expression:
-    has_name = False
+    is_binding = False
     has_params = False
 
     is_commented = True
+    is_reference = False
     is_tagged = True
 
     def always_succeeds(self):
@@ -18,7 +21,7 @@ class Expression:
 
     def compile(self, out):
         if not out.has_available_blocks(self.num_blocks):
-            func, params = functionalize(out, self, is_generator=False)
+            func, params = self.functionalize(out, is_generator=False)
             out += (STATUS, RESULT, POS) << func(*params)
             return
 
@@ -33,27 +36,37 @@ class Expression:
         if self.is_tagged:
             out.add_comment(f'End {self.__class__.__name__}')
 
-    def _error_func(self):
+    def error_func(self):
         return Code(f'_raise_error{self.program_id}')
 
-    def _operand_string(self):
+    def operand_string(self):
         return str(self)
 
-    def _argumentize(self, out):
-        func, params = functionalize(out, self, is_generator=True)
+    def argumentize(self, out):
+        func, params = self.functionalize(out, is_generator=True)
         if len(params) <= 2:
             return func
+        else:
+            _ParseFunction = Code('_ParseFunction')
+            value = _ParseFunction(func, tuple(params[2:]), ())
+            return out.var('arg', value)
 
-        _ParseFunction = Code('_ParseFunction')
-        args = tuple(params[2:])
-        value = _ParseFunction(func, args, ())
-        return out.var('arg', value)
+    def functionalize(self, out, is_generator=False):
+        name = f'_parse_function_{self.program_id}'
+        params = [str(TEXT), str(POS)] + list(sorted(self.freevars()))
 
-    def _functionalize(self, out):
-        pass
+        with out.global_section():
+            with out.DEF(name, params):
+                self.compile(out)
+                method = out.YIELD if is_generator else out.RETURN
+                method((STATUS, RESULT, POS))
 
-    def _freevars(self):
-        pass
+        return Code(name), [Code(x) for x in params]
+
+    def freevars(self):
+        counter = SymbolCounter()
+        visit(self, counter.previsit, counter.postvisit)
+        return counter.freevars
 
 
 def visit(expr, previsitor, postvisitor=None):
@@ -69,3 +82,31 @@ def visit(expr, previsitor, postvisitor=None):
     elif isinstance(expr, (list, tuple)):
         for child in expr:
             visit(child, previsitor, postvisitor)
+
+
+class SymbolCounter:
+    def __init__(self):
+        self.freevars = set()
+        self._counts = defaultdict(int)
+
+    def previsit(self, node):
+        if node.is_binding:
+            self._counts[node.name] += 1
+
+        if node.has_params and node.params:
+            for param in node.params:
+                self._counts[param] += 1
+
+        if node.is_reference and node.is_local and not self.is_bound(node.name):
+            self.freevars.add(node.name)
+
+    def postvisit(self, node):
+        if node.is_binding:
+            self._counts[node.name] -= 1
+
+        if node.has_params and node.params:
+            for param in node.params:
+                self._counts[param] -= 1
+
+    def is_bound(self, name):
+        return self._counts[name] > 0

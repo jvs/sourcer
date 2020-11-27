@@ -14,7 +14,7 @@ class Choice(Expression):
     def __str__(self):
         return ' | '.join(str(x) for x in self.exprs)
 
-    def _operand_string(self):
+    def operand_string(self):
         return f'({self})'
 
     def always_succeeds(self):
@@ -33,7 +33,7 @@ class Choice(Expression):
         farthest_pos = out.var('farthest_pos') if needs_err else None
 
         if needs_err:
-            farthest_err = out.var('farthest_err', self._error_func())
+            farthest_err = out.var('farthest_err', self.error_func())
 
         if needs_err and needs_backtrack:
             out += backtrack << farthest_pos << POS
