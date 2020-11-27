@@ -3,7 +3,9 @@ from string import Template
 from outsourcer import CodeBuilder, Code, Val
 
 from . import expressions as ex
-from .expressions import Choice, Class, Ref, Right, Rule, Skip, visit
+from .expressions import (
+    TEXT, POS, Choice, Class, Ref, Right, Rule, Skip, visit
+)
 
 
 def generate_source_code(docstring, nodes):
@@ -128,28 +130,28 @@ def generate_source_code(docstring, nodes):
                     out += LINE << None
                     out += COL << None
 
-            with out.ELSE():
-                out += (LINE, COL) << Code('_get_line_and_column')(TEXT, POS),
-                out += Code('excerpt') << Code('_extract_excerpt')(TEXT, POS, COL),
-                out += TITLE << Code(
-                    r"f'Error on line {line}, column {col}:\n{excerpt}\n'"
-                )
+                with out.ELSE():
+                    out += (LINE, COL) << Code('_get_line_and_column')(TEXT, POS)
+                    out += Code('excerpt') << Code('_extract_excerpt')(TEXT, POS, COL)
+                    out += TITLE << Code(
+                        r"f'Error on line {line}, column {col}:\n{excerpt}\n'"
+                    )
 
-            delegate = error_delegates.get(expr.program_id, expr)
-            out.extend([
-                Code('details = ('),
-                Val(f'Failed to parse the {rule.name!r} rule, at the expression:\n'),
-                Val(f'    {str(delegate)}\n\n'),
-                Val(expr.complain()),
-                Code(')'),
-                Code('raise ParseError(', TITLE + Code('details'), POS, LINE, COL, ')'),
-            ])
+                delegate = error_delegates.get(expr.program_id, expr)
+                out.extend([
+                    Code('details = ('),
+                    Val(f'Failed to parse the {rule.name!r} rule, at the expression:\n'),
+                    Val(f'    {str(delegate)}\n\n'),
+                    Val(expr.complain()),
+                    Code(')'),
+                    Code('raise ParseError', (TITLE + Code('details'), POS, LINE, COL)),
+                ])
 
     for rule in rules:
         rule.compile(out)
         visit(rule, lambda x: maybe_compile_error_message(out, rule, x))
 
-    return out.generate_source_code()
+    return out.write_source()
 
 
 def _assign_ids(rules):

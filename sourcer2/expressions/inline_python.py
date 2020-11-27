@@ -25,6 +25,9 @@ class PythonExpression(Expression):
         out += RESULT << Code(self.source_code)
         out += STATUS << True
 
+    def argumentize(self, out):
+        return Code(self.source_code)
+
 
 class PythonSection:
     def __init__(self, source_code):

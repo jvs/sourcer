@@ -4,7 +4,7 @@ from .base import SymbolCounter, visit
 from .call import Call, KeywordArg
 from .choice import Choice
 from .class_ import Class
-from .constants import CALL
+from .constants import CALL, POS, TEXT
 from .discard import Discard
 from .expect import Expect, ExpectNot
 from .fail import Fail

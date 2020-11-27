@@ -25,9 +25,9 @@ class Str(Expression):
         return False
 
     def argumentize(self, out):
-        value = Expression.argumentize(self, out)
         wrap = Code('_wrap_string_literal')
-        return out.var('arg', wrap(expr.value, value))
+        value = Expression.argumentize(self, out)
+        return out.var('arg', wrap(self.value, value))
 
     def _compile(self, out):
         if not self.value:

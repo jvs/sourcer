@@ -23,3 +23,6 @@ class Ref(Expression):
 
     def _compile(self, out):
         out += (STATUS, RESULT, POS) << Yield((CALL, Code(self.resolved), POS))
+
+    def argumentize(self, out):
+        return Code(self.resolved)

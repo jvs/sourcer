@@ -7,7 +7,6 @@ from .seq import Seq
 
 
 class Class(Expression):
-    is_binding = True
     has_params = True
 
     is_tagged = False

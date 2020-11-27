@@ -6,6 +6,7 @@ from .constants import RESULT
 
 
 class Let(Expression):
+    defines_local = True
     num_blocks = 1
 
     def __init__(self, name, expr, body):

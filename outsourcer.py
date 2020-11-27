@@ -78,18 +78,18 @@ class CodeBuilder:
 
     @contextmanager
     def CLASS(self, name, superclass=None):
-        extra = f'({superclass})' if superclass else ''
-        self.append(Code('class ', name, extra, ':'))
         with self._new_block() as body:
             yield
+        extra = f'({superclass})' if superclass else ''
+        self.append(Code('class ', name, extra, ':'))
         self.append(_Block(body))
         self.add_newline()
 
     @contextmanager
     def DEF(self, name, params):
-        self.append(Code('def ', name, '(', ', '.join(params), '):'))
         with self._new_block() as body:
             yield
+        self.append(Code('def ', name, '(', ', '.join(params), '):'))
         self.append(_Block(body))
         self.add_newline()
 
@@ -100,13 +100,13 @@ class CodeBuilder:
         return self._control_block('if', condition)
 
     def IF_NOT(self, condition):
-        return self.IF(Code('not', Val(condition)))
+        return self.IF(Code('not ', Val(condition)))
 
     @contextmanager
     def ELSE(self):
-        self.append('else:')
         with self._new_block() as else_body:
             yield
+        self.append('else:')
         self.append(_Block(else_body))
 
     def FOR(self, item, in_):
@@ -121,18 +121,19 @@ class CodeBuilder:
 
     @contextmanager
     def global_section(self):
-        saved = self._statements
+        saved = self._statements, self._num_blocks
         self._statements = self._root
+        self._num_blocks = 1
         try:
             yield
         finally:
-            self._statements = saved
+            self._statements, self._num_blocks = saved
 
     @contextmanager
     def _control_block(self, keyword, condition):
-        self.append(Code(keyword, ' ', Val(condition), ':'))
         with self._new_block() as body:
             yield
+        self.append(Code(keyword, ' ', Val(condition), ':'))
         self.append(_Block(body))
 
     @contextmanager

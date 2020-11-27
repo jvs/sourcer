@@ -35,6 +35,7 @@ class Regex(Expression):
         flags = '_IGNORECASE' if self.ignore_case else '0'
         bound_method = f'_compile_re({self.pattern!r}, flags={flags}).match'
         matcher = out.define_global_constant('matcher', Code(bound_method))
+        out.add_newline()
 
         match = out.var('match', matcher(TEXT, POS))
         end = match.end()

@@ -39,6 +39,8 @@ class Choice(Expression):
             out += backtrack << farthest_pos << POS
         elif needs_backtrack:
             out += backtrack << POS
+        elif needs_err:
+            out += farthest_pos << POS
 
         with utils.breakable(out):
             for i, expr in enumerate(self.exprs):

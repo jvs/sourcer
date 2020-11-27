@@ -84,7 +84,7 @@ class RightAssoc(OperatorPrecedenceRule):
                 out += STATUS << True
                 out += BREAK
 
-            step = Code('Infix')(operand, RESULT, Val(None))
+            step = Code('Infix')(operand, RESULT, None)
 
             with out.IF(prev):
                 out += backup << prev

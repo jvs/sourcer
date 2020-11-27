@@ -6,7 +6,6 @@ from .constants import POS, RESULT, STATUS, TEXT
 
 
 class Rule(Expression):
-    is_binding = True
     has_params = True
 
     is_tagged = False

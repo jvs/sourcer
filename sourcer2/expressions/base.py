@@ -1,10 +1,10 @@
 from collections import defaultdict
 from outsourcer import Code
-from .constants import STATUS, RESULT, POS
+from .constants import POS, RESULT, STATUS, TEXT
 
 
 class Expression:
-    is_binding = False
+    defines_local = False
     has_params = False
 
     is_commented = True
@@ -90,7 +90,7 @@ class SymbolCounter:
         self._counts = defaultdict(int)
 
     def previsit(self, node):
-        if node.is_binding:
+        if node.defines_local:
             self._counts[node.name] += 1
 
         if node.has_params and node.params:
@@ -101,7 +101,7 @@ class SymbolCounter:
             self.freevars.add(node.name)
 
     def postvisit(self, node):
-        if node.is_binding:
+        if node.defines_local:
             self._counts[node.name] -= 1
 
         if node.has_params and node.params:
