@@ -45,7 +45,7 @@ class Class(Expression):
                 out.YIELD((STATUS, RESULT, POS))
 
     def _compile_class_body(self, out, parse_func, field_names):
-        out.add_comment(str(self))
+        out.add_docstring(str(self))
         out += Code('_fields') << tuple(field_names)
         out.add_newline()
 

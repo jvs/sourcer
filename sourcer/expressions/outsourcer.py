@@ -55,14 +55,14 @@ class CodeBuilder:
         return Code(f'{base_name}{self._names[base_name]}')
 
     def add_comment(self, content):
-        if '\n' not in content:
-            ready = '# ' + content
-        else:
-            safe = content.replace('\\', '\\\\') .replace('"""', '\\"\\"\\"')
-            indent = '    ' * (self._num_blocks - 1)
-            body = textwrap.indent(safe, indent)
-            ready = f'"""\n{body}\n{indent}"""'
-        self.append(Code(ready))
+        for line in content.split('\n'):
+            self.append(Code('# ', line))
+
+    def add_docstring(self, content):
+        safe = content.replace('\\', '\\\\') .replace('"""', '\\"\\"\\"')
+        indent = '    ' * (self._num_blocks - 1)
+        body = textwrap.indent(safe, indent)
+        self.append(Code(f'"""\n{body}\n{indent}"""'))
 
     def add_newline(self):
         self.append('')

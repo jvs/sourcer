@@ -10,7 +10,7 @@ from .expressions import (
 
 def generate_source_code(docstring, nodes):
     out = CodeBuilder()
-    out.add_comment(docstring)
+    out.add_docstring(docstring)
     out += Code(_program_setup)
 
     # Collect all the rules and stuff.

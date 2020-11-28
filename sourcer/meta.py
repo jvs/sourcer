@@ -3091,17 +3091,15 @@ def _parse_function_244(_text, _pos):
 def _try_Expr(_text, _pos):
     # Rule 'Expr'
     # Begin OperatorPrecedence
-    """
-    OperatorPrecedence(
-        Atom,
-        Postfix(ArgList),
-        Postfix('?' | '*' | '+' | Repeat),
-        LeftAssoc(wrap('//' | '/?')),
-        LeftAssoc(wrap('<<' | '>>')),
-        LeftAssoc(wrap('<|' | '|>' | 'where')),
-        LeftAssoc(wrap('|'))
-    )
-    """
+    # OperatorPrecedence(
+    #     Atom,
+    #     Postfix(ArgList),
+    #     Postfix('?' | '*' | '+' | Repeat),
+    #     LeftAssoc(wrap('//' | '/?')),
+    #     LeftAssoc(wrap('<<' | '>>')),
+    #     LeftAssoc(wrap('<|' | '|>' | 'where')),
+    #     LeftAssoc(wrap('|'))
+    # )
     # Begin LeftAssoc
     # LeftAssoc(wrap('|'))
     is_first1 = True
