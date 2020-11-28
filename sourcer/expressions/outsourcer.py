@@ -300,8 +300,6 @@ def Yield(obj):
 
 class _Block:
     def __init__(self, statements):
-        if not isinstance(statements, (list, tuple)):
-            raise TypeError('Expected list of tuple')
         self._statements = statements or ['pass']
 
     def _write_block(self, writer):
