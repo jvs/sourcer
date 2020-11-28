@@ -19,6 +19,9 @@ class Expression:
         # partially succeed.
         return not self.always_succeeds()
 
+    def precompile(self, out):
+        pass
+
     def compile(self, out):
         if not out.has_available_blocks(self.num_blocks):
             func, params = self.functionalize(out, is_generator=False)

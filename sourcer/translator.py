@@ -148,6 +148,11 @@ def generate_source_code(docstring, nodes):
                 ])
 
     for rule in rules:
+        visit(rule, lambda x: x.precompile(out))
+
+    out.add_newline()
+
+    for rule in rules:
         rule.compile(out)
         visit(rule, lambda x: maybe_compile_error_message(out, rule, x))
 

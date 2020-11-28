@@ -13,6 +13,7 @@ OMITTED = object()
 
 class CodeBuilder:
     def __init__(self):
+        self.state = {}
         self._root = []
         self._statements = self._root
         self._num_blocks = 1
@@ -39,17 +40,6 @@ class CodeBuilder:
 
     def append_global(self, statement):
         self._root.append(statement)
-
-    def define_global_constant(self, base_name, value):
-        value = Val(value)
-        key = repr(value)
-        if key in self._global_constants:
-            return self._global_constants[key]
-        else:
-            result = self._reserve_name(base_name)
-            self._global_constants[key] = result
-            self._root.append(result << value)
-            return result
 
     def has_available_blocks(self, num_blocks):
         return self._num_blocks + num_blocks <= self._max_num_blocks

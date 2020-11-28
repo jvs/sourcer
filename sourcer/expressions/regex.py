@@ -31,13 +31,19 @@ class Regex(Expression):
     def can_partially_succeed(self):
         return False
 
-    def _compile(self, out):
+    def _match_func(self):
         flags = '_IGNORECASE' if self.ignore_case else '0'
-        bound_method = f'_compile_re({self.pattern!r}, flags={flags}).match'
-        matcher = out.define_global_constant('matcher', Code(bound_method))
-        out.add_newline()
+        return f'_compile_re({self.pattern!r}, flags={flags}).match'
 
-        match = out.var('match', matcher(TEXT, POS))
+    def precompile(self, out):
+        func = self._match_func()
+        if func not in out.state:
+            with out.global_section():
+                out.state[func] = out.var('matcher', Code(func))
+
+    def _compile(self, out):
+        func = out.state[self._match_func()]
+        match = out.var('match', func(TEXT, POS))
         end = match.end()
 
         with out.IF(match):
