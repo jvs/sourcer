@@ -22,13 +22,6 @@ class Discard(Expression):
         return (self.expr1.always_succeeds()
             and self.expr2.always_succeeds())
 
-    def can_partially_succeed(self):
-        if self.always_succeeds():
-            return False
-        else:
-            return (self.expr1.can_partially_succeed()
-                or self.expr2.can_partially_succeed())
-
     def _compile(self, out):
         with utils.breakable(out):
             with utils.if_fails(out, self.expr1):
