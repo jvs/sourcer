@@ -408,11 +408,22 @@ def _map_index_to_line_and_column(text):
     return line_numbers, column_numbers
 
 matcher1 = _compile_re('[ \\t]+', flags=0).match
+matcher2 = _compile_re('#[^\\r\\n]*', flags=0).match
+matcher3 = _compile_re('[\\r\\n][\\s]*', flags=0).match
+matcher4 = _compile_re('[_a-zA-Z][_a-zA-Z0-9]*', flags=0).match
+matcher5 = _compile_re('(?s)[bB]?("""([^\\\\]|\\\\.)*?""")[iI]?', flags=0).match
+matcher6 = _compile_re("(?s)[bB]?('''([^\\\\]|\\\\.)*?''')[iI]?", flags=0).match
+matcher7 = _compile_re('[bB]?("([^"\\\\]|\\\\.)*")[iI]?', flags=0).match
+matcher8 = _compile_re("[bB]?('([^'\\\\]|\\\\.)*')[iI]?", flags=0).match
+matcher9 = _compile_re('[bB]?\\/([^\\/\\\\]|\\\\.)*\\/[iI]?', flags=0).match
+matcher10 = _compile_re('(?s)```.*?```', flags=0).match
+matcher11 = _compile_re('`.*?`', flags=0).match
+matcher12 = _compile_re('\\d+', flags=0).match
+
 def _try_Space(_text, _pos):
     # Rule 'Space'
     # Begin Regex
     # /[ \\t]+/
-
     match1 = matcher1(_text, _pos)
     if match1:
         _result = match1.group(0)
@@ -446,12 +457,10 @@ def _raise_error2(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-matcher2 = _compile_re('#[^\\r\\n]*', flags=0).match
 def _try_Comment(_text, _pos):
     # Rule 'Comment'
     # Begin Regex
     # /#[^\\r\\n]*/
-
     match2 = matcher2(_text, _pos)
     if match2:
         _result = match2.group(0)
@@ -485,12 +494,10 @@ def _raise_error4(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-matcher3 = _compile_re('[\\r\\n][\\s]*', flags=0).match
 def _try_Newline(_text, _pos):
     # Rule 'Newline'
     # Begin Regex
     # /[\\r\\n][\\s]*/
-
     match3 = matcher3(_text, _pos)
     if match3:
         _result = match3.group(0)
@@ -611,12 +618,10 @@ def _raise_error11(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-matcher4 = _compile_re('[_a-zA-Z][_a-zA-Z0-9]*', flags=0).match
 def _try_Name(_text, _pos):
     # Rule 'Name'
     # Begin Regex
     # /[_a-zA-Z][_a-zA-Z0-9]*/
-
     match4 = matcher4(_text, _pos)
     if match4:
         _result = match4.group(0)
@@ -1047,10 +1052,6 @@ class StringLiteral(Node):
         return _run(text, pos, _try_StringLiteral, fullparse)
 
 
-matcher5 = _compile_re('(?s)[bB]?("""([^\\\\]|\\\\.)*?""")[iI]?', flags=0).match
-matcher6 = _compile_re("(?s)[bB]?('''([^\\\\]|\\\\.)*?''')[iI]?", flags=0).match
-matcher7 = _compile_re('[bB]?("([^"\\\\]|\\\\.)*")[iI]?', flags=0).match
-matcher8 = _compile_re("[bB]?('([^'\\\\]|\\\\.)*')[iI]?", flags=0).match
 def _try_StringLiteral(_text, _pos):
     # Begin Seq
     start_pos1 = _pos
@@ -1062,7 +1063,6 @@ def _try_StringLiteral(_text, _pos):
             # Option 1:
             # Begin Regex
             # /(?s)[bB]?("""([^\\\\]|\\\\.)*?""")[iI]?/
-
             match5 = matcher5(_text, _pos)
             if match5:
                 _result = match5.group(0)
@@ -1077,7 +1077,6 @@ def _try_StringLiteral(_text, _pos):
             # Option 2:
             # Begin Regex
             # /(?s)[bB]?('''([^\\\\]|\\\\.)*?''')[iI]?/
-
             match6 = matcher6(_text, _pos)
             if match6:
                 _result = match6.group(0)
@@ -1092,7 +1091,6 @@ def _try_StringLiteral(_text, _pos):
             # Option 3:
             # Begin Regex
             # /[bB]?("([^"\\\\]|\\\\.)*")[iI]?/
-
             match7 = matcher7(_text, _pos)
             if match7:
                 _result = match7.group(0)
@@ -1107,7 +1105,6 @@ def _try_StringLiteral(_text, _pos):
             # Option 4:
             # Begin Regex
             # /[bB]?('([^'\\\\]|\\\\.)*')[iI]?/
-
             match8 = matcher8(_text, _pos)
             if match8:
                 _result = match8.group(0)
@@ -1232,14 +1229,12 @@ class RegexLiteral(Node):
         return _run(text, pos, _try_RegexLiteral, fullparse)
 
 
-matcher9 = _compile_re('[bB]?\\/([^\\/\\\\]|\\\\.)*\\/[iI]?', flags=0).match
 def _try_RegexLiteral(_text, _pos):
     # Begin Seq
     start_pos2 = _pos
     while True:
         # Begin Regex
         # /[bB]?\\/([^\\/\\\\]|\\\\.)*\\/[iI]?/
-
         match9 = matcher9(_text, _pos)
         if match9:
             _result = match9.group(0)
@@ -1294,7 +1289,6 @@ class PythonSection(Node):
         return _run(text, pos, _try_PythonSection, fullparse)
 
 
-matcher10 = _compile_re('(?s)```.*?```', flags=0).match
 def _try_PythonSection(_text, _pos):
     # Begin Seq
     start_pos3 = _pos
@@ -1303,7 +1297,6 @@ def _try_PythonSection(_text, _pos):
         # /(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
         # Begin Regex
         # /(?s)```.*?```/
-
         match10 = matcher10(_text, _pos)
         if match10:
             _result = match10.group(0)
@@ -1364,8 +1357,6 @@ class PythonExpression(Node):
         return _run(text, pos, _try_PythonExpression, fullparse)
 
 
-matcher11 = _compile_re('`.*?`', flags=0).match
-matcher12 = _compile_re('\\d+', flags=0).match
 def _try_PythonExpression(_text, _pos):
     # Begin Seq
     start_pos4 = _pos
@@ -1379,7 +1370,6 @@ def _try_PythonExpression(_text, _pos):
             # /`.*?`/ |> `lambda x: x[1:-1]`
             # Begin Regex
             # /`.*?`/
-
             match11 = matcher11(_text, _pos)
             if match11:
                 _result = match11.group(0)
@@ -1404,7 +1394,6 @@ def _try_PythonExpression(_text, _pos):
             # Option 2:
             # Begin Regex
             # /\\d+/
-
             match12 = matcher12(_text, _pos)
             if match12:
                 _result = match12.group(0)
