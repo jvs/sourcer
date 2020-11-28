@@ -59,9 +59,9 @@ class CodeBuilder:
             ready = '# ' + content
         else:
             safe = content.replace('\\', '\\\\') .replace('"""', '\\"\\"\\"')
-            body = textwrap.indent(safe, '    ' * self._num_blocks)
-            tail = '    ' * (self._num_blocks - 1)
-            ready = f'"""\n{body}\n{tail}"""'
+            indent = '    ' * (self._num_blocks - 1)
+            body = textwrap.indent(safe, indent)
+            ready = f'"""\n{body}\n{indent}"""'
         self.append(Code(ready))
 
     def add_newline(self):
