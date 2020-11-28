@@ -1,4 +1,4 @@
-from outsourcer import Code
+from .outsourcer import Code
 
 from . import utils
 from .constants import BREAK, POS, RESULT, STATUS

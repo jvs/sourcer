@@ -1,4 +1,4 @@
-from outsourcer import Code
+from .outsourcer import Code
 
 
 BREAK = Code('break')

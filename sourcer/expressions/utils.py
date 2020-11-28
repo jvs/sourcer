@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from outsourcer import Code, Yield
+from .outsourcer import Code, Yield
 from .constants import BREAK, CALL, STATUS
 
 

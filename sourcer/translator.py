@@ -1,6 +1,6 @@
 from string import Template
 
-from outsourcer import CodeBuilder, Code, Val
+from .expressions.outsourcer import CodeBuilder, Code, Val
 
 from . import expressions as ex
 from .expressions import (

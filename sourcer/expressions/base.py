@@ -1,5 +1,5 @@
 from collections import defaultdict
-from outsourcer import Code
+from .outsourcer import Code
 from .constants import POS, RESULT, STATUS, TEXT
 
 
