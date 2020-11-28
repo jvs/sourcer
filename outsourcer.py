@@ -35,6 +35,7 @@ class CodeBuilder:
 
     def extend(self, statements):
         self._statements.extend(statements)
+        return self
 
     def append_global(self, statement):
         self._root.append(statement)
@@ -174,12 +175,6 @@ class Code:
     def __rlshift__(self, other):
         return Code(Val(other), ' = ', self)
 
-    def __rshift__(self, other):
-        return Code(self, ' : ', Val(other))
-
-    def __rrshift__(self, other):
-        return Code(Val(other), ' : ', self)
-
     def __call__(self, *args, **kwargs):
         parts = [self, '(']
 
@@ -298,14 +293,11 @@ class Code:
     def __le__(self, other):
         return _binop(self, '<=', other)
 
-    def __int__(self):
-        return Code('int(', self, ')')
+    def __rshift__(self, other):
+        return _binop(self, '>>', other)
 
-    def __float__(self):
-        return Code('float(', self, ')')
-
-    def __complex__(self):
-        return Code('complex(', self, ')')
+    def __rrshift__(self, other):
+        return _binop(other, '>>', self)
 
 
 def Val(obj):

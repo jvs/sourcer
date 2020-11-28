@@ -38,7 +38,7 @@ class Str(Expression):
         value = out.var('value', self.value)
         end = out.var('end', POS + len(self.value))
 
-        with out.IF(TEXT[POS >> end] == value):
+        with out.IF(TEXT[POS : end] == value):
             out += RESULT << value
             out += POS << (utils.skip_ignored(end) if self.skip_ignored else end)
             out += STATUS << True
