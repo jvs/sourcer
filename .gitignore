@@ -2,6 +2,7 @@
 .DS_Store
 .coverage
 htmlcov/
+docs/_build/
 
 # Special work-in-progress file.
 wip.py
