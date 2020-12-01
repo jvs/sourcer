@@ -48,6 +48,22 @@ black: image
 wip:
 	$(RUN) python wip.py
 
+# How to publish a release:
+# - Update __version__ in sourcer/__init__.py.
+# - Commit / merge to "main" branch.
+# - Run:
+#   - make tag
+#   - make upload_test
+#   - make upload_real
+
+tag: clean
+	$(eval VERSION=$(shell sed -n -E \
+		"s/^__version__ = [\'\"]([^\'\"]+)[\'\"]$$/\1/p" \
+		sourcer/__init__.py))
+	@echo Tagging version $(VERSION)
+	git tag -a $(VERSION) -m "Version $(VERSION)"
+	git push origin $(VERSION)
+
 # Build the distributeion.
 dist:
 	rm -rf dist/
