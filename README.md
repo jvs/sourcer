@@ -2,24 +2,32 @@
 
 A parsing library for Python.
 
+
+## What's it look like?
+
+First, you define your grammar:
+
 ```python
 from sourcer import Grammar
 
 g = Grammar(r'''
-    start = "Hello" >> /[a-zA-Z]+/
+    start = "Hello" >> /\w+/
 
-    ignore /[ \t]+/
-    ignore "," | "." | "!" | "?"
+    ignore "," | "." | "!" | "?" | " "
 ''')
-
-assert g.parse('Hello, World!') == 'World'
-assert g.parse('Hello?! Anybody?!') == 'Anybody'
 ```
 
-Notes:
+Sourcer compiles your grammar to a Python module.
 
-* `>>` means "discard the the left hand side"
-* `/.../` means "regular expression"
+Then, you use your grammar to parse things:
+
+```python
+>>> g.parse('Hello, World!')
+'World'
+
+>>> g.parse('Hello?? Anybody?!')
+'Anybody'
+```
 
 
 ## Installation
@@ -30,10 +38,7 @@ Use pip:
 $ python3 -m pip install sourcer
 ```
 
-Notes:
-
-* Sourcer is a pure Python library, with no dependencies beyond the standard library.
-* Sourcer requires Python version 3.6 or later.
+Sourcer requires Python version 3.6 or later.
 
 
 ## Why does this exist?

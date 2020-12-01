@@ -11,7 +11,8 @@ image: Dockerfile
 
 # Remove random debris left around by python, pytest, and coverage.
 clean:
-	-rm -rf \
+	@echo "Removing generated files."
+	@rm -rf \
 		__pycache__ \
 		.coverage \
 		.pytest_cache \
@@ -20,7 +21,8 @@ clean:
 		docs/_build/* \
 		dist \
 		htmlcov \
-		MANIFEST
+		MANIFEST \
+		*.egg-info
 
 # Run the tests in a docker container.
 test: clean image
@@ -35,7 +37,7 @@ coverage: clean image
 
 # Build the documentation.
 docs:
-	$(RUN) python render_output_for_examples.py
+	$(RUN) python -m exemplary --paths "**/*.md" --render
 	$(MAKE) -C docs html
 
 # Run the code-formatter, but skip the generated python file.
@@ -45,6 +47,22 @@ black: image
 # You can use a file called "wip.py" to run experiments.
 wip:
 	$(RUN) python wip.py
+
+# How to publish a release:
+# - Update __version__ in sourcer/__init__.py.
+# - Commit / merge to "main" branch.
+# - Run:
+#   - make tag
+#   - make upload_test
+#   - make upload_real
+
+tag: clean
+	$(eval VERSION=$(shell sed -n -E \
+		"s/^__version__ = [\'\"]([^\'\"]+)[\'\"]$$/\1/p" \
+		sourcer/__init__.py))
+	@echo Tagging version $(VERSION)
+	git tag -a $(VERSION) -m "Version $(VERSION)"
+	git push origin $(VERSION)
 
 # Build the distributeion.
 dist:

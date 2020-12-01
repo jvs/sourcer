@@ -3,7 +3,6 @@
 If you ever need to parse something with significant indentation, you can start
 with this example and build it up.
 
-<!-- SETUP -->
 ```python
 from sourcer import Grammar
 
@@ -45,7 +44,6 @@ The grammar is compiled to a Python module, which is assigned to the variable ``
 The module defines a ``parse`` function, which you can use to parse strings.
 The ``parse`` function returns a list of statements:
 
-<!-- CONSOLE -->
 ```python
 >>> g.parse('print foo\nprint bar')
 [Print(name='foo'), Print(name='bar')]
@@ -61,7 +59,6 @@ The classes for our grammar are defined in the module that we assigned to `g`.
 You can create your own instances of these classes in Python. In this example,
 a test creates some `If` and `Print` objects, in order to validate the parser.
 
-<!-- TEST -->
 ```python
 result = g.parse('''
 print ok

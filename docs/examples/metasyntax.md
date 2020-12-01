@@ -3,6 +3,7 @@
 This example shows how Sourcer parses grammar definitions. (It's a definition of
 Sourcer's grammar, using Sourcer's grammar, if that makes any sense.)
 
+<!-- skip example -->
 ~~~
 ```
 import textwrap

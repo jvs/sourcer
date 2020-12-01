@@ -5,7 +5,6 @@ This is a short example to show how you can define classes within your grammars.
 Classes let you define the kinds of objects that you want to get back when you
 parse something.
 
-<!-- SETUP -->
 ```python
 from sourcer import Grammar
 
@@ -32,13 +31,12 @@ g = Grammar(r'''
 
     ignore /\s+/
 ''')
-
 ```
 
-The grammar is compiled to a Python module, which is assigned to the variable ``g``.
-The module defines a ``parse`` function, which you can use to parse strings:
+The grammar is compiled to a Python module, which is assigned to the variable
+``g``. The module defines a ``parse`` function, which you can use to parse
+strings:
 
-<!-- CONSOLE -->
 ```python
 >>> commands = g.parse('Print [10, 20); Delete (33, 44];')
 >>> len(commands)
@@ -52,7 +50,7 @@ Command(action='Delete', range=Range(start='(', left=33, right=44, end=']'))
 ```
 
 The Command objects have position information:
-<!-- CONSOLE -->
+
 ```python
 >>> info = commands[0]._position_info
 >>> info.start
@@ -66,7 +64,6 @@ _Position(index=13, line=1, column=14)
 The ``Command``, ``Range``, and ``_Position`` classes are defined in the grammar
 module, ``g``.
 
-<!-- TEST -->
 ```python
 # The `g` module defines the `Command` and `Range` classes. For example:
 assert g.parse('Copy [1, 2]; Delete [3, 4]') == [
