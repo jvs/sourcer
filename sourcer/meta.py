@@ -570,7 +570,7 @@ def _try_Sep(_text, _pos):
             _result = farthest_err1
             break
         # End Choice
-        if not _status:
+        if not (_status):
             _pos = checkpoint1
             break
         staging1.append(_result)
@@ -729,7 +729,7 @@ def _try_wrap(_text, _pos, x):
             # End Ref
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         staging2 = _result
         # Begin Skip
@@ -827,7 +827,7 @@ def _try_Params(_text, _pos):
             func2 = _ParseFunction(_try_wrap, (arg3,), ())
             (_status, _result, _pos) = (yield (3, func2, _pos))
             # End Call
-            if not _status:
+            if not (_status):
                 break
             # Begin Sep
             # wrap(Name) /? Comma
@@ -839,14 +839,14 @@ def _try_Params(_text, _pos):
                 func3 = _ParseFunction(_try_wrap, (_try_Name,), ())
                 (_status, _result, _pos) = (yield (3, func3, _pos))
                 # End Call
-                if not _status:
+                if not (_status):
                     break
                 staging3.append(_result)
                 checkpoint4 = _pos
                 # Begin Ref
                 (_status, _result, _pos) = (yield (3, _try_Comma, _pos))
                 # End Ref
-                if not _status:
+                if not (_status):
                     break
                 checkpoint4 = _pos
             _result = staging3
@@ -855,7 +855,7 @@ def _try_Params(_text, _pos):
             # End Sep
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         staging4 = _result
         # Begin Str
@@ -1120,7 +1120,7 @@ def _try_StringLiteral(_text, _pos):
             _result = farthest_err3
             break
         # End Choice
-        if not _status:
+        if not (_status):
             break
         value = _result
         _result = StringLiteral(value)
@@ -1244,7 +1244,7 @@ def _try_RegexLiteral(_text, _pos):
             _result = _raise_error61
             _status = False
         # End Regex
-        if not _status:
+        if not (_status):
             break
         value = _result
         _result = RegexLiteral(value)
@@ -1312,7 +1312,7 @@ def _try_PythonSection(_text, _pos):
             _status = True
             _result = _result(arg6)
         # End Apply
-        if not _status:
+        if not (_status):
             break
         value = _result
         _result = PythonSection(value)
@@ -1451,7 +1451,7 @@ def _try_PythonExpression(_text, _pos):
             _result = farthest_err4
             break
         # End Choice
-        if not _status:
+        if not (_status):
             break
         value = _result
         _result = PythonExpression(value)
@@ -1647,7 +1647,7 @@ def _try_RuleDef(_text, _pos):
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_IgnoreKeyword, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             _pos = backtrack4
             _result = None
             _status = True
@@ -1661,7 +1661,7 @@ def _try_RuleDef(_text, _pos):
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Name, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             break
         name = _result
         # Begin Discard
@@ -1673,7 +1673,7 @@ def _try_RuleDef(_text, _pos):
             # Begin Ref
             (_status, _result, _pos) = (yield (3, _try_Params, _pos))
             # End Ref
-            if not _status:
+            if not (_status):
                 _pos = backtrack5
                 _result = None
                 _status = True
@@ -1688,13 +1688,13 @@ def _try_RuleDef(_text, _pos):
                 _result = staging5
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         params = _result
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Expr, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             break
         expr = _result
         _result = RuleDef(is_ignored, name, params, expr)
@@ -1832,14 +1832,14 @@ def _try_ClassDef(_text, _pos):
             func7 = _ParseFunction(_try_kw, (arg9,), ())
             (_status, _result, _pos) = (yield (3, func7, _pos))
             # End Call
-            if not _status:
+            if not (_status):
                 break
             # Begin Ref
             (_status, _result, _pos) = (yield (3, _try_Name, _pos))
             # End Ref
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         name = _result
         # Begin Opt
@@ -1848,7 +1848,7 @@ def _try_ClassDef(_text, _pos):
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Params, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             _pos = backtrack6
             _result = None
             _status = True
@@ -1866,7 +1866,7 @@ def _try_ClassDef(_text, _pos):
                 func8 = _ParseFunction(_try_wrap, (arg10,), ())
                 (_status, _result, _pos) = (yield (3, func8, _pos))
                 # End Call
-                if not _status:
+                if not (_status):
                     break
                 # Begin Sep
                 # RuleDef /? Sep
@@ -1876,14 +1876,14 @@ def _try_ClassDef(_text, _pos):
                     # Begin Ref
                     (_status, _result, _pos) = (yield (3, _try_RuleDef, _pos))
                     # End Ref
-                    if not _status:
+                    if not (_status):
                         break
                     staging6.append(_result)
                     checkpoint5 = _pos
                     # Begin Ref
                     (_status, _result, _pos) = (yield (3, _try_Sep, _pos))
                     # End Ref
-                    if not _status:
+                    if not (_status):
                         break
                     checkpoint5 = _pos
                 _result = staging6
@@ -1892,7 +1892,7 @@ def _try_ClassDef(_text, _pos):
                 # End Sep
                 break
             # End Discard
-            if not _status:
+            if not (_status):
                 break
             staging7 = _result
             # Begin Str
@@ -1910,7 +1910,7 @@ def _try_ClassDef(_text, _pos):
                 _result = staging7
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         fields = _result
         _result = ClassDef(name, params, fields)
@@ -1997,14 +1997,14 @@ def _try_IgnoreStmt(_text, _pos):
             # Begin Ref
             (_status, _result, _pos) = (yield (3, _try_IgnoreKeyword, _pos))
             # End Ref
-            if not _status:
+            if not (_status):
                 break
             # Begin Ref
             (_status, _result, _pos) = (yield (3, _try_Expr, _pos))
             # End Ref
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         expr = _result
         _result = IgnoreStmt(expr)
@@ -2187,14 +2187,14 @@ def _try_LetExpression(_text, _pos):
                 func9 = _ParseFunction(_try_kw, (arg11,), ())
                 (_status, _result, _pos) = (yield (3, func9, _pos))
                 # End Call
-                if not _status:
+                if not (_status):
                     break
                 # Begin Ref
                 (_status, _result, _pos) = (yield (3, _try_Name, _pos))
                 # End Ref
                 break
             # End Discard
-            if not _status:
+            if not (_status):
                 break
             staging8 = _result
             # Begin Call
@@ -2207,7 +2207,7 @@ def _try_LetExpression(_text, _pos):
                 _result = staging8
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         name = _result
         # Begin Discard
@@ -2216,7 +2216,7 @@ def _try_LetExpression(_text, _pos):
             # Begin Ref
             (_status, _result, _pos) = (yield (3, _try_Expr, _pos))
             # End Ref
-            if not _status:
+            if not (_status):
                 break
             staging9 = _result
             # Begin Call
@@ -2228,13 +2228,13 @@ def _try_LetExpression(_text, _pos):
                 _result = staging9
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         expr = _result
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Expr, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             break
         body = _result
         _result = LetExpression(name, expr, body)
@@ -2318,7 +2318,7 @@ def _try_Ref(_text, _pos):
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Name, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             break
         value = _result
         _result = Ref(value)
@@ -2368,7 +2368,7 @@ def _try_ListLiteral(_text, _pos):
                     _result = _raise_error165
                     _status = False
                 # End Str
-                if not _status:
+                if not (_status):
                     break
                 # Begin Sep
                 # wrap(Expr) /? Comma
@@ -2380,14 +2380,14 @@ def _try_ListLiteral(_text, _pos):
                     func13 = _ParseFunction(_try_wrap, (_try_Expr,), ())
                     (_status, _result, _pos) = (yield (3, func13, _pos))
                     # End Call
-                    if not _status:
+                    if not (_status):
                         break
                     staging10.append(_result)
                     checkpoint6 = _pos
                     # Begin Ref
                     (_status, _result, _pos) = (yield (3, _try_Comma, _pos))
                     # End Ref
-                    if not _status:
+                    if not (_status):
                         break
                     checkpoint6 = _pos
                 _result = staging10
@@ -2396,7 +2396,7 @@ def _try_ListLiteral(_text, _pos):
                 # End Sep
                 break
             # End Discard
-            if not _status:
+            if not (_status):
                 break
             staging11 = _result
             # Begin Str
@@ -2414,7 +2414,7 @@ def _try_ListLiteral(_text, _pos):
                 _result = staging11
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         elements = _result
         _result = ListLiteral(elements)
@@ -2479,7 +2479,7 @@ def _try_Atom(_text, _pos):
                     _result = _raise_error176
                     _status = False
                 # End Str
-                if not _status:
+                if not (_status):
                     break
                 # Begin Call
                 # wrap(Expr)
@@ -2488,7 +2488,7 @@ def _try_Atom(_text, _pos):
                 # End Call
                 break
             # End Discard
-            if not _status:
+            if not (_status):
                 break
             staging12 = _result
             # Begin Str
@@ -2663,7 +2663,7 @@ def _try_KeywordArg(_text, _pos):
             # Begin Ref
             (_status, _result, _pos) = (yield (3, _try_Name, _pos))
             # End Ref
-            if not _status:
+            if not (_status):
                 break
             staging13 = _result
             # Begin Choice
@@ -2706,13 +2706,13 @@ def _try_KeywordArg(_text, _pos):
                 _result = staging13
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         name = _result
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Expr, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             break
         expr = _result
         _result = KeywordArg(name, expr)
@@ -2840,7 +2840,7 @@ def _try_ArgList(_text, _pos):
                     _result = _raise_error202
                     _status = False
                 # End Str
-                if not _status:
+                if not (_status):
                     break
                 # Begin Sep
                 # wrap(KeywordArg | Expr) /? Comma
@@ -2852,14 +2852,14 @@ def _try_ArgList(_text, _pos):
                     func15 = _ParseFunction(_try_wrap, (_parse_function_206,), ())
                     (_status, _result, _pos) = (yield (3, func15, _pos))
                     # End Call
-                    if not _status:
+                    if not (_status):
                         break
                     staging14.append(_result)
                     checkpoint7 = _pos
                     # Begin Ref
                     (_status, _result, _pos) = (yield (3, _try_Comma, _pos))
                     # End Ref
-                    if not _status:
+                    if not (_status):
                         break
                     checkpoint7 = _pos
                 _result = staging14
@@ -2868,7 +2868,7 @@ def _try_ArgList(_text, _pos):
                 # End Sep
                 break
             # End Discard
-            if not _status:
+            if not (_status):
                 break
             staging15 = _result
             # Begin Str
@@ -2886,7 +2886,7 @@ def _try_ArgList(_text, _pos):
                 _result = staging15
             break
         # End Discard
-        if not _status:
+        if not (_status):
             break
         args = _result
         _result = ArgList(args)
@@ -3215,7 +3215,7 @@ def _try_Expr(_text, _pos):
                                 _status = True
                                 break
                     # End Postfix
-                    if not _status:
+                    if not (_status):
                         break
                     checkpoint10 = _pos
                     if is_first4:
@@ -3228,15 +3228,15 @@ def _try_Expr(_text, _pos):
                     func16 = _ParseFunction(_try_wrap, (_parse_function_225,), ())
                     (_status, _result, _pos) = (yield (3, func16, _pos))
                     # End Call
-                    if not _status:
+                    if not (_status):
                         break
                     operator4 = _result
-                if not is_first4:
+                if not (is_first4):
                     _status = True
                     _result = staging19
                     _pos = checkpoint10
                 # End LeftAssoc
-                if not _status:
+                if not (_status):
                     break
                 checkpoint11 = _pos
                 if is_first3:
@@ -3249,15 +3249,15 @@ def _try_Expr(_text, _pos):
                 func17 = _ParseFunction(_try_wrap, (_parse_function_231,), ())
                 (_status, _result, _pos) = (yield (3, func17, _pos))
                 # End Call
-                if not _status:
+                if not (_status):
                     break
                 operator3 = _result
-            if not is_first3:
+            if not (is_first3):
                 _status = True
                 _result = staging18
                 _pos = checkpoint11
             # End LeftAssoc
-            if not _status:
+            if not (_status):
                 break
             checkpoint12 = _pos
             if is_first2:
@@ -3270,15 +3270,15 @@ def _try_Expr(_text, _pos):
             func18 = _ParseFunction(_try_wrap, (_parse_function_237,), ())
             (_status, _result, _pos) = (yield (3, func18, _pos))
             # End Call
-            if not _status:
+            if not (_status):
                 break
             operator2 = _result
-        if not is_first2:
+        if not (is_first2):
             _status = True
             _result = staging17
             _pos = checkpoint12
         # End LeftAssoc
-        if not _status:
+        if not (_status):
             break
         checkpoint13 = _pos
         if is_first1:
@@ -3292,10 +3292,10 @@ def _try_Expr(_text, _pos):
         func19 = _ParseFunction(_try_wrap, (arg14,), ())
         (_status, _result, _pos) = (yield (3, func19, _pos))
         # End Call
-        if not _status:
+        if not (_status):
             break
         operator1 = _result
-    if not is_first1:
+    if not (is_first1):
         _status = True
         _result = staging16
         _pos = checkpoint13
@@ -3598,7 +3598,7 @@ def _try_Repeat(_text, _pos):
             _result = _raise_error248
             _status = False
         # End Str
-        if not _status:
+        if not (_status):
             break
         open = _result
         # Begin Opt
@@ -3607,7 +3607,7 @@ def _try_Repeat(_text, _pos):
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_RepeatArg, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             _pos = backtrack11
             _result = None
             _status = True
@@ -3631,7 +3631,7 @@ def _try_Repeat(_text, _pos):
                     _result = _raise_error255
                     _status = False
                 # End Str
-                if not _status:
+                if not (_status):
                     break
                 # Begin Ref
                 (_status, _result, _pos) = (yield (3, _try_RepeatArg, _pos))
@@ -3656,7 +3656,7 @@ def _try_Repeat(_text, _pos):
                     _result = _raise_error258
                     _status = False
                 # End Str
-                if not _status:
+                if not (_status):
                     break
                 _result = None
                 _status = True
@@ -3682,7 +3682,7 @@ def _try_Repeat(_text, _pos):
             _result = _raise_error262
             _status = False
         # End Str
-        if not _status:
+        if not (_status):
             break
         close = _result
         _result = Repeat(open, start, stop, close)
@@ -3818,14 +3818,14 @@ def _try_ManyStmts(_text, _pos):
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Stmt, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             break
         staging22.append(_result)
         checkpoint14 = _pos
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Sep, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             break
         checkpoint14 = _pos
     if staging22:
@@ -3849,7 +3849,7 @@ def _try_SingleExpr(_text, _pos):
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Expr, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             break
         staging23 = _result
         # Begin Opt
@@ -3858,7 +3858,7 @@ def _try_SingleExpr(_text, _pos):
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Sep, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             _pos = backtrack14
             _result = None
             _status = True
@@ -3882,7 +3882,7 @@ def _try_start(_text, _pos):
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try__ignored, _pos))
         # End Ref
-        if not _status:
+        if not (_status):
             break
         # Begin Discard
         # Skip(Newline) >> (ManyStmts | SingleExpr)
