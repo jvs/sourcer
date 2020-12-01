@@ -38,10 +38,7 @@ Use pip:
 $ python3 -m pip install sourcer
 ```
 
-Notes:
-
-* Sourcer is a pure Python library, with no dependencies beyond the standard library.
-* Sourcer requires Python version 3.6 or later.
+Sourcer requires Python version 3.6 or later.
 
 
 ## Why does this exist?

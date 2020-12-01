@@ -1,6 +1,6 @@
 import typing
 
-from .outsourcer import Code
+from outsourcer import Code
 
 from . import utils
 from .base import Expression

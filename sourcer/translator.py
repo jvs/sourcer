@@ -1,6 +1,6 @@
 from string import Template
 
-from .expressions.outsourcer import CodeBuilder, Code, Val
+from outsourcer import CodeBuilder, Code, Val
 
 from . import expressions as ex
 from .expressions import (
@@ -156,7 +156,7 @@ def generate_source_code(docstring, nodes):
         rule.compile(out)
         visit(rule, lambda x: maybe_compile_error_message(out, rule, x))
 
-    return out.write_source()
+    return out
 
 
 def _assign_ids(rules):

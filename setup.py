@@ -1,4 +1,7 @@
+import os
+import re
 import setuptools
+
 
 def long_description():
     try:
@@ -8,17 +11,29 @@ def long_description():
         return ''
 
 
+def install_requires():
+    with open('requirements.txt') as f:
+        return f.read().splitlines()
+
+
+def version():
+    with open(os.path.join('sourcer', '__init__.py')) as f:
+        regex = re.compile('\\n__version__\\s*=\\s*[\'"]+([\\d\\.]+)[\'"]\n')
+        return regex.search(f.read()).group(1)
+
+
 setuptools.setup(
     name='sourcer',
-    version='0.3.8',
+    version=version(),
     author='jvs',
     author_email='vonseg@protonmail.com',
     url='https://github.com/jvs/sourcer',
     description='simple parsing library',
     long_description=long_description(),
     long_description_content_type='text/markdown',
+    data_files=[('', ['README.md', 'requirements.txt', 'requirements-dev.txt'])],
     python_requires='>=3.6',
-    install_requires=[],
+    install_requires=install_requires(),
     packages=['sourcer'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

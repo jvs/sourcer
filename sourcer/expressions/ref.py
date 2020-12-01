@@ -1,5 +1,6 @@
-from .outsourcer import Code, Yield
+from outsourcer import Code, Yield
 
+from . import utils
 from .base import Expression
 from .constants import CALL, POS, RESULT, STATUS
 

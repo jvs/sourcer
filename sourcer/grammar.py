@@ -1,6 +1,5 @@
 import ast
 import re
-import types
 
 from . import expressions as ex
 from . import meta
@@ -22,16 +21,12 @@ def Grammar(description, name='grammar', include_source=False):
     nodes = meta.transform(raw, _create_parsing_expression)
 
     # Generate and compile the souce code.
-    source_code = translator.generate_source_code(docstring, nodes)
-    code_object = compile(source_code, f'<{name}>', 'exec', optimize=2)
-    module = types.ModuleType(name, doc=docstring)
-    exec(code_object, module.__dict__)
-
-    # Optionally include the source code.
-    if include_source and not hasattr(module, '_source_code'):
-        module._source_code = source_code
-
-    return module
+    builder = translator.generate_source_code(docstring, nodes)
+    return builder.compile(
+        module_name=name,
+        docstring=docstring,
+        source_var='_source_code' if include_source else None,
+    )
 
 
 def _create_parsing_expression(node):
