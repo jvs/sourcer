@@ -3,6 +3,7 @@
 .coverage
 htmlcov/
 docs/_build/
+dist_test/
 
 # Special work-in-progress file.
 wip.py
