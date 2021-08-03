@@ -204,6 +204,9 @@ from re import compile as _compile_re, IGNORECASE as _IGNORECASE
 class Node:
     _fields = ()
 
+    def __init__(self):
+        self._metadata = _Metadata()
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -219,7 +222,23 @@ class Node:
         for field in self._fields:
             if field not in kw:
                 kw[field] = getattr(self, field)
-        return self.__class__(**kw)
+        result = self.__class__(**kw)
+        result._metadata._fields.update(self._metadata._fields)
+        return result
+
+
+class _Metadata:
+    def __init__(self, **fields):
+        object.__setattr__(self, '_fields', fields)
+
+    def __getattr__(self, name):
+        return self._fields.get(name)
+
+    def __setattr__(self, name, value):
+        self._fields[name] = value
+
+    def copy(self):
+        return _Metadata(**self._fields)
 
 
 class Rule:
@@ -257,6 +276,7 @@ class Infix(Node):
     _fields = ('left', 'operator', 'right')
 
     def __init__(self, left, operator, right):
+        Node.__init__(self)
         self.left = left
         self.operator = operator
         self.right = right
@@ -269,6 +289,7 @@ class Postfix(Node):
     _fields = ('left', 'operator')
 
     def __init__(self, left, operator):
+        Node.__init__(self)
         self.left = left
         self.operator = operator
 
@@ -280,6 +301,7 @@ class Prefix(Node):
     _fields = ('operator', 'right')
 
     def __init__(self, operator, right):
+        Node.__init__(self)
         self.operator = operator
         self.right = right
 
@@ -405,11 +427,11 @@ def _finalize_parse_info(text, nodes, pos, fullparse):
     line_numbers, column_numbers = _map_index_to_line_and_column(text)
 
     for node in visit(nodes):
-        pos_info = getattr(node, '_position_info', None)
+        pos_info = node._metadata.position
         if pos_info:
             start, end = pos_info
             end -= 1
-            node._position_info = _PositionInfo(
+            node._metadata.position = _PositionInfo(
                 start=_Position(start, line_numbers[start], column_numbers[start]),
                 end=_Position(end, line_numbers[end], column_numbers[end]),
             )

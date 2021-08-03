@@ -50,9 +50,9 @@ class Class(Expression):
         out.add_newline()
 
         with out.DEF('__init__', ['self'] + field_names):
+            out += Code('Node.__init__(self)')
             for name in field_names:
                 out += Code(f'self.{name} = {name}')
-            out += Code('self._position_info = None')
 
         with out.DEF('__repr__', ['self']):
             values = ', '.join(f'{x}={{self.{x}!r}}' for x in field_names)

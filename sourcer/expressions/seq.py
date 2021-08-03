@@ -45,4 +45,4 @@ class Seq(Expression):
             out += RESULT << result
 
             if self.needs_parse_info:
-                out += RESULT._position_info << (start_pos, POS)
+                out += RESULT._metadata.position << (start_pos, POS)

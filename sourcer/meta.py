@@ -136,6 +136,9 @@ from re import compile as _compile_re, IGNORECASE as _IGNORECASE
 class Node:
     _fields = ()
 
+    def __init__(self):
+        self._metadata = _Metadata()
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -151,7 +154,23 @@ class Node:
         for field in self._fields:
             if field not in kw:
                 kw[field] = getattr(self, field)
-        return self.__class__(**kw)
+        result = self.__class__(**kw)
+        result._metadata._fields.update(self._metadata._fields)
+        return result
+
+
+class _Metadata:
+    def __init__(self, **fields):
+        object.__setattr__(self, '_fields', fields)
+
+    def __getattr__(self, name):
+        return self._fields.get(name)
+
+    def __setattr__(self, name, value):
+        self._fields[name] = value
+
+    def copy(self):
+        return _Metadata(**self._fields)
 
 
 class Rule:
@@ -190,6 +209,7 @@ class Infix(Node):
     _fields = ('left', 'operator', 'right')
 
     def __init__(self, left, operator, right):
+        Node.__init__(self)
         self.left = left
         self.operator = operator
         self.right = right
@@ -202,6 +222,7 @@ class Postfix(Node):
     _fields = ('left', 'operator')
 
     def __init__(self, left, operator):
+        Node.__init__(self)
         self.left = left
         self.operator = operator
 
@@ -213,6 +234,7 @@ class Prefix(Node):
     _fields = ('operator', 'right')
 
     def __init__(self, operator, right):
+        Node.__init__(self)
         self.operator = operator
         self.right = right
 
@@ -338,11 +360,11 @@ def _finalize_parse_info(text, nodes, pos, fullparse):
     line_numbers, column_numbers = _map_index_to_line_and_column(text)
 
     for node in visit(nodes):
-        pos_info = getattr(node, '_position_info', None)
+        pos_info = node._metadata.position
         if pos_info:
             start, end = pos_info
             end -= 1
-            node._position_info = _PositionInfo(
+            node._metadata.position = _PositionInfo(
                 start=_Position(start, line_numbers[start], column_numbers[start]),
                 end=_Position(end, line_numbers[end], column_numbers[end]),
             )
@@ -1041,8 +1063,8 @@ class StringLiteral(Node):
     _fields = ('value',)
 
     def __init__(self, value):
+        Node.__init__(self)
         self.value = value
-        self._position_info = None
 
     def __repr__(self):
         return f'StringLiteral(value={self.value!r})'
@@ -1124,7 +1146,7 @@ def _try_StringLiteral(_text, _pos):
             break
         value = _result
         _result = StringLiteral(value)
-        _result._position_info = (start_pos1, _pos)
+        _result._metadata.position = (start_pos1, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1218,8 +1240,8 @@ class RegexLiteral(Node):
     _fields = ('value',)
 
     def __init__(self, value):
+        Node.__init__(self)
         self.value = value
-        self._position_info = None
 
     def __repr__(self):
         return f'RegexLiteral(value={self.value!r})'
@@ -1248,7 +1270,7 @@ def _try_RegexLiteral(_text, _pos):
             break
         value = _result
         _result = RegexLiteral(value)
-        _result._position_info = (start_pos2, _pos)
+        _result._metadata.position = (start_pos2, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1278,8 +1300,8 @@ class PythonSection(Node):
     _fields = ('value',)
 
     def __init__(self, value):
+        Node.__init__(self)
         self.value = value
-        self._position_info = None
 
     def __repr__(self):
         return f'PythonSection(value={self.value!r})'
@@ -1316,7 +1338,7 @@ def _try_PythonSection(_text, _pos):
             break
         value = _result
         _result = PythonSection(value)
-        _result._position_info = (start_pos3, _pos)
+        _result._metadata.position = (start_pos3, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1346,8 +1368,8 @@ class PythonExpression(Node):
     _fields = ('value',)
 
     def __init__(self, value):
+        Node.__init__(self)
         self.value = value
-        self._position_info = None
 
     def __repr__(self):
         return f'PythonExpression(value={self.value!r})'
@@ -1455,7 +1477,7 @@ def _try_PythonExpression(_text, _pos):
             break
         value = _result
         _result = PythonExpression(value)
-        _result._position_info = (start_pos4, _pos)
+        _result._metadata.position = (start_pos4, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1568,11 +1590,11 @@ class RuleDef(Node):
     _fields = ('is_ignored', 'name', 'params', 'expr')
 
     def __init__(self, is_ignored, name, params, expr):
+        Node.__init__(self)
         self.is_ignored = is_ignored
         self.name = name
         self.params = params
         self.expr = expr
-        self._position_info = None
 
     def __repr__(self):
         return f'RuleDef(is_ignored={self.is_ignored!r}, name={self.name!r}, params={self.params!r}, expr={self.expr!r})'
@@ -1698,7 +1720,7 @@ def _try_RuleDef(_text, _pos):
             break
         expr = _result
         _result = RuleDef(is_ignored, name, params, expr)
-        _result._position_info = (start_pos5, _pos)
+        _result._metadata.position = (start_pos5, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1778,10 +1800,10 @@ class ClassDef(Node):
     _fields = ('name', 'params', 'fields')
 
     def __init__(self, name, params, fields):
+        Node.__init__(self)
         self.name = name
         self.params = params
         self.fields = fields
-        self._position_info = None
 
     def __repr__(self):
         return f'ClassDef(name={self.name!r}, params={self.params!r}, fields={self.fields!r})'
@@ -1914,7 +1936,7 @@ def _try_ClassDef(_text, _pos):
             break
         fields = _result
         _result = ClassDef(name, params, fields)
-        _result._position_info = (start_pos6, _pos)
+        _result._metadata.position = (start_pos6, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1976,8 +1998,8 @@ class IgnoreStmt(Node):
     _fields = ('expr',)
 
     def __init__(self, expr):
+        Node.__init__(self)
         self.expr = expr
-        self._position_info = None
 
     def __repr__(self):
         return f'IgnoreStmt(expr={self.expr!r})'
@@ -2008,7 +2030,7 @@ def _try_IgnoreStmt(_text, _pos):
             break
         expr = _result
         _result = IgnoreStmt(expr)
-        _result._position_info = (start_pos7, _pos)
+        _result._metadata.position = (start_pos7, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2107,10 +2129,10 @@ class LetExpression(Node):
     _fields = ('name', 'expr', 'body')
 
     def __init__(self, name, expr, body):
+        Node.__init__(self)
         self.name = name
         self.expr = expr
         self.body = body
-        self._position_info = None
 
     def __repr__(self):
         return f'LetExpression(name={self.name!r}, expr={self.expr!r}, body={self.body!r})'
@@ -2238,7 +2260,7 @@ def _try_LetExpression(_text, _pos):
             break
         body = _result
         _result = LetExpression(name, expr, body)
-        _result._position_info = (start_pos8, _pos)
+        _result._metadata.position = (start_pos8, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2300,8 +2322,8 @@ class Ref(Node):
     _fields = ('value',)
 
     def __init__(self, value):
+        Node.__init__(self)
         self.value = value
-        self._position_info = None
 
     def __repr__(self):
         return f'Ref(value={self.value!r})'
@@ -2322,7 +2344,7 @@ def _try_Ref(_text, _pos):
             break
         value = _result
         _result = Ref(value)
-        _result._position_info = (start_pos9, _pos)
+        _result._metadata.position = (start_pos9, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2336,8 +2358,8 @@ class ListLiteral(Node):
     _fields = ('elements',)
 
     def __init__(self, elements):
+        Node.__init__(self)
         self.elements = elements
-        self._position_info = None
 
     def __repr__(self):
         return f'ListLiteral(elements={self.elements!r})'
@@ -2418,7 +2440,7 @@ def _try_ListLiteral(_text, _pos):
             break
         elements = _result
         _result = ListLiteral(elements)
-        _result._position_info = (start_pos10, _pos)
+        _result._metadata.position = (start_pos10, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2641,9 +2663,9 @@ class KeywordArg(Node):
     _fields = ('name', 'expr')
 
     def __init__(self, name, expr):
+        Node.__init__(self)
         self.name = name
         self.expr = expr
-        self._position_info = None
 
     def __repr__(self):
         return f'KeywordArg(name={self.name!r}, expr={self.expr!r})'
@@ -2716,7 +2738,7 @@ def _try_KeywordArg(_text, _pos):
             break
         expr = _result
         _result = KeywordArg(name, expr)
-        _result._position_info = (start_pos11, _pos)
+        _result._metadata.position = (start_pos11, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2778,8 +2800,8 @@ class ArgList(Node):
     _fields = ('args',)
 
     def __init__(self, args):
+        Node.__init__(self)
         self.args = args
-        self._position_info = None
 
     def __repr__(self):
         return f'ArgList(args={self.args!r})'
@@ -2890,7 +2912,7 @@ def _try_ArgList(_text, _pos):
             break
         args = _result
         _result = ArgList(args)
-        _result._position_info = (start_pos12, _pos)
+        _result._metadata.position = (start_pos12, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -3569,11 +3591,11 @@ class Repeat(Node):
     _fields = ('open', 'start', 'stop', 'close')
 
     def __init__(self, open, start, stop, close):
+        Node.__init__(self)
         self.open = open
         self.start = start
         self.stop = stop
         self.close = close
-        self._position_info = None
 
     def __repr__(self):
         return f'Repeat(open={self.open!r}, start={self.start!r}, stop={self.stop!r}, close={self.close!r})'
@@ -3686,7 +3708,7 @@ def _try_Repeat(_text, _pos):
             break
         close = _result
         _result = Repeat(open, start, stop, close)
-        _result._position_info = (start_pos13, _pos)
+        _result._metadata.position = (start_pos13, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)

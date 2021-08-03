@@ -232,7 +232,7 @@ cmd = result[1]
 assert cmd.action == 'Delete'
 
 # The Command objects have position information:
-info = cmd._position_info
+info = cmd._metadata.position
 assert info.start == g._Position(index=16, line=1, column=17)
 assert info.end == g._Position(index=30, line=1, column=31)
 ```
