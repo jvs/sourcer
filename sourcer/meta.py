@@ -360,11 +360,11 @@ def _finalize_parse_info(text, nodes, pos, fullparse):
     line_numbers, column_numbers = _map_index_to_line_and_column(text)
 
     for node in visit(nodes):
-        pos_info = node._metadata.position
+        pos_info = node._metadata.position_info
         if pos_info:
             start, end = pos_info
             end -= 1
-            node._metadata.position = _PositionInfo(
+            node._metadata.position_info = _PositionInfo(
                 start=_Position(start, line_numbers[start], column_numbers[start]),
                 end=_Position(end, line_numbers[end], column_numbers[end]),
             )
@@ -1146,7 +1146,7 @@ def _try_StringLiteral(_text, _pos):
             break
         value = _result
         _result = StringLiteral(value)
-        _result._metadata.position = (start_pos1, _pos)
+        _result._metadata.position_info = (start_pos1, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1270,7 +1270,7 @@ def _try_RegexLiteral(_text, _pos):
             break
         value = _result
         _result = RegexLiteral(value)
-        _result._metadata.position = (start_pos2, _pos)
+        _result._metadata.position_info = (start_pos2, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1338,7 +1338,7 @@ def _try_PythonSection(_text, _pos):
             break
         value = _result
         _result = PythonSection(value)
-        _result._metadata.position = (start_pos3, _pos)
+        _result._metadata.position_info = (start_pos3, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1477,7 +1477,7 @@ def _try_PythonExpression(_text, _pos):
             break
         value = _result
         _result = PythonExpression(value)
-        _result._metadata.position = (start_pos4, _pos)
+        _result._metadata.position_info = (start_pos4, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1720,7 +1720,7 @@ def _try_RuleDef(_text, _pos):
             break
         expr = _result
         _result = RuleDef(is_ignored, name, params, expr)
-        _result._metadata.position = (start_pos5, _pos)
+        _result._metadata.position_info = (start_pos5, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -1936,7 +1936,7 @@ def _try_ClassDef(_text, _pos):
             break
         fields = _result
         _result = ClassDef(name, params, fields)
-        _result._metadata.position = (start_pos6, _pos)
+        _result._metadata.position_info = (start_pos6, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2030,7 +2030,7 @@ def _try_IgnoreStmt(_text, _pos):
             break
         expr = _result
         _result = IgnoreStmt(expr)
-        _result._metadata.position = (start_pos7, _pos)
+        _result._metadata.position_info = (start_pos7, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2260,7 +2260,7 @@ def _try_LetExpression(_text, _pos):
             break
         body = _result
         _result = LetExpression(name, expr, body)
-        _result._metadata.position = (start_pos8, _pos)
+        _result._metadata.position_info = (start_pos8, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2344,7 +2344,7 @@ def _try_Ref(_text, _pos):
             break
         value = _result
         _result = Ref(value)
-        _result._metadata.position = (start_pos9, _pos)
+        _result._metadata.position_info = (start_pos9, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2440,7 +2440,7 @@ def _try_ListLiteral(_text, _pos):
             break
         elements = _result
         _result = ListLiteral(elements)
-        _result._metadata.position = (start_pos10, _pos)
+        _result._metadata.position_info = (start_pos10, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2738,7 +2738,7 @@ def _try_KeywordArg(_text, _pos):
             break
         expr = _result
         _result = KeywordArg(name, expr)
-        _result._metadata.position = (start_pos11, _pos)
+        _result._metadata.position_info = (start_pos11, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2912,7 +2912,7 @@ def _try_ArgList(_text, _pos):
             break
         args = _result
         _result = ArgList(args)
-        _result._metadata.position = (start_pos12, _pos)
+        _result._metadata.position_info = (start_pos12, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -3708,7 +3708,7 @@ def _try_Repeat(_text, _pos):
             break
         close = _result
         _result = Repeat(open, start, stop, close)
-        _result._metadata.position = (start_pos13, _pos)
+        _result._metadata.position_info = (start_pos13, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)

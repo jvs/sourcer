@@ -52,7 +52,7 @@ Command(action='Delete', range=Range(start='(', left=33, right=44, end=']'))
 The Command objects have position information:
 
 ```python
->>> info = commands[0]._metadata.position
+>>> info = commands[0]._metadata.position_info
 >>> info.start
 _Position(index=0, line=1, column=1)
 
@@ -73,7 +73,7 @@ assert g.parse('Copy [1, 2]; Delete [3, 4]') == [
 
 # The `g` module also defines the `_Position` class.
 command = g.parse('Print (5, 6)')
-position = command[0]._metadata.position
+position = command[0]._metadata.position_info
 assert position.start == g._Position(index=0, line=1, column=1)
 ```
 

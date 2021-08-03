@@ -427,11 +427,11 @@ def _finalize_parse_info(text, nodes, pos, fullparse):
     line_numbers, column_numbers = _map_index_to_line_and_column(text)
 
     for node in visit(nodes):
-        pos_info = node._metadata.position
+        pos_info = node._metadata.position_info
         if pos_info:
             start, end = pos_info
             end -= 1
-            node._metadata.position = _PositionInfo(
+            node._metadata.position_info = _PositionInfo(
                 start=_Position(start, line_numbers[start], column_numbers[start]),
                 end=_Position(end, line_numbers[end], column_numbers[end]),
             )
