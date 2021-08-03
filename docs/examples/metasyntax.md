@@ -13,7 +13,7 @@ ignored Space = /[ \t]+/
 ignored Comment = /#[^\r\n]*/
 
 Newline = /[\r\n][\s]*/
-Sep = Some(Newline | ";")
+LineSep = Some(Newline | ";")
 Name = /[_a-zA-Z][_a-zA-Z0-9]*/
 Comma = wrap(",")
 
@@ -64,7 +64,7 @@ class RuleDef {
 class ClassDef {
     name: kw("class") >> Name
     params: Opt(Params)
-    fields: wrap("{") >> (RuleDef /? Sep) << "}"
+    fields: wrap("{") >> (RuleDef /? LineSep) << "}"
 }
 
 class IgnoreStmt {
@@ -127,8 +127,8 @@ class Repeat {
 
 RepeatArg = PythonExpression | Ref
 
-ManyStmts = Sep(Stmt, Sep, allow_trailer=True, allow_empty=False)
-SingleExpr = Expr << Opt(Sep)
+ManyStmts = Sep(Stmt, LineSep, allow_trailer=True, allow_empty=False)
+SingleExpr = Expr << Opt(LineSep)
 
 start = Skip(Newline) >> (ManyStmts | SingleExpr)
 ~~~

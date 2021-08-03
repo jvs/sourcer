@@ -9,7 +9,7 @@ ignored Space = /[ \\t]+/
 ignored Comment = /#[^\\r\\n]*/
 
 Newline = /[\\r\\n][\\s]*/
-Sep = Some(Newline | ";")
+LineSep = Some(Newline | ";")
 Name = /[_a-zA-Z][_a-zA-Z0-9]*/
 Comma = wrap(",")
 
@@ -60,7 +60,7 @@ class RuleDef {
 class ClassDef {
     name: kw("class") >> Name
     params: Opt(Params)
-    fields: wrap("{") >> (RuleDef /? Sep) << "}"
+    fields: wrap("{") >> (RuleDef /? LineSep) << "}"
 }
 
 class IgnoreStmt {
@@ -123,8 +123,8 @@ class Repeat {
 
 RepeatArg = PythonExpression | Ref
 
-ManyStmts = Sep(Stmt, Sep, allow_trailer=True, allow_empty=False)
-SingleExpr = Expr << Opt(Sep)
+ManyStmts = Sep(Stmt, LineSep, allow_trailer=True, allow_empty=False)
+SingleExpr = Expr << Opt(LineSep)
 
 start = Skip(Newline) >> (ManyStmts | SingleExpr)
 
@@ -531,8 +531,8 @@ def _raise_error6(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _try_Sep(_text, _pos):
-    # Rule 'Sep'
+def _try_LineSep(_text, _pos):
+    # Rule 'LineSep'
     # Begin List
     # (Newline | ';')+
     staging1 = []
@@ -580,11 +580,11 @@ def _try_Sep(_text, _pos):
     # End List
     yield (_status, _result, _pos)
 
-def _parse_Sep(text, pos=0, fullparse=True):
-    return _run(text, pos, _try_Sep, fullparse)
+def _parse_LineSep(text, pos=0, fullparse=True):
+    return _run(text, pos, _try_LineSep, fullparse)
 
-Sep = Rule('Sep', _parse_Sep, """
-    Sep = (Newline | ';')+
+LineSep = Rule('LineSep', _parse_LineSep, """
+    LineSep = (Newline | ';')+
 """)
 def _raise_error9(_text, _pos):
     if (len(_text) <= _pos):
@@ -596,7 +596,7 @@ def _raise_error9(_text, _pos):
         excerpt = _extract_excerpt(_text, _pos, col)
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
-    "Failed to parse the 'Sep' rule, at the expression:\n"
+    "Failed to parse the 'LineSep' rule, at the expression:\n"
     "    Newline | ';'\n\n"
     'Unexpected input'
     )
@@ -612,7 +612,7 @@ def _raise_error11(_text, _pos):
         excerpt = _extract_excerpt(_text, _pos, col)
         title = f'Error on line {line}, column {col}:\n{excerpt}\n'
     details = (
-    "Failed to parse the 'Sep' rule, at the expression:\n"
+    "Failed to parse the 'LineSep' rule, at the expression:\n"
     "    ';'\n\n"
     "Expected to match the string ';'"
     )
@@ -1772,7 +1772,7 @@ class ClassDef(Node):
     class ClassDef {
         name: kw('class') >> Name
         params: Opt(Params)
-        fields: (wrap('{') >> (RuleDef /? Sep)) << '}'
+        fields: (wrap('{') >> (RuleDef /? LineSep)) << '}'
     }
     """
     _fields = ('name', 'params', 'fields')
@@ -1855,10 +1855,10 @@ def _try_ClassDef(_text, _pos):
         # End Opt
         params = _result
         # Begin Discard
-        # (wrap('{') >> (RuleDef /? Sep)) << '}'
+        # (wrap('{') >> (RuleDef /? LineSep)) << '}'
         while True:
             # Begin Discard
-            # wrap('{') >> (RuleDef /? Sep)
+            # wrap('{') >> (RuleDef /? LineSep)
             while True:
                 # Begin Call
                 # wrap('{')
@@ -1869,7 +1869,7 @@ def _try_ClassDef(_text, _pos):
                 if not (_status):
                     break
                 # Begin Sep
-                # RuleDef /? Sep
+                # RuleDef /? LineSep
                 staging6 = []
                 checkpoint5 = _pos
                 while True:
@@ -1881,7 +1881,7 @@ def _try_ClassDef(_text, _pos):
                     staging6.append(_result)
                     checkpoint5 = _pos
                     # Begin Ref
-                    (_status, _result, _pos) = (yield (3, _try_Sep, _pos))
+                    (_status, _result, _pos) = (yield (3, _try_LineSep, _pos))
                     # End Ref
                     if not (_status):
                         break
@@ -3811,7 +3811,7 @@ def _raise_error264(_text, _pos):
 def _try_ManyStmts(_text, _pos):
     # Rule 'ManyStmts'
     # Begin Sep
-    # Stmt /? Sep
+    # Stmt /? LineSep
     staging22 = []
     checkpoint14 = _pos
     while True:
@@ -3823,7 +3823,7 @@ def _try_ManyStmts(_text, _pos):
         staging22.append(_result)
         checkpoint14 = _pos
         # Begin Ref
-        (_status, _result, _pos) = (yield (3, _try_Sep, _pos))
+        (_status, _result, _pos) = (yield (3, _try_LineSep, _pos))
         # End Ref
         if not (_status):
             break
@@ -3839,12 +3839,12 @@ def _parse_ManyStmts(text, pos=0, fullparse=True):
     return _run(text, pos, _try_ManyStmts, fullparse)
 
 ManyStmts = Rule('ManyStmts', _parse_ManyStmts, """
-    ManyStmts = Stmt /? Sep
+    ManyStmts = Stmt /? LineSep
 """)
 def _try_SingleExpr(_text, _pos):
     # Rule 'SingleExpr'
     # Begin Discard
-    # Expr << Opt(Sep)
+    # Expr << Opt(LineSep)
     while True:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Expr, _pos))
@@ -3853,10 +3853,10 @@ def _try_SingleExpr(_text, _pos):
             break
         staging23 = _result
         # Begin Opt
-        # Opt(Sep)
+        # Opt(LineSep)
         backtrack14 = _pos
         # Begin Ref
-        (_status, _result, _pos) = (yield (3, _try_Sep, _pos))
+        (_status, _result, _pos) = (yield (3, _try_LineSep, _pos))
         # End Ref
         if not (_status):
             _pos = backtrack14
@@ -3872,7 +3872,7 @@ def _parse_SingleExpr(text, pos=0, fullparse=True):
     return _run(text, pos, _try_SingleExpr, fullparse)
 
 SingleExpr = Rule('SingleExpr', _parse_SingleExpr, """
-    SingleExpr = Expr << Opt(Sep)
+    SingleExpr = Expr << Opt(LineSep)
 """)
 def _try_start(_text, _pos):
     # Rule 'start'
