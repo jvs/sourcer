@@ -102,16 +102,14 @@ g = Grammar(r'''
 
     # Define operatator precedence, from highest to lowest.
     Expr = OperatorPrecedence(
-        Int | Parens,
+        Int,
+        Mixfix('(' >> Expr << ')'),
         Prefix('+' | '-'),
         RightAssoc('^'),
         Postfix('%'),
         LeftAssoc('*' | '/'),
         LeftAssoc('+' | '-'),
     )
-
-    # Discard parentheses.
-    Parens = '(' >> Expr << ')'
 
     # Turn integers into Python int objects.
     Int = /\d+/ |> `int`
