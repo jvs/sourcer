@@ -53,8 +53,8 @@ wip:
 # - Commit / merge to "main" branch.
 # - Run:
 #   - make tag
-#   - make upload_test
-#   - make upload_real
+#   - make test_upload
+#   - make real_upload
 
 tag: clean
 	$(eval VERSION=$(shell sed -n -E \
