@@ -19,10 +19,10 @@ def test_arithmetic_expressions():
         ignored Space = /\s+/
 
         Int = /\d+/ |> `int`
-        Parens = '(' >> Expr << ')'
 
         Expr = OperatorPrecedence(
-            Int | Parens,
+            Int,
+            Mixfix('(' >> Expr << ')'),
             Prefix('+' | '-'),
             RightAssoc('^'),
             Postfix('%'),
@@ -492,10 +492,10 @@ def test_mixfix_operator():
         ignored Space = /\s+/
 
         Int = /\d+/ |> `int`
-        Parens = '(' >> Expr << ')'
 
         Expr = OperatorPrecedence(
-            Int | Parens,
+            Int,
+            Mixfix('(' >> Expr << ')'),
             Prefix('+' | '-'),
             RightAssoc('^'),
             Postfix('%'),
@@ -535,3 +535,6 @@ def test_mixfix_operator():
         true_case=I(30, '+', 3),
         false_case=I(40, '-', 4),
     ))
+
+    result = g.parse('1 * (if 2 >= 3 then 4 else 5) / 6')
+    assert result == I(I(1, '*', g.IfThenElse(I(2, '>=', 3), 4, 5)), '/', 6)
