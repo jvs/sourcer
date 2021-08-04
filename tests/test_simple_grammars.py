@@ -485,3 +485,53 @@ def test_length_prefix_on_number_list_in_byte_string():
         Byte = b/./
     ''')
     assert g.parse(b'\x03abc') == b'abc'
+
+
+def test_mixfix_operator():
+    g = Grammar(r'''
+        ignored Space = /\s+/
+
+        Int = /\d+/ |> `int`
+        Parens = '(' >> Expr << ')'
+
+        Expr = OperatorPrecedence(
+            Int | Parens,
+            Prefix('+' | '-'),
+            RightAssoc('^'),
+            Postfix('%'),
+            LeftAssoc('*' | '/'),
+            LeftAssoc('+' | '-'),
+            NonAssoc("<=" | "<" | ">=" | ">" | "as"),
+            NonAssoc("==" | "!="),
+            Prefix("not"),
+            LeftAssoc("and"),
+            LeftAssoc("or"),
+            RightAssoc("->"),
+            Mixfix(IfThenElse),
+            Prefix("assert"),
+        )
+
+        class IfThenElse {
+            test: "if" >> Expr
+            true_case: "then" >> Expr
+            false_case: "else" >> Expr
+        }
+
+        start = Expr
+    ''')
+
+    # Define short names for the constructors.
+    I, P = g.Infix, g.Prefix
+
+    result = g.parse('1 + 2')
+    assert result == I(1, '+', 2)
+
+    result = g.parse('if 1 < 2 then 3 else 4')
+    assert result == g.IfThenElse(I(1, '<', 2), 3, 4)
+
+    result = g.parse('assert if 10 != 20 then 30 + 3 else 40 - 4')
+    assert result == P('assert', g.IfThenElse(
+        test=I(10, '!=', 20),
+        true_case=I(30, '+', 3),
+        false_case=I(40, '-', 4),
+    ))
