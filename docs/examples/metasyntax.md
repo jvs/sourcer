@@ -91,8 +91,7 @@ class ListLiteral {
     elements: "[" >> (wrap(Expr) /? Comma) << "]"
 }
 
-Atom = ("(" >> wrap(Expr) << ")")
-    | StringLiteral
+Atom = StringLiteral
     | RegexLiteral
     | LetExpression
     | ListLiteral
@@ -110,6 +109,7 @@ class ArgList {
 
 Expr = OperatorPrecedence(
     Atom,
+    Mixfix("(" >> wrap(Expr) << ")"),
     Postfix(ArgList),
     Postfix("?" | "*" | "+" | Repeat),
     LeftAssoc(wrap("//" | "/?")),
