@@ -223,7 +223,7 @@ class Node:
             if field not in kw:
                 kw[field] = getattr(self, field)
         result = self.__class__(**kw)
-        result._metadata._fields.update(self._metadata._fields)
+        result._metadata.update(self._metadata)
         return result
 
 
@@ -237,8 +237,14 @@ class _Metadata:
     def __setattr__(self, name, value):
         self._fields[name] = value
 
+    def __len__(self):
+        return len(self._fields)
+
     def copy(self):
         return _Metadata(**self._fields)
+
+    def update(self, other):
+        self._fields.update(other._fields)
 
 
 class Rule:
@@ -414,8 +420,10 @@ def _transform(node, callback):
     for field in node._fields:
         was = getattr(node, field)
         now = _transform(was, callback)
-        if was is not now:
+        if now is not was:
             updates[field] = now
+            if isinstance(was, Node) and isinstance(now, Node) and not now._metadata:
+                now._metadata.update(was._metadata)
 
     if updates:
         node = node._replace(**updates)
