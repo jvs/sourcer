@@ -538,3 +538,75 @@ def test_mixfix_operator():
 
     result = g.parse('1 * (if 2 >= 3 then 4 else 5) / 6')
     assert result == I(I(1, '*', g.IfThenElse(I(2, '>=', 3), 4, 5)), '/', 6)
+
+
+def test_traverse_function():
+    g = Grammar(r'''
+        start = Stmt /? ';'
+        Stmt = DataDef | FuncDef
+        class DataDef {
+            name: "data " >> Word
+            fields: "(" >> (Word /? ",") << ")"
+        }
+        class FuncDef {
+            name: "func " >> Word
+            params: "(" >> (Word /? ",") << ")"
+            body: "=>" >> Expr
+        }
+
+        Expr = OperatorPrecedence(
+            Word | Int,
+            Mixfix('(' >> Expr << ')'),
+            Postfix(ArgList),
+        )
+        class ArgList {
+            args: "(" >> (Expr /? ",") << ")"
+        }
+
+        Word = /[_a-zA-Z][_a-zA-Z0-9]*/
+        ignored Space = /\s+/
+    ''')
+    result = g.parse('''
+        data Foo(bar, baz);
+        func fiz(buz, baz) => buz(baz);
+    ''')
+    Foo, fiz = result
+    received = list(g.traverse(result))
+    assert received == [
+        g._Traversing(parent=None, field=None, child=result, is_finished=False),
+
+        g._Traversing(parent=result, field=0, child=Foo, is_finished=False),
+        g._Traversing(parent=Foo, field='name', child='Foo', is_finished=False),
+        g._Traversing(parent=Foo, field='name', child='Foo', is_finished=True),
+        g._Traversing(parent=Foo, field='fields', child=Foo.fields, is_finished=False),
+        g._Traversing(parent=Foo.fields, field=0, child='bar', is_finished=False),
+        g._Traversing(parent=Foo.fields, field=0, child='bar', is_finished=True),
+        g._Traversing(parent=Foo.fields, field=1, child='baz', is_finished=False),
+        g._Traversing(parent=Foo.fields, field=1, child='baz', is_finished=True),
+        g._Traversing(parent=Foo, field='fields', child=Foo.fields, is_finished=True),
+        g._Traversing(parent=result, field=0, child=Foo, is_finished=True),
+
+        g._Traversing(parent=result, field=1, child=fiz, is_finished=False),
+        g._Traversing(parent=fiz, field='name', child='fiz', is_finished=False),
+        g._Traversing(parent=fiz, field='name', child='fiz', is_finished=True),
+        g._Traversing(parent=fiz, field='params', child=fiz.params, is_finished=False),
+        g._Traversing(parent=fiz.params, field=0, child='buz', is_finished=False),
+        g._Traversing(parent=fiz.params, field=0, child='buz', is_finished=True),
+        g._Traversing(parent=fiz.params, field=1, child='baz', is_finished=False),
+        g._Traversing(parent=fiz.params, field=1, child='baz', is_finished=True),
+        g._Traversing(parent=fiz, field='params', child=fiz.params, is_finished=True),
+
+        g._Traversing(parent=fiz, field='body', child=fiz.body, is_finished=False),
+        g._Traversing(parent=fiz.body, field='left', child='buz', is_finished=False),
+        g._Traversing(parent=fiz.body, field='left', child='buz', is_finished=True),
+        g._Traversing(parent=fiz.body, field='operator', child=fiz.body.operator, is_finished=False),
+        g._Traversing(parent=fiz.body.operator, field='args', child=['baz'], is_finished=False),
+        g._Traversing(parent=fiz.body.operator.args, field=0, child='baz', is_finished=False),
+        g._Traversing(parent=fiz.body.operator.args, field=0, child='baz', is_finished=True),
+        g._Traversing(parent=fiz.body.operator, field='args', child=['baz'], is_finished=True),
+        g._Traversing(parent=fiz.body, field='operator', child=fiz.body.operator, is_finished=True),
+        g._Traversing(parent=fiz, field='body', child=fiz.body, is_finished=True),
+
+        g._Traversing(parent=result, field=1, child=fiz, is_finished=True),
+        g._Traversing(parent=None, field=None, child=result, is_finished=True),
+    ]

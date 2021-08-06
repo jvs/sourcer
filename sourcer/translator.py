@@ -394,6 +394,56 @@ def visit(node):
                 stack.extend(getattr(node, x) for x in node._fields)
 
 
+_Traversing = _nt('_Traversing', 'parent, field, child, is_finished')
+
+
+def traverse(node):
+    visited = set()
+    stack = [_Traversing(parent=None, field=None, child=node, is_finished=False)]
+    while stack:
+        traversing = stack.pop()
+
+        if traversing.is_finished:
+            yield traversing
+            continue
+
+        child = traversing.child
+        child_id = id(child)
+
+        if child_id in visited:
+            continue
+
+        visited.add(child_id)
+        stack.append(traversing._replace(is_finished=True))
+        yield traversing
+
+        def extend(items):
+            stack.extend(reversed(list(items)))
+
+        if isinstance(child, (list, tuple)):
+            extend(
+                _Traversing(parent=child, field=i, child=x, is_finished=False)
+                for i, x in enumerate(child)
+            )
+
+        elif isinstance(child, dict):
+            extend(
+                _Traversing(parent=child, field=k, child=v, is_finished=False)
+                for k, v in child.items()
+            )
+
+        elif isinstance(child, Node) and hasattr(child, '_fields'):
+            extend(
+                _Traversing(
+                    parent=child,
+                    field=x,
+                    child=getattr(child, x),
+                    is_finished=False,
+                )
+                for x in child._fields
+            )
+
+
 def transform(node, *callbacks):
     if not callbacks:
         return node
