@@ -482,7 +482,7 @@ def test_length_prefix_on_number_list_in_byte_string():
             Byte{size} |> `lambda x: b''.join(x)`
 
         Length = Byte |> `ord`
-        Byte = b/./
+        Byte = b/[\x00-\xFF]/
     ''')
     assert g.parse(b'\x03abc') == b'abc'
 
