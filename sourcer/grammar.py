@@ -51,7 +51,7 @@ def _create_parsing_expression(node):
         if ignore_case:
             value = value[:-1]
 
-        # Remove backslashes.
+        # Remove /slash/ delimiters.
         value = value[1:-1]
 
         # Enocde binary string.
