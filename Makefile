@@ -1,13 +1,19 @@
-# Runs the docker container and executes the command.
-RUN := docker run --rm --name sourcer -v `pwd`:/workspace sourcer
+PYTHON := .venv/bin/python
 
-# Generate the a python module to parse grammar specifications.
-metasyntax:
-	$(RUN) python generate_metasyntax.py
+test: venv sourcer/meta.py
+	$(PYTHON) -m pytest -vv -s tests
 
-# Create a docker image with Python and our dev dependencies.
-image: Dockerfile
-	docker build -t sourcer .
+sourcer/meta.py: venv metasyntax.txt generate_metasyntax.py
+	$(PYTHON) generate_metasyntax.py
+
+venv: .venv/bin/activate
+
+.venv/bin/activate: requirements.txt requirements-dev.txt
+	test -d .venv || python3 -m venv .venv
+	.venv/bin/pip install --upgrade pip
+	.venv/bin/pip install -r requirements.txt
+	.venv/bin/pip install -r requirements-dev.txt
+	touch .venv/bin/activate
 
 # Remove random debris left around by python, pytest, and coverage.
 clean:
@@ -24,29 +30,21 @@ clean:
 		MANIFEST \
 		*.egg-info
 
-# Run the tests in a docker container.
-test: clean image
-	$(RUN) python -m pytest -v -s tests
-
 # Run the tests, compute test coverage, and open the coverage report.
-coverage: clean image
-	$(RUN) /bin/bash -c "coverage run -m pytest tests \
-		&& coverage report \
-		&& coverage html"
+coverage: clean venv sourcer/meta.py
+	.venv/bin/coverage run -m pytest tests
+	.venv/bin/coverage report
+	.venv/bin/coverage html
 	open "htmlcov/index.html"
 
 # Build the documentation.
-docs:
-	$(RUN) python -m exemplary --paths "**/*.md" --render
+docs: venv sourcer/meta.py
+	$(PYTHON) -m exemplary --paths "**/*.md" --render
 	$(MAKE) -C docs html
 
 # Run the code-formatter, but skip the generated python file.
-black: image
-	$(RUN) black sourcer -S --exclude 'meta.py'
-
-# You can use a file called "wip.py" to run experiments.
-wip:
-	$(RUN) python wip.py
+black: venv
+	.venv/bin/black sourcer -S --exclude 'meta.py'
 
 # How to publish a release:
 # - Update __version__ in sourcer/__init__.py.
@@ -67,15 +65,15 @@ tag: clean
 # Build the distributeion.
 dist:
 	rm -rf dist/
-	python3 setup.py sdist
-	twine check dist/*
+	$(PYTHON) setup.py sdist
+	.venv/bin/twine check dist/*
 
 # Upload the library to pypitest.
 test_upload: dist
-	twine upload --repository pypitest dist/*
+	.venv/bin/twine upload --repository pypitest dist/*
 
 # Upload the library to pypi.
 real_upload: dist
-	twine upload --repository pypi dist/*
+	.venv/bin/twine upload --repository pypi dist/*
 
-.PHONY: clean docs test coverage black wip dist test_upload real_upload
+.PHONY: clean docs test coverage black dist test_upload real_upload
