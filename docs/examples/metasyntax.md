@@ -78,7 +78,7 @@ Stmt = ClassDef
     | PythonExpression
 
 class LetExpression {
-    name: kw("let") >> Name << wrap("=")
+    name: kw("let") >> Name << wrap("=>" | "=" | ":")
     expr: Expr << wrap(kw("in"))
     body: Expr
 }
@@ -105,7 +105,7 @@ Atom = StringLiteral
     | Ref
 
 class KeywordArg {
-    name: Name << ("=" | ":")
+    name: Name << ("=>" | "=" | ":")
     expr: Expr
 }
 
