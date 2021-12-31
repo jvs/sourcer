@@ -1,10 +1,10 @@
 PYTHON := .venv/bin/python
 
-test: venv sourcer/meta.py
+test: venv sourcer/parser.py
 	$(PYTHON) -m pytest -vv -s tests
 
-sourcer/meta.py: venv metasyntax.txt generate_metasyntax.py
-	$(PYTHON) generate_metasyntax.py
+sourcer/parser.py: venv grammar.txt generate_parser.py
+	$(PYTHON) generate_parser.py
 
 venv: .venv/bin/activate
 
@@ -31,20 +31,20 @@ clean:
 		*.egg-info
 
 # Run the tests, compute test coverage, and open the coverage report.
-coverage: clean venv sourcer/meta.py
+coverage: clean venv sourcer/parser.py
 	.venv/bin/coverage run -m pytest tests
 	.venv/bin/coverage report
 	.venv/bin/coverage html
 	open "htmlcov/index.html"
 
 # Build the documentation.
-docs: venv sourcer/meta.py
+docs: venv sourcer/parser.py
 	$(PYTHON) -m exemplary --paths "**/*.md" --render
 	$(MAKE) -C docs html
 
 # Run the code-formatter, but skip the generated python file.
 black: venv
-	.venv/bin/black sourcer -S --exclude 'meta.py'
+	.venv/bin/black sourcer -S --exclude 'parser.py'
 
 # How to publish a release:
 # - Update __version__ in sourcer/__init__.py.

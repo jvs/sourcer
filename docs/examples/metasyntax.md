@@ -140,6 +140,6 @@ start = Skip(Newline) >> (ManyStmts | SingleExpr)
 ~~~
 
 As part of Sourcer's build process, it reads
-[this definition](https://github.com/jvs/sourcer/blob/master/metasyntax.txt)
+[this definition](https://github.com/jvs/sourcer/blob/master/grammar.txt)
 and then generates a
-[Python parser for it](https://github.com/jvs/sourcer/blob/master/sourcer/meta.py).
+[Python parser for it](https://github.com/jvs/sourcer/blob/master/sourcer/parser.py).

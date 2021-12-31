@@ -2,23 +2,23 @@ import ast
 import re
 
 from . import expressions as ex
-from . import meta
+from . import parser
 from . import translator
 
 
 def Grammar(description, name='grammar', include_source=False):
     # Parse the grammar description.
-    raw = meta.parse(description)
+    raw = parser.parse(description)
 
     # If the grammar is just an expression, create an implicit 'start' rule.
     if not isinstance(raw, list):
-        raw = [meta.RuleDef(is_ignored=False, name='start', params=None, expr=raw)]
+        raw = [parser.RuleDef(is_ignored=False, name='start', params=None, expr=raw)]
 
     # Create the docstring for the module.
     docstring = '# Grammar definition:\n' + description
 
     # Convert the parse tree into a list of parsing expressions.
-    nodes = meta.transform(raw, _create_parsing_expression)
+    nodes = parser.transform(raw, _create_parsing_expression)
 
     # Generate and compile the souce code.
     builder = translator.generate_source_code(docstring, nodes)
@@ -30,7 +30,7 @@ def Grammar(description, name='grammar', include_source=False):
 
 
 def _create_parsing_expression(node):
-    if isinstance(node, meta.StringLiteral):
+    if isinstance(node, parser.StringLiteral):
         ignore_case = node.value.endswith(('i', 'I'))
         value = ast.literal_eval(node.value[:-1] if ignore_case else node.value)
         if ignore_case:
@@ -38,7 +38,7 @@ def _create_parsing_expression(node):
         else:
             return ex.Str(value)
 
-    if isinstance(node, meta.RegexLiteral):
+    if isinstance(node, parser.RegexLiteral):
         is_binary = node.value.startswith('b')
         ignore_case = node.value.endswith(('i', 'I'))
         value = node.value
@@ -60,28 +60,28 @@ def _create_parsing_expression(node):
 
         return ex.Regex(value, ignore_case=ignore_case)
 
-    if isinstance(node, meta.ByteLiteral):
+    if isinstance(node, parser.ByteLiteral):
         return ex.Byte(node.value)
 
-    if isinstance(node, meta.PythonExpression):
+    if isinstance(node, parser.PythonExpression):
         return ex.PythonExpression(node.value)
 
-    if isinstance(node, meta.PythonSection):
+    if isinstance(node, parser.PythonSection):
         return ex.PythonSection(node.value)
 
-    if isinstance(node, meta.Ref):
+    if isinstance(node, parser.Ref):
         return ex.Ref(node.value)
 
-    if isinstance(node, meta.LetExpression):
+    if isinstance(node, parser.LetExpression):
         return ex.Let(node.name, node.expr, node.body)
 
-    if isinstance(node, meta.ListLiteral):
+    if isinstance(node, parser.ListLiteral):
         return ex.Seq(*node.elements)
 
-    if isinstance(node, meta.ArgList):
+    if isinstance(node, parser.ArgList):
         return node
 
-    if isinstance(node, meta.Postfix) and isinstance(node.operator, meta.ArgList):
+    if isinstance(node, parser.Postfix) and isinstance(node.operator, parser.ArgList):
         left, args = node.left, node.operator.args
         if isinstance(left, ex.Ref) and hasattr(ex, left.name):
             return getattr(ex, left.name)(
@@ -91,7 +91,7 @@ def _create_parsing_expression(node):
         else:
             return ex.Call(left, args)
 
-    if isinstance(node, meta.Postfix):
+    if isinstance(node, parser.Postfix):
         classes = {
             '?': ex.Opt,
             '*': ex.List,
@@ -100,21 +100,21 @@ def _create_parsing_expression(node):
         if isinstance(node.operator, str) and node.operator in classes:
             return classes[node.operator](node.left)
 
-        if isinstance(node.operator, meta.Repeat):
+        if isinstance(node.operator, parser.Repeat):
             start = uncook(node.operator.start)
             stop = uncook(node.operator.stop)
             return ex.List(node.left, min_len=start, max_len=stop)
 
-    if isinstance(node, meta.Repeat):
+    if isinstance(node, parser.Repeat):
         return node
 
-    if isinstance(node, meta.Infix) and node.operator == '|':
+    if isinstance(node, parser.Infix) and node.operator == '|':
         left, right = node.left, node.right
         left = list(left.exprs) if isinstance(left, ex.Choice) else [left]
         right = list(right.exprs) if isinstance(right, ex.Choice) else [right]
         return ex.Choice(*left, *right)
 
-    if isinstance(node, meta.Infix):
+    if isinstance(node, parser.Infix):
         classes = {
             '|>': lambda a, b: ex.Apply(a, b, apply_left=False),
             '<|': lambda a, b: ex.Apply(a, b, apply_left=True),
@@ -126,16 +126,16 @@ def _create_parsing_expression(node):
         }
         return classes[node.operator](node.left, node.right)
 
-    if isinstance(node, meta.KeywordArg):
+    if isinstance(node, parser.KeywordArg):
         return ex.KeywordArg(node.name, node.expr)
 
-    if isinstance(node, meta.RuleDef):
+    if isinstance(node, parser.RuleDef):
         return ex.Rule(node.name, node.params, node.expr, is_ignored=node.is_ignored)
 
-    if isinstance(node, meta.ClassDef):
+    if isinstance(node, parser.ClassDef):
         return ex.Class(node.name, node.params, node.fields)
 
-    if isinstance(node, meta.IgnoreStmt):
+    if isinstance(node, parser.IgnoreStmt):
         return ex.Rule(None, None, node.expr, is_ignored=True)
 
     # Otherwise, fail if we don't know what to do with this node.
