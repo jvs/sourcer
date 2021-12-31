@@ -74,7 +74,7 @@ def generate_source_code(docstring, nodes):
             impl_name = ex.implementation_name('_ignored')
             first_rule.expr = Right(Ref(impl_name), first_rule.expr)
 
-        # Update the "skip_ignored" flag of each StringLiteral and RegexLiteral.
+        # Update the "skip_ignored" flag of each literal.
         def _set_skip_ignored(expr):
             if hasattr(expr, 'skip_ignored'):
                 expr.skip_ignored = True
@@ -336,6 +336,17 @@ class _StringLiteral(str):
 
 def _wrap_string_literal(string_value, parse_function):
     result = _StringLiteral(string_value)
+    result._parse_function = parse_function
+    return result
+
+
+class _ByteLiteral(int):
+    def __call__(self, _text, _pos):
+        return self._parse_function(_text, _pos)
+
+
+def _wrap_byte_literal(byte_value, parse_function):
+    result = _ByteLiteral(byte_value)
     result._parse_function = parse_function
     return result
 

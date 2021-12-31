@@ -1,6 +1,7 @@
 from .apply import Apply
 from .assoc import LeftAssoc, NonAssoc, RightAssoc
 from .base import SymbolCounter, visit
+from .byte import Byte
 from .call import Call, KeywordArg
 from .choice import Choice
 from .class_ import Class

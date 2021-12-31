@@ -60,6 +60,9 @@ def _create_parsing_expression(node):
 
         return ex.Regex(value, ignore_case=ignore_case)
 
+    if isinstance(node, meta.ByteLiteral):
+        return ex.Byte(node.value)
+
     if isinstance(node, meta.PythonExpression):
         return ex.PythonExpression(node.value)
 

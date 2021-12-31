@@ -487,6 +487,20 @@ def test_length_prefix_on_number_list_in_byte_string():
     assert g.parse(b'\x03abc') == b'abc'
 
 
+def test_byte_literals():
+    g = Grammar(r'''
+        class Doc {
+            version: 0x65
+            open: 0xFF
+            body: b/[\x01-\xFF]+/
+            close: 0x00
+        }
+    ''')
+    doc = b'\x65\xFF\x11\x22\x33\x00'
+    result = g.Doc.parse(doc)
+    assert result == g.Doc(version=0x65, open=0xFF, body=b'\x11\x22\x33', close=0x00)
+
+
 def test_mixfix_operator():
     g = Grammar(r'''
         ignored Space = /\s+/

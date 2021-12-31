@@ -84,10 +84,16 @@ class ListLiteral {
     elements: "[" >> (wrap(Expr) /? Comma) << "]"
 }
 
+class ByteLiteral {
+    prefix: /0[xX]/
+    value: /[0-9a-fA-F]{2}/ |> `lambda x: int(x, 16)`
+}
+
 Atom = StringLiteral
     | RegexLiteral
     | LetExpression
     | ListLiteral
+    | ByteLiteral
     | PythonExpression
     | Ref
 
