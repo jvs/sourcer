@@ -521,6 +521,20 @@ def test_repetition_with_zero():
     assert result == [0x11, 0x22, 0x33]
 
 
+def test_peek():
+    g = Grammar(r'''
+        Letter = /[a-z]/
+        Word = /[a-z]+/
+
+        class Doc {
+            first: Peek(Letter)
+            body: Word
+        }
+    ''')
+    result = g.Doc.parse('foobar')
+    assert result == g.Doc(first='f', body='foobar')
+
+
 def test_mixfix_operator():
     g = Grammar(r'''
         ignored Space = /\s+/
