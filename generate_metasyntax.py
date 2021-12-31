@@ -2,6 +2,7 @@ import importlib
 import os
 import re
 import subprocess
+import sys
 
 import sourcer
 
@@ -32,7 +33,7 @@ def generate_meta_module(description):
     try:
         new_grammar = sourcer.Grammar(description, include_source=True)
         assert new_grammar.parse(description)
-        subprocess.run('python -m pytest tests', shell=True, check=True)
+        subprocess.run(f'{sys.executable} -m pytest tests', shell=True, check=True)
     except Exception:
         # If we failed, restore the old code and re-raise the exception.
         with open('sourcer/meta.py', 'w') as f:
