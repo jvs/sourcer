@@ -34,7 +34,11 @@ class Byte(Expression):
         return out.var('arg', wrap(self.value, value))
 
     def _compile(self, out):
-        with out.IF(TEXT[POS] == self.value):
+        LEN = Code('len')
+        has_byte = POS < LEN(TEXT)
+        is_match = TEXT[POS] == self.value
+
+        with out.IF(Code(has_byte, ' and ', is_match)):
             out += RESULT << self.value
             end = POS + 1
             out += POS << (utils.skip_ignored(end) if self.skip_ignored else end)

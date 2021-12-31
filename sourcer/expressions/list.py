@@ -35,6 +35,11 @@ class List(Expression):
         return not self.always_succeeds() and self.expr.can_partially_succeed()
 
     def _compile(self, out):
+        if self.max_len == 0 or self.max_len == '0':
+            out += RESULT << []
+            out += STATUS << True
+            return
+
         LEN = Code('len')
         staging = out.var('staging', [])
 

@@ -485,6 +485,7 @@ def test_length_prefix_on_number_list_in_byte_string():
         Byte = b/[\x00-\xFF]/
     ''')
     assert g.parse(b'\x03abc') == b'abc'
+    assert g.parse(b'\x00') == b''
 
 
 def test_byte_literals():
@@ -499,6 +500,25 @@ def test_byte_literals():
     doc = b'\x65\xFF\x11\x22\x33\x00'
     result = g.Doc.parse(doc)
     assert result == g.Doc(version=0x65, open=0xFF, body=b'\x11\x22\x33', close=0x00)
+
+    with pytest.raises(g.ParseError):
+        g.Doc.parse(b'\x65')
+
+
+def test_repetition_with_zero():
+    g = Grammar(r'''
+        vec(element) =>
+            let length = num in
+            element{length}
+
+        num = 0x01 >> b/[\x00-\xFF]/ |> `ord`
+        start = vec(num)
+    ''')
+    result = g.parse(b'\x01\x00')
+    assert result == []
+
+    result = g.parse(b'\x01\x03\x01\x11\x01\x22\x01\x33')
+    assert result == [0x11, 0x22, 0x33]
 
 
 def test_mixfix_operator():
