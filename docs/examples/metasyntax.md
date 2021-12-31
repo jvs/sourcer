@@ -64,7 +64,14 @@ class RuleDef {
 class ClassDef {
     name: kw("class") >> Name
     params: Opt(Params)
-    fields: wrap("{") >> (RuleDef /? LineSep) << "}"
+    members: wrap("{") >> (ClassMember /? LineSep) << "}"
+}
+
+class ClassMember {
+    is_omitted: Opt("let") |> `bool`
+    name: Name
+    params: Opt(Params) << wrap("=>" | "=" | ":")
+    expr: Expr
 }
 
 class IgnoreStmt {

@@ -14,32 +14,41 @@ class Class(Expression):
 
     num_blocks = 2
 
-    def __init__(self, name, params, fields, is_ignored=False):
+    def __init__(self, name, params, members, is_ignored=False):
         self.name = name
         self.params = params
-        self.fields = fields
+        self.members = members
         self.is_ignored = is_ignored
         self.extra_id = None
 
     def __str__(self):
         params = '' if self.params is None else f'({", ".join(self.params)})'
-        fields = ''.join(f'    {x.name}: {x.expr}\n' for x in self.fields)
-        return f'class {self.name}{params} {{\n{fields}}}'
+        lines = []
+        for member in self.members:
+            mod = 'let ' if member.is_omitted else ''
+            lines.append(f'    {mod}{member.name}: {member.expr}\n')
+        return f'class {self.name}{params} {{\n{"".join(lines)}}}'
 
     def always_succeeds(self):
-        return all(x.expr.always_succeeds() for x in self.fields)
+        return all(x.expr.always_succeeds() for x in self.members)
 
     def _compile(self, out):
         parse_func = Code(f'{utils.implementation_name(self.name)}')
-        field_names = [x.name for x in self.fields]
+        all_names = [x.name for x in self.members]
+        field_names = [x.name for x in self.members if not x.is_omitted]
 
         with out.global_section():
             with out.CLASS(self.name, 'Node'):
                 self._compile_class_body(out, parse_func, field_names)
 
             with out.DEF(parse_func, [str(TEXT), str(POS)] + (self.params or [])):
-                exprs = (x.expr for x in self.fields)
-                seq = Seq(*exprs, names=field_names, constructor=self.name)
+                exprs = (x.expr for x in self.members)
+                seq = Seq(
+                    *exprs,
+                    names=all_names,
+                    constructor=self.name,
+                    constructor_args=field_names,
+                )
                 seq.program_id = self.extra_id
                 seq.compile(out)
                 out.YIELD((STATUS, RESULT, POS))

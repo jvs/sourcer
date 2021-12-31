@@ -9,7 +9,7 @@ class Seq(Expression):
     is_commented = False
     num_blocks = 2
 
-    def __init__(self, *exprs, names=None, constructor=None):
+    def __init__(self, *exprs, names=None, constructor=None, constructor_args=None):
         if isinstance(constructor, type):
             constructor = constructor.__name__
         self.exprs = exprs
@@ -23,6 +23,7 @@ class Seq(Expression):
 
         self.needs_parse_info = constructor is not None
         self.constructor = None if constructor is None else Code(constructor)
+        self.constructor_args = constructor_args
 
     def __str__(self):
         return f'[{", ".join(str(x) for x in self.exprs)}]'
@@ -30,6 +31,9 @@ class Seq(Expression):
     def _compile(self, out):
         if self.needs_parse_info:
             start_pos = out.var('start_pos', POS)
+
+        cargs = self.constructor_args
+        which = None if cargs is None else set(cargs)
 
         with utils.breakable(out):
             items = []
@@ -39,7 +43,9 @@ class Seq(Expression):
 
                 item = out.var('item') if name is None else Code(name)
                 out += item << RESULT
-                items.append(item)
+
+                if which is None or name in which:
+                    items.append(item)
 
             result = items if self.constructor is None else self.constructor(*items)
             out += RESULT << result

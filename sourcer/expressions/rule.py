@@ -13,11 +13,12 @@ class Rule(Expression):
 
     num_blocks = 1
 
-    def __init__(self, name, params, expr, is_ignored=False):
+    def __init__(self, name, params, expr, is_ignored=False, is_omitted=False):
         self.name = name
         self.params = params
         self.expr = expr
         self.is_ignored = is_ignored
+        self.is_omitted = is_omitted
 
     def __str__(self):
         params = '' if self.params is None else f'({", ".join(self.params)})'

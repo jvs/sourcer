@@ -535,6 +535,22 @@ def test_peek():
     assert result == g.Doc(first='f', body='foobar')
 
 
+def test_class_with_omitted_fields():
+    g = Grammar(r'''
+        class Section {
+            let id: 0x01
+            let version: Byte
+            let count: Byte
+            name: Byte{count} |> `bytes`
+            body: b/[\x01-\xFF]*\x00/
+        }
+
+        Byte = b/[\x00-\xFF]/ |> `ord`
+    ''')
+    result = g.Section.parse(b'\x01\x12\x04test\x99\x88\x77\x00')
+    assert result == g.Section(name=b'test', body=b'\x99\x88\x77\x00')
+
+
 def test_mixfix_operator():
     g = Grammar(r'''
         ignored Space = /\s+/

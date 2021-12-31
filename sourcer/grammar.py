@@ -133,7 +133,10 @@ def _create_parsing_expression(node):
         return ex.Rule(node.name, node.params, node.expr, is_ignored=node.is_ignored)
 
     if isinstance(node, parser.ClassDef):
-        return ex.Class(node.name, node.params, node.fields)
+        return ex.Class(node.name, node.params, node.members)
+
+    if isinstance(node, parser.ClassMember):
+        return ex.Rule(node.name, node.params, node.expr, is_omitted=node.is_omitted)
 
     if isinstance(node, parser.IgnoreStmt):
         return ex.Rule(None, None, node.expr, is_ignored=True)
