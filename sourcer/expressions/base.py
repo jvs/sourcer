@@ -54,6 +54,9 @@ class Expression:
             value = _ParseFunction(func, tuple(params[2:]), ())
             return out.var('arg', value)
 
+    def constantize(self):
+        return None
+
     def functionalize(self, out, is_generator=False):
         name = f'_parse_function_{self.program_id}'
         params = [str(TEXT), str(POS)] + list(sorted(self.freevars()))

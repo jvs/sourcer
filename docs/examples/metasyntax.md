@@ -69,8 +69,7 @@ class ClassDef {
 
 class ClassMember {
     is_omitted: Opt("let") |> `bool`
-    name: Name
-    params: Opt(Params) << wrap("=>" | "=" | ":")
+    name: Name << wrap("=>" | "=" | ":")
     expr: Expr
 }
 

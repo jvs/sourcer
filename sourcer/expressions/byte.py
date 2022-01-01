@@ -33,6 +33,9 @@ class Byte(Expression):
         value = Expression.argumentize(self, out)
         return out.var('arg', wrap(self.value, value))
 
+    def constantize(self):
+        return hex(self.value)
+
     def _compile(self, out):
         LEN = Code('len')
         has_byte = POS < LEN(TEXT)

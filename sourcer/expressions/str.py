@@ -29,6 +29,9 @@ class Str(Expression):
         value = Expression.argumentize(self, out)
         return out.var('arg', wrap(self.value, value))
 
+    def constantize(self):
+        return repr(self.value)
+
     def _compile(self, out):
         if not self.value:
             out += STATUS << True

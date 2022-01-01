@@ -36,10 +36,17 @@ class Class(Expression):
         parse_func = Code(f'{utils.implementation_name(self.name)}')
         all_names = [x.name for x in self.members]
         field_names = [x.name for x in self.members if not x.is_omitted]
+        class_attrs = []
+
+        for member in self.members:
+            if member.is_omitted:
+                const_value = member.expr.constantize()
+                if const_value is not None:
+                    class_attrs.append((member.name, const_value))
 
         with out.global_section():
             with out.CLASS(self.name, 'Node'):
-                self._compile_class_body(out, parse_func, field_names)
+                self._compile_class_body(out, parse_func, field_names, class_attrs)
 
             with out.DEF(parse_func, [str(TEXT), str(POS)] + (self.params or [])):
                 exprs = (x.expr for x in self.members)
@@ -53,10 +60,15 @@ class Class(Expression):
                 seq.compile(out)
                 out.YIELD((STATUS, RESULT, POS))
 
-    def _compile_class_body(self, out, parse_func, field_names):
+    def _compile_class_body(self, out, parse_func, field_names, class_attrs):
         out.add_docstring(str(self))
         out += Code('_fields') << tuple(field_names)
         out.add_newline()
+
+        if class_attrs:
+            for name, value in class_attrs:
+                out += Code(f'{name} = {value}')
+            out.add_newline()
 
         with out.DEF('__init__', ['self'] + field_names):
             out += Code('Node.__init__(self)')
