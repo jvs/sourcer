@@ -680,3 +680,59 @@ def test_traverse_function():
         g._Traversing(parent=result, field=1, child=fiz, is_finished=True),
         g._Traversing(parent=None, field=None, child=result, is_finished=True),
     ]
+
+
+def test_simple_traversal():
+    g = Grammar('''
+        class Branch {
+            name: "branch" >> Word
+            children: "{" >> Tree* << "}"
+        }
+        class Leaf {
+            name: "leaf" >> Word
+        }
+        Tree = Branch | Leaf
+        Word = /[_a-zA-Z][_a-zA-Z0-9]*/
+        ignored Space = /\s+/
+        start = Tree
+    ''')
+    result = g.parse('''
+        branch foo {
+            branch bar {
+                leaf zim
+                leaf zam
+            }
+            branch baz {
+                branch fiz {
+                    branch buz {
+                        leaf flim
+                        leaf flam
+                    }
+                }
+                branch spam {
+                    branch eggs {}
+                    leaf ham
+                }
+            }
+        }
+    ''')
+    branch, leaf = g.Branch, g.Leaf
+    assert result == branch('foo', [
+        branch('bar', [leaf('zim'), leaf('zam')]),
+        branch('baz', [
+            branch('fiz', [
+                branch('buz', [leaf('flim'), leaf('flam')]),
+            ]),
+            branch('spam', [branch('eggs', []), leaf('ham')]),
+        ]),
+    ])
+
+    found = []
+    for info in g.traverse(result):
+        if hasattr(info.child, 'name'):
+            found.append(info.child.name)
+    assert found == [
+        'foo', 'bar', 'zim', 'zim', 'zam', 'zam', 'bar',
+        'baz', 'fiz', 'buz', 'flim', 'flim', 'flam', 'flam', 'buz', 'fiz',
+        'spam', 'eggs', 'eggs', 'ham', 'ham', 'spam', 'baz', 'foo',
+    ]
