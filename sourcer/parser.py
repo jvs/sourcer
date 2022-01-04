@@ -333,10 +333,10 @@ def visit(node):
         node = stack.pop()
 
         if isinstance(node, (list, tuple)):
-            stack.extend(node)
+            stack.extend(reversed(node))
 
         elif isinstance(node, dict):
-            stack.extend(node.values())
+            stack.extend(reversed(node.values()))
 
         elif isinstance(node, Node):
             node_id = id(node)
@@ -347,7 +347,7 @@ def visit(node):
             yield node
 
             if hasattr(node, '_fields'):
-                stack.extend(getattr(node, x) for x in node._fields)
+                stack.extend(getattr(node, x) for x in reversed(node._fields))
 
 
 _Traversing = _nt('_Traversing', 'parent, field, child, is_finished')
