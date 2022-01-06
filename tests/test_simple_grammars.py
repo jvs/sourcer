@@ -521,13 +521,13 @@ def test_repetition_with_zero():
     assert result == [0x11, 0x22, 0x33]
 
 
-def test_peek():
+def test_expect():
     g = Grammar(r'''
         Letter = /[a-z]/
         Word = /[a-z]+/
 
         class Doc {
-            first: Peek(Letter)
+            first: Expect(Letter)
             body: Word
         }
     ''')

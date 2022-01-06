@@ -14,7 +14,6 @@ from .let import Let
 from .list import List
 from .mixfix import Mixfix
 from .opt import Opt
-from .peek import Peek
 from .postfix import Postfix
 from .precedence import OperatorPrecedence
 from .prefix import Prefix

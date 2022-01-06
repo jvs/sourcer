@@ -20,6 +20,7 @@ class Expect(Expression):
 
     def _compile(self, out):
         backtrack = out.var('backtrack', POS)
+
         with utils.if_succeeds(out, self.expr):
             out += POS << backtrack
 
