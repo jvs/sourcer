@@ -6,6 +6,7 @@
 htmlcov/
 docs/_build/
 dist_test/
+build/
 dist/
 sourcer.egg-info/
 
