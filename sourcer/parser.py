@@ -404,13 +404,19 @@ def transform(node, *callbacks):
     if not callbacks:
         return node
 
-    if len(callbacks) == 1:
-        callback = callbacks[0]
-    else:
-        def callback(node):
-            for f in callbacks:
-                node = f(node)
-            return node
+    def callback(node):
+        for f in callbacks:
+            prev = node
+            node = f(prev)
+
+            if node is not prev:
+                if (
+                    isinstance(prev, Node)
+                    and isinstance(node, Node)
+                    and not node._metadata
+                ):
+                    node._metadata.update(prev._metadata)
+        return node
 
     return _transform(node, callback)
 
@@ -428,8 +434,6 @@ def _transform(node, callback):
         now = _transform(was, callback)
         if now is not was:
             updates[field] = now
-            if isinstance(was, Node) and isinstance(now, Node) and not now._metadata:
-                now._metadata.update(was._metadata)
 
     if updates:
         node = node._replace(**updates)
