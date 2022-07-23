@@ -12,7 +12,15 @@ def Grammar(description, name='grammar', include_source=False):
 
     # If the grammar is just an expression, create an implicit 'start' rule.
     if not isinstance(raw, list):
-        raw = [parser.RuleDef(is_ignored=False, name='start', params=None, expr=raw)]
+        raw = [
+            parser.RuleDef(
+                is_override=False,
+                is_ignored=False,
+                name='start',
+                params=None,
+                expr=raw,
+            ),
+        ]
 
     # Create the docstring for the module.
     docstring = '# Grammar definition:\n' + description
