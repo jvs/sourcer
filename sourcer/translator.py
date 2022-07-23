@@ -33,7 +33,7 @@ def generate_source_code(docstring, nodes):
 
     if start_rule is not None and start_rule.is_ignored:
         raise Exception(
-            f'The {start_rule!r} rule may not have the "ignored" modifier.'
+            f'The {start_rule!r} rule must not have the "ignore" modifier.'
         )
 
     if not rules:
