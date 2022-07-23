@@ -26,6 +26,7 @@ kw(word) => Name where `lambda x: x == word`
 
 Params = wrap("(") >> (wrap(Name) /? Comma) << ")"
 IgnoreKeyword = kw("ignored") | kw("ignore")
+OverrideKeyword = kw("overrides") | kw("override")
 
 class StringLiteral {
     value: (
@@ -55,6 +56,7 @@ class PythonExpression {
 }
 
 class RuleDef {
+    is_override: Opt(OverrideKeyword) |> `bool`
     is_ignored: Opt(IgnoreKeyword) |> `bool`
     name: Name
     params: Opt(Params) << wrap("=>" | "=" | ":")
@@ -122,13 +124,17 @@ class ArgList {
 Expr = OperatorPrecedence(
     Atom,
     Mixfix("(" >> wrap(Expr) << ")"),
-    Postfix(ArgList),
+    Postfix(ArgList | FieldAccess),
     Postfix("?" | "*" | "+" | Repeat),
     LeftAssoc(wrap("//" | "/?")),
     LeftAssoc(wrap("<<" | ">>")),
     LeftAssoc(wrap("<|" | "|>" | "where")),
     LeftAssoc(wrap("|")),
 )
+
+class FieldAccess {
+    field: "." >> Name
+}
 
 class Repeat {
     open: "{"
