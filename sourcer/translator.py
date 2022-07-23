@@ -41,7 +41,11 @@ def generate_source_code(docstring, nodes):
 
     visited_names = set()
     for rule in rules:
-        if rule.name is not None and rule.name.startswith('_'):
+        if (
+            rule.name is not None
+            and rule.name.startswith('_')
+            and not rule.name.startswith('_super_')
+        ):
             raise Exception(
                 'Grammar rule names must start with a letter. Found a rule that'
                 f' starts with an underscore: "{rule.name}". '

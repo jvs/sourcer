@@ -683,7 +683,7 @@ def test_traverse_function():
 
 
 def test_simple_traversal():
-    g = Grammar('''
+    g = Grammar(r'''
         class Branch {
             name: "branch" >> Word
             children: "{" >> Tree* << "}"
@@ -735,4 +735,64 @@ def test_simple_traversal():
         'foo', 'bar', 'zim', 'zim', 'zam', 'zam', 'bar',
         'baz', 'fiz', 'buz', 'flim', 'flim', 'flam', 'flam', 'buz', 'fiz',
         'spam', 'eggs', 'eggs', 'ham', 'ham', 'spam', 'baz', 'foo',
+    ]
+
+
+def test_extending_a_grammar():
+    g1 = Grammar(r'''
+        ignore Space = /\s+/
+
+        Program = Statement*
+        Statement = Print | Goto | Halt
+
+        class Print {
+            line: Number
+            message: "print"i >> /"[^"]*"/
+        }
+
+        class Goto {
+            line: Number
+            destination: "goto"i >> Number
+        }
+
+        class Halt {
+            line: Number << "halt"i
+        }
+
+        Number = /\d+/ |> `int`
+        start = Program
+    ''')
+
+    g2 = Grammar(
+        r'''
+            override Statement = Sleep | super.Statement
+
+            class Sleep {
+                line: Number
+                duration: "sleep"i >> Number
+            }
+        ''',
+        extends=g1,
+    )
+
+    p1 = g1.parse('''
+        10 PRINT "running"
+        20 GOTO 10
+        30 HALT
+    ''')
+    assert p1 == [
+        g1.Print(line=10, message='"running"'),
+        g1.Goto(line=20, destination=10),
+        g1.Halt(line=30),
+    ]
+
+    p2 = g2.parse('''
+        10 PRINT "running"
+        20 SLEEP 99
+        40 HALT
+    ''')
+    assert p2 == [
+        g2.Print(line=10, message='"running"'),
+        g2.Sleep(line=20, duration=99),
+        g2.Halt(line=40),
     ]

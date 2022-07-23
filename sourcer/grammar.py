@@ -6,19 +6,25 @@ from . import parser
 from . import translator
 
 
-def Grammar(description, name='grammar', include_source=False):
-    # Parse the grammar description.
-    raw = parser.parse(description)
+def Grammar(description, name='grammar', include_source=False, extends=None):
+    if extends is not None:
+        return _extend(description, name, include_source, extends)
+    else:
+        # Parse the grammar description.
+        tree = parser.parse(description)
+        return _build(tree, description, name, include_source)
 
+
+def _build(tree, description, name, include_source):
     # If the grammar is just an expression, create an implicit 'start' rule.
-    if not isinstance(raw, list):
-        raw = [
+    if not isinstance(tree, list):
+        tree = [
             parser.RuleDef(
                 is_override=False,
                 is_ignored=False,
                 name='start',
                 params=None,
-                expr=raw,
+                expr=tree,
             ),
         ]
 
@@ -26,7 +32,7 @@ def Grammar(description, name='grammar', include_source=False):
     docstring = '# Grammar definition:\n' + description
 
     # Convert the parse tree into a list of parsing expressions.
-    nodes = parser.transform(raw, _create_parsing_expression)
+    nodes = parser.transform(tree, _create_parsing_expression)
 
     # Generate and compile the souce code.
     builder = translator.generate_source_code(docstring, nodes)
@@ -35,6 +41,30 @@ def Grammar(description, name='grammar', include_source=False):
         docstring=docstring,
         source_var='_source_code' if include_source else None,
     )
+
+
+def _extend(description, name, include_source, extends):
+    # Parse both grammar descriptions.
+    super_nodes = parser.parse(extends.__doc__)
+    sub_nodes = parser.parse(description)
+
+    overrides = set()
+    for node in sub_nodes:
+        if isinstance(node, parser.RuleDef) and node.is_override:
+            overrides.add(node.name)
+
+    applied_overrides = set()
+    for node in super_nodes:
+        if isinstance(node, parser.RuleDef) and node.name in overrides:
+            applied_overrides.add(node.name)
+            node.name = f'_super_{node.name}'
+
+    if applied_overrides != overrides:
+        missing = overrides - applied_overrides
+        raise Exception(f'Not found. One or more super rules not defined: {missing}.')
+
+    tree = super_nodes + sub_nodes
+    return _build(tree, description, name, include_source)
 
 
 def _create_parsing_expression(node):
@@ -89,6 +119,9 @@ def _create_parsing_expression(node):
     if isinstance(node, parser.ArgList):
         return node
 
+    if isinstance(node, parser.FieldAccess):
+        return node
+
     if isinstance(node, parser.Postfix) and isinstance(node.operator, parser.ArgList):
         left, args = node.left, node.operator.args
         if isinstance(left, ex.Ref) and hasattr(ex, left.name):
@@ -98,6 +131,14 @@ def _create_parsing_expression(node):
             )
         else:
             return ex.Call(left, args)
+
+    if (
+        isinstance(node, parser.Postfix)
+        and isinstance(node.operator, parser.FieldAccess)
+        and isinstance(node.left, ex.Ref)
+        and node.left.name == 'super'
+    ):
+        return ex.Ref(f'_super_{node.operator.field}')
 
     if isinstance(node, parser.Postfix):
         classes = {
