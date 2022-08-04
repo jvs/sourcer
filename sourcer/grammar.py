@@ -6,19 +6,21 @@ from . import parser
 from . import translator
 
 
-def Grammar(description, name='grammar', include_source=False):
+def Grammar(description, include_source=False):
     # Parse the grammar description.
-    raw = parser.parse(description)
+    tree = parser.parse(description)
+    assert isinstance(tree, parser.GrammarDef)
+    head, body = tree.head, tree.body
 
-    # If the grammar is just an expression, create an implicit 'start' rule.
-    if not isinstance(raw, list):
-        raw = [
+    # If the body is just an expression, create an implicit 'start' rule.
+    if not isinstance(body, list):
+        body = [
             parser.RuleDef(
                 is_override=False,
                 is_ignored=False,
                 name='start',
                 params=None,
-                expr=raw,
+                expr=body,
             ),
         ]
 
@@ -26,7 +28,10 @@ def Grammar(description, name='grammar', include_source=False):
     docstring = '# Grammar definition:\n' + description
 
     # Convert the parse tree into a list of parsing expressions.
-    nodes = parser.transform(raw, _create_parsing_expression)
+    nodes = parser.transform(body, _create_parsing_expression)
+
+    # Grab the name of the grammar.
+    name = head.name.join('.') if head is not None else 'grammar'
 
     # Generate and compile the souce code.
     builder = translator.generate_source_code(docstring, nodes)

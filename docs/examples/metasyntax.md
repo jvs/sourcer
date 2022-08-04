@@ -79,6 +79,16 @@ class IgnoreStmt {
     expr: IgnoreKeyword >> Expr
 }
 
+class GrammarDef {
+    head: Opt(GrammarHead)
+    body: ManyStmts | SingleExpr
+}
+
+class GrammarHead {
+    name: kw("grammar") >> (Name // ".")
+    extends: Opt(kw("extends") >> (Name // "."))
+}
+
 Stmt = ClassDef
     | RuleDef
     | IgnoreStmt
@@ -147,8 +157,7 @@ RepeatArg = PythonExpression | Ref
 
 ManyStmts = Sep(Stmt, LineSep, allow_trailer=True, allow_empty=False)
 SingleExpr = Expr << Opt(LineSep)
-
-start = Skip(Newline) >> (ManyStmts | SingleExpr)
+start = Skip(Newline) >> GrammarDef
 ~~~
 
 As part of Sourcer's build process, it reads
