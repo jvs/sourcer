@@ -15,6 +15,8 @@ ignored Comment = /#[^\r\n]*/
 Newline = /[\r\n][\s]*/
 LineSep = Some(Newline | ";")
 Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+QualifiedName = (Name // ".") |> `lambda x: '.'.join(x)`
+
 Comma = wrap(",")
 
 wrap(x) => Skip(Newline) >> x << Skip(Newline)
@@ -80,13 +82,13 @@ class IgnoreStmt {
 }
 
 class GrammarDef {
-    head: Opt(GrammarHead)
+    head: Opt(GrammarHead << Skip(Newline))
     body: ManyStmts | SingleExpr
 }
 
 class GrammarHead {
-    name: kw("grammar") >> (Name // ".")
-    extends: Opt(kw("extends") >> (Name // "."))
+    name: kw("grammar") >> QualifiedName
+    extends: Opt(kw("extends") >> QualifiedName)
 }
 
 Stmt = ClassDef

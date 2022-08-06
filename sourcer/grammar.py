@@ -1,5 +1,8 @@
 import ast
+import importlib
 import re
+import sys
+import types
 
 from . import expressions as ex
 from . import parser
@@ -8,6 +11,54 @@ from . import translator
 
 def Grammar(description, include_source=False):
     # Parse the grammar description.
+    head, body = _parse_grammar(description)
+
+    # Create the docstring for the module.
+    docstring = '# Grammar definition:\n' + description
+
+    # Convert the parse tree into a list of parsing expressions.
+    nodes = parser.transform(body, _create_parsing_expression)
+
+    # Grab the name of the grammar.
+    name = head.name if head else 'grammar'
+
+    # If we have a super-grammar, then prepend those nodes.
+    if head is not None and head.extends is not None:
+        super_body = _get_super_tree(head.extends)
+        super_body.extend(body)
+        body = super_body
+
+    # Generate and compile the souce code.
+    builder = translator.generate_source_code(docstring, nodes)
+    module = builder.compile(
+        module_name=name,
+        docstring=docstring,
+        source_var='_source_code' if include_source else None,
+    )
+
+    if head.name:
+        _install_module(name, module)
+
+    return module
+
+
+def _get_super_tree(name):
+    module = importlib.import_module(name)
+    head, body = _parse_grammar(module.__doc__)
+
+    for node in parser.visit(body):
+        if isinstance(node, parser.Node):
+            node._metatadata.module_name = name
+
+    if head is None or head.extends is None:
+        return body
+
+    super_body = _get_super_tree(head.extends)
+    super_body.extend(body)
+    return super_body
+
+
+def _parse_grammar(description):
     tree = parser.parse(description)
     assert isinstance(tree, parser.GrammarDef)
     head, body = tree.head, tree.body
@@ -24,22 +75,7 @@ def Grammar(description, include_source=False):
             ),
         ]
 
-    # Create the docstring for the module.
-    docstring = '# Grammar definition:\n' + description
-
-    # Convert the parse tree into a list of parsing expressions.
-    nodes = parser.transform(body, _create_parsing_expression)
-
-    # Grab the name of the grammar.
-    name = head.name.join('.') if head is not None else 'grammar'
-
-    # Generate and compile the souce code.
-    builder = translator.generate_source_code(docstring, nodes)
-    return builder.compile(
-        module_name=name,
-        docstring=docstring,
-        source_var='_source_code' if include_source else None,
-    )
+    return head, body
 
 
 def _create_parsing_expression(node):
@@ -173,3 +209,17 @@ def uncook(x):
         return x.name
 
     raise Exception(f'Expected name or Python expression. Received: {x}')
+
+
+def _install_module(name, module):
+    if '.' not in name:
+        sys.modules[name] = module
+        return
+
+    parent_name, child_name = name.rsplit('.', 1)
+    try:
+        parent_module = importlib.import_module(parent_name)
+    except ModuleNotFoundError:
+        parent_module = types.ModuleType(parent_name)
+        _install_module(parent_name, parent_module)
+        setattr(parent_module, child_name, module)
