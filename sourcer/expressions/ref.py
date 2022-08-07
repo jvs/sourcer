@@ -23,7 +23,12 @@ class Ref(Expression):
         return self.name
 
     def _compile(self, out, flags):
-        out += (STATUS, RESULT, POS) << Yield((CALL, Code(self.resolved), POS))
+        if flags.uses_context:
+            func = Code(f'_ctx.{self.resolved}')
+        else:
+            func = Code(self.resolved)
+
+        out += (STATUS, RESULT, POS) << Yield((CALL, func, POS))
 
     def argumentize(self, out, flags):
         return Code(self.resolved)

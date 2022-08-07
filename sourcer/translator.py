@@ -100,15 +100,20 @@ def generate_source_code(docstring, parsed):
 
     _assign_ids(rules)
     _update_local_references(rules)
-    _update_rule_references(rules)
+    _update_rule_references(rules, parsed.extends)
 
     default_rule = start_rule or rules[0]
 
-    out += Code(Template(_main_template).substitute(
-        CALL=ex.CALL,
-        ctx='_ctx, ' if flags.uses_context else '',
-        start=ex.implementation_name(default_rule.name),
-    ))
+    if parsed.extends is None:
+        out += Code(Template(_main_template).substitute(
+            CALL=ex.CALL,
+            ctx='_ctx, ' if flags.uses_context else '',
+            start=ex.implementation_name(default_rule.name),
+        ))
+    else:
+        out += Code(Template(_subgrammar_body).substitute(
+            start=ex.implementation_name(default_rule.name),
+        ))
 
     error_delegates = {}
     def set_error_delegate(expr):
@@ -174,10 +179,26 @@ def generate_source_code(docstring, parsed):
 
     if parsed.name is not None:
         out += Code('_ctx = _Context()')
+
+        if parsed.extends is not None:
+            out += Code('_ctx._super_ctx = _super_ctx')
+
+        visited_names = set()
+
         for rule in rules:
             if hasattr(rule, 'name'):
                 impl_name = ex.implementation_name(rule.name)
                 out += Code(f'_ctx.{impl_name} = {impl_name}')
+                visited_names.add(rule.name)
+
+        ancestor = parsed.extends
+        while ancestor is not None:
+            for stmt in ancestor.body:
+                if hasattr(stmt, 'name') and stmt.name not in visited_names:
+                    impl_name = ex.implementation_name(stmt.name)
+                    out += Code(f'_ctx.{impl_name} = {impl_name}')
+                    visited_names.add(stmt.name)
+            ancestor = ancestor.extends
 
     return out
 
@@ -212,11 +233,16 @@ def _update_local_references(rules):
     visit(rules, previsit, counter.postvisit)
 
 
-def _update_rule_references(rules):
+def _update_rule_references(rules, extends):
     rule_names = set()
     for rule in rules:
         if isinstance(rule, (ex.Class, ex.Rule)):
             rule_names.add(rule.name)
+
+    if extends is not None:
+        for stmt in extends.body:
+            if hasattr(stmt, 'name'):
+                rule_names.add(stmt.name)
 
     def check_refs(node):
         if isinstance(node, Ref) and node.name in rule_names and not node.is_local:
@@ -290,15 +316,23 @@ def _create_parsing_expression(tree):
             return ex.Call(left, args)
 
     if isinstance(tree, parser.Postfix):
+        op = tree.operator
         classes = {
             '?': ex.Opt,
             '*': ex.List,
             '+': ex.Some,
         }
-        if isinstance(tree.operator, str) and tree.operator in classes:
-            return classes[tree.operator](tree.left)
+        if isinstance(op, str) and op in classes:
+            return classes[op](tree.left)
 
-        if isinstance(tree.operator, parser.Repeat):
+        if isinstance(op, parser.FieldAccess):
+            if isinstance(op, parser.Ref) and op.value == 'super':
+                impl_name = ex.implementation_name(op.field)
+                result = ex.Ref(f'_ctx._super_ctx.{impl_name}')
+                result._resolved = result.name
+                return result
+
+        if isinstance(op, parser.Repeat):
             def uncook(x):
                 if x is None:
                     return None
@@ -311,8 +345,8 @@ def _create_parsing_expression(tree):
                 else:
                     raise Exception(f'Expected name or Python expression. Received: {x}')
 
-            start = uncook(tree.operator.start)
-            stop = uncook(tree.operator.stop)
+            start = uncook(op.start)
+            stop = uncook(op.stop)
             return ex.List(tree.left, min_len=start, max_len=stop)
 
     if isinstance(tree, parser.Repeat):
@@ -769,6 +803,7 @@ from $super_module import (
     transform,
     traverse,
     visit,
+    _ctx as _super_ctx,
 )
 '''
 
