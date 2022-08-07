@@ -25,7 +25,8 @@ class Rule(Expression):
         return f'{self.name}{params} = {self.expr}'
 
     def _compile(self, out, flags):
-        params = [str(TEXT), str(POS)] + (self.params or [])
+        extra_params = ['_ctx'] if flags.uses_context else []
+        params = extra_params + [str(TEXT), str(POS)] + (self.params or [])
         impl_name = utils.implementation_name(self.name)
         entry_name = f'_parse_{self.name}'
 

@@ -72,11 +72,27 @@ def generate_source_code(docstring, parsed):
             )
         visited_names.add(rule.name)
 
+    super_has_ignore = False
+    ancestor = parsed.extends
+    while ancestor is not None and not super_has_ignore:
+        for stmt in ancestor.body:
+            is_ignored_rule = isinstance(stmt, parser.RuleDef) and stmt.is_ignored
+            is_ignored_expr = isinstance(stmt, parser.IgnoreStmt)
+            if is_ignored_rule or is_ignored_expr:
+                super_has_ignore = True
+                break
+        ancestor = ancestor.extends
+
     if ignored:
         # Create a rule called "_ignored" that skips all the ignored rules.
         refs = [Ref(x.name) for x in ignored]
+
+        if super_has_ignore:
+            refs.append(Ref('_super_ctx._ignored'))
+
         rules.append(ex.Rule('_ignored', None, ex.Skip(*refs), 'ignored'))
 
+    if ignored or super_has_ignore:
         # If we have a start rule, then update its expression to skip ahead past
         # any leading ignored stuff.
         if isinstance(start_rule, ex.Class):
@@ -102,17 +118,30 @@ def generate_source_code(docstring, parsed):
     _update_local_references(rules)
     _update_rule_references(rules, parsed.extends)
 
-    default_rule = start_rule or rules[0]
+    if start_rule is not None:
+        start_name = ex.implementation_name(start_rule.name)
+    else:
+        start_name = None
+        ancestor = parsed.extends
+        while start_name is None and ancestor is not None:
+            for stmt in ancestor.body:
+                if hasattr(stmt, 'name') and stmt.name.lower() == 'start':
+                    start_name = f'_ctx.{ex.implementation_name(stmt.name)}'
+                    break
+            ancestor = ancestor.extends
+
+    if start_name is None:
+        start_name = ex.implementation_name(rules[0].name)
 
     if parsed.extends is None:
         out += Code(Template(_main_template).substitute(
             CALL=ex.CALL,
             ctx='_ctx, ' if flags.uses_context else '',
-            start=ex.implementation_name(default_rule.name),
+            start=start_name,
         ))
     else:
         out += Code(Template(_subgrammar_body).substitute(
-            start=ex.implementation_name(default_rule.name),
+            start=start_name,
         ))
 
     error_delegates = {}
@@ -183,7 +212,16 @@ def generate_source_code(docstring, parsed):
         if parsed.extends is not None:
             out += Code('_ctx._super_ctx = _super_ctx')
 
+        if super_has_ignore and not ignored:
+            impl_name = ex.implementation_name('_ignored')
+            out += Code(f'_ctx.{impl_name} = _super_ctx.{impl_name}')
+
+        if ignored:
+            impl_name = ex.implementation_name('_ignored')
+            out += Code(f'_ctx.{impl_name} = {impl_name}')
+
         visited_names = set()
+        more_imports = []
 
         for rule in rules:
             if hasattr(rule, 'name'):
@@ -196,9 +234,16 @@ def generate_source_code(docstring, parsed):
             for stmt in ancestor.body:
                 if hasattr(stmt, 'name') and stmt.name not in visited_names:
                     impl_name = ex.implementation_name(stmt.name)
-                    out += Code(f'_ctx.{impl_name} = {impl_name}')
+                    out += Code(f'_ctx.{impl_name} = _super_ctx.{impl_name}')
                     visited_names.add(stmt.name)
+                    more_imports.append(stmt.name)
             ancestor = ancestor.extends
+
+        if more_imports:
+            lines = ',\n    '.join(sorted(more_imports))
+            out.append_global(Code(
+                f'from {parsed.extends.name} import (\n    {lines}\n)'
+            ))
 
     return out
 
@@ -316,20 +361,20 @@ def _create_parsing_expression(tree):
             return ex.Call(left, args)
 
     if isinstance(tree, parser.Postfix):
-        op = tree.operator
+        left, op = tree.left, tree.operator
         classes = {
             '?': ex.Opt,
             '*': ex.List,
             '+': ex.Some,
         }
         if isinstance(op, str) and op in classes:
-            return classes[op](tree.left)
+            return classes[op](left)
 
         if isinstance(op, parser.FieldAccess):
-            if isinstance(op, parser.Ref) and op.value == 'super':
+            if isinstance(left, ex.Ref) and left.name == 'super':
                 impl_name = ex.implementation_name(op.field)
-                result = ex.Ref(f'_ctx._super_ctx.{impl_name}')
-                result._resolved = result.name
+                result = ex.Ref(f'super.{op.field}')
+                result._resolved = f'_super_ctx.{impl_name}'
                 return result
 
         if isinstance(op, parser.Repeat):
@@ -347,9 +392,9 @@ def _create_parsing_expression(tree):
 
             start = uncook(op.start)
             stop = uncook(op.stop)
-            return ex.List(tree.left, min_len=start, max_len=stop)
+            return ex.List(left, min_len=start, max_len=stop)
 
-    if isinstance(tree, parser.Repeat):
+    if isinstance(tree, (parser.Repeat, parser.FieldAccess)):
         return tree
 
     if isinstance(tree, parser.Infix) and tree.operator == '|':

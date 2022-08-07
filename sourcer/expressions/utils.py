@@ -38,7 +38,12 @@ def infix_str(expr1, op, expr2):
 
 
 def skip_ignored(pos, flags):
-    return Yield((CALL, Code(implementation_name('_ignored')), pos))[2]
+    func = implementation_name('_ignored')
+
+    if flags.uses_context:
+        func = '_ctx.' + func
+
+    return Yield((CALL, Code(func), pos))[2]
 
 
 def implementation_name(name):
