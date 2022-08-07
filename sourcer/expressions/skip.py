@@ -20,14 +20,14 @@ class Skip(Expression):
     def can_partially_succeed(self):
         return False
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         checkpoint = out.var('checkpoint')
 
         with utils.breakable(out):
             out += checkpoint << POS
 
             for expr in self.exprs:
-                expr.compile(out)
+                expr.compile(out, flags)
 
                 if expr.always_succeeds():
                     with out.IF(POS != checkpoint):

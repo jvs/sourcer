@@ -1,17 +1,32 @@
+import ast
+import re
 from string import Template
 
 from outsourcer import CodeBuilder, Code, Val
 
 from . import expressions as ex
-from .expressions import (
-    TEXT, POS, Choice, Class, Ref, Right, Rule, Skip, visit
-)
+from . import parser
+from .expressions import TEXT, POS, Ref, visit
 
 
-def generate_source_code(docstring, nodes):
+def generate_source_code(docstring, parsed):
+    # Convert the parse tree into a list of parsing expressions.
+    nodes = parser.transform(parsed.body, _create_parsing_expression)
+
     out = CodeBuilder()
     out.add_docstring(docstring)
-    out += Code(_program_setup)
+
+    flags = _Flags(uses_context=parsed.name is not None)
+
+    if parsed.extends is None:
+        out += Code(_program_setup)
+    else:
+        out += Code(Template(_subgrammar_setup).substitute(
+            super_module=parsed.extends.name,
+        ))
+
+    if flags.uses_context and parsed.extends is None:
+        out += Code(_context_section)
 
     # Collect all the rules and stuff.
     rules, ignored = [], []
@@ -60,19 +75,19 @@ def generate_source_code(docstring, nodes):
     if ignored:
         # Create a rule called "_ignored" that skips all the ignored rules.
         refs = [Ref(x.name) for x in ignored]
-        rules.append(Rule('_ignored', None, Skip(*refs), 'ignored'))
+        rules.append(ex.Rule('_ignored', None, ex.Skip(*refs), 'ignored'))
 
         # If we have a start rule, then update its expression to skip ahead past
         # any leading ignored stuff.
-        if isinstance(start_rule, Class):
+        if isinstance(start_rule, ex.Class):
             first_rule = start_rule.fields[0] if start_rule.fields else None
         else:
             first_rule = start_rule
 
         if first_rule:
-            assert isinstance(first_rule, Rule)
+            assert isinstance(first_rule, ex.Rule)
             impl_name = ex.implementation_name('_ignored')
-            first_rule.expr = Right(Ref(impl_name), first_rule.expr)
+            first_rule.expr = ex.Right(Ref(impl_name), first_rule.expr)
 
         # Update the "skip_ignored" flag of each literal.
         def _set_skip_ignored(expr):
@@ -91,12 +106,13 @@ def generate_source_code(docstring, nodes):
 
     out += Code(Template(_main_template).substitute(
         CALL=ex.CALL,
+        ctx='_ctx, ' if flags.uses_context else '',
         start=ex.implementation_name(default_rule.name),
     ))
 
     error_delegates = {}
     def set_error_delegate(expr):
-        if not isinstance(expr, Choice):
+        if not isinstance(expr, ex.Choice):
             return
         real, fail = [], []
         for option in expr.exprs:
@@ -106,8 +122,8 @@ def generate_source_code(docstring, nodes):
                 real.append(option)
         if not real or not fail:
             return
-        delegate = Choice(*real)
-        error_delegates[fail[-1].program_id] = Choice(*real)
+        delegate = ex.Choice(*real)
+        error_delegates[fail[-1].program_id] = ex.Choice(*real)
 
     for rule in rules:
         visit(rule, set_error_delegate)
@@ -153,10 +169,22 @@ def generate_source_code(docstring, nodes):
     out.add_newline()
 
     for rule in rules:
-        rule.compile(out)
+        rule.compile(out, flags)
         visit(rule, lambda x: maybe_compile_error_message(out, rule, x))
 
+    if parsed.name is not None:
+        out += Code('_ctx = _Context()')
+        for rule in rules:
+            if hasattr(rule, 'name'):
+                impl_name = ex.implementation_name(rule.name)
+                out += Code(f'_ctx.{impl_name} = {impl_name}')
+
     return out
+
+
+class _Flags:
+    def __init__(self, uses_context):
+        self.uses_context = uses_context
 
 
 def _assign_ids(rules):
@@ -166,7 +194,7 @@ def _assign_ids(rules):
         nonlocal next_id
         node.program_id = next_id
         next_id += 1
-        if isinstance(node, Class):
+        if isinstance(node, ex.Class):
             node.extra_id = next_id
             next_id += 1
 
@@ -187,7 +215,7 @@ def _update_local_references(rules):
 def _update_rule_references(rules):
     rule_names = set()
     for rule in rules:
-        if isinstance(rule, (Class, Rule)):
+        if isinstance(rule, (ex.Class, ex.Rule)):
             rule_names.add(rule.name)
 
     def check_refs(node):
@@ -195,6 +223,136 @@ def _update_rule_references(rules):
             node._resolved = ex.implementation_name(node.name)
 
     visit(rules, check_refs)
+
+
+def _create_parsing_expression(tree):
+    if isinstance(tree, parser.StringLiteral):
+        ignore_case = tree.value.endswith(('i', 'I'))
+        value = ast.literal_eval(tree.value[:-1] if ignore_case else tree.value)
+        if ignore_case:
+            return ex.Regex(re.escape(value), ignore_case=True)
+        else:
+            return ex.Str(value)
+
+    if isinstance(tree, parser.RegexLiteral):
+        is_binary = tree.value.startswith('b')
+        ignore_case = tree.value.endswith(('i', 'I'))
+        value = tree.value
+
+        # Remove leading 'b'.
+        if is_binary:
+            value = value[1:]
+
+        # Remove trailing 'i'.
+        if ignore_case:
+            value = value[:-1]
+
+        # Remove /slash/ delimiters.
+        value = value[1:-1]
+
+        # Enocde binary string.
+        if is_binary:
+            value = value.encode('ascii')
+
+        return ex.Regex(value, ignore_case=ignore_case)
+
+    if isinstance(tree, parser.ByteLiteral):
+        return ex.Byte(tree.value)
+
+    if isinstance(tree, parser.PythonExpression):
+        return ex.PythonExpression(tree.value)
+
+    if isinstance(tree, parser.PythonSection):
+        return ex.PythonSection(tree.value)
+
+    if isinstance(tree, parser.Ref):
+        return ex.Ref(tree.value)
+
+    if isinstance(tree, parser.LetExpression):
+        return ex.Let(tree.name, tree.expr, tree.body)
+
+    if isinstance(tree, parser.ListLiteral):
+        return ex.Seq(*tree.elements)
+
+    if isinstance(tree, parser.ArgList):
+        return tree
+
+    if isinstance(tree, parser.Postfix) and isinstance(tree.operator, parser.ArgList):
+        left, args = tree.left, tree.operator.args
+        if isinstance(left, ex.Ref) and hasattr(ex, left.name):
+            def unwrap(x):
+                return eval(x.source_code) if isinstance(x, ex.PythonExpression) else x
+            return getattr(ex, left.name)(
+                *[unwrap(x) for x in args if not isinstance(x, ex.KeywordArg)],
+                **{x.name: unwrap(x.expr) for x in args if isinstance(x, ex.KeywordArg)},
+            )
+        else:
+            return ex.Call(left, args)
+
+    if isinstance(tree, parser.Postfix):
+        classes = {
+            '?': ex.Opt,
+            '*': ex.List,
+            '+': ex.Some,
+        }
+        if isinstance(tree.operator, str) and tree.operator in classes:
+            return classes[tree.operator](tree.left)
+
+        if isinstance(tree.operator, parser.Repeat):
+            def uncook(x):
+                if x is None:
+                    return None
+                if isinstance(x, ex.PythonExpression) and x.source_code == 'None':
+                    return None
+                if isinstance(x, ex.PythonExpression):
+                    return x.source_code
+                if isinstance(x, ex.Ref):
+                    return x.name
+                else:
+                    raise Exception(f'Expected name or Python expression. Received: {x}')
+
+            start = uncook(tree.operator.start)
+            stop = uncook(tree.operator.stop)
+            return ex.List(tree.left, min_len=start, max_len=stop)
+
+    if isinstance(tree, parser.Repeat):
+        return tree
+
+    if isinstance(tree, parser.Infix) and tree.operator == '|':
+        left, right = tree.left, tree.right
+        left = list(left.exprs) if isinstance(left, ex.Choice) else [left]
+        right = list(right.exprs) if isinstance(right, ex.Choice) else [right]
+        return ex.Choice(*left, *right)
+
+    if isinstance(tree, parser.Infix):
+        classes = {
+            '|>': lambda a, b: ex.Apply(a, b, apply_left=False),
+            '<|': lambda a, b: ex.Apply(a, b, apply_left=True),
+            '/?': lambda a, b: ex.Sep(a, b, allow_trailer=True),
+            '//': lambda a, b: ex.Sep(a, b, allow_trailer=False),
+            '<<': ex.Left,
+            '>>': ex.Right,
+            'where': ex.Where,
+        }
+        return classes[tree.operator](tree.left, tree.right)
+
+    if isinstance(tree, parser.KeywordArg):
+        return ex.KeywordArg(tree.name, tree.expr)
+
+    if isinstance(tree, parser.RuleDef):
+        return ex.Rule(tree.name, tree.params, tree.expr, is_ignored=tree.is_ignored)
+
+    if isinstance(tree, parser.ClassDef):
+        return ex.Class(tree.name, tree.params, tree.members)
+
+    if isinstance(tree, parser.ClassMember):
+        return ex.Rule(tree.name, None, tree.expr, is_omitted=tree.is_omitted)
+
+    if isinstance(tree, parser.IgnoreStmt):
+        return ex.Rule(None, None, tree.expr, is_ignored=True)
+
+    # Otherwise, fail if we don't know what to do with this tree.
+    raise Exception(f'Unexpected expression: {tree!r}')
 
 
 _program_setup = r'''
@@ -316,7 +474,7 @@ class Prefix(Node):
 
 
 def parse(text, pos=0, fullparse=True):
-    return _run(text, pos, $start, fullparse)
+    return _run(${ctx}text, pos, $start, fullparse)
 
 
 _PositionInfo = _nt('_PositionInfo', 'start, end')
@@ -325,12 +483,12 @@ _Position = _nt('_Position', 'index, line, column')
 
 
 class _ParseFunction(_nt('_ParseFunction', 'func, args, kwargs')):
-    def __call__(self, _text, _pos):
-        return self.func(_text, _pos, *self.args, **dict(self.kwargs))
+    def __call__(self, ${ctx}_text, _pos):
+        return self.func(${ctx}_text, _pos, *self.args, **dict(self.kwargs))
 
 
 class _StringLiteral(str):
-    def __call__(self, _text, _pos):
+    def __call__(self, ${ctx}_text, _pos):
         return self._parse_function(_text, _pos)
 
 
@@ -341,7 +499,7 @@ def _wrap_string_literal(string_value, parse_function):
 
 
 class _ByteLiteral(int):
-    def __call__(self, _text, _pos):
+    def __call__(self, ${ctx}_text, _pos):
         return self._parse_function(_text, _pos)
 
 
@@ -351,12 +509,12 @@ def _wrap_byte_literal(byte_value, parse_function):
     return result
 
 
-def _run(text, pos, start, fullparse):
+def _run(${ctx}text, pos, start, fullparse):
     memo = {}
     result = None
 
     key = ($CALL, start, pos)
-    gtor = start(text, pos)
+    gtor = start(${ctx}text, pos)
     stack = [(key, gtor)]
 
     while stack:
@@ -369,7 +527,7 @@ def _run(text, pos, start, fullparse):
         elif result in memo:
             result = memo[result]
         else:
-            gtor = result[1](text, result[2])
+            gtor = result[1](${ctx}text, result[2])
             stack.append((result, gtor))
             result = None
 
@@ -569,4 +727,52 @@ def _map_index_to_line_and_column(text):
         column_numbers.append(current_column)
 
     return line_numbers, column_numbers
+'''
+
+
+_context_section = '''
+class _Context:
+    pass
+'''
+
+
+_subgrammar_setup = r'''
+from $super_module import (
+    Infix,
+    Node,
+    ParseError,
+    PartialParseError,
+    Postfix,
+    Prefix,
+    Rule,
+    SourcerError,
+    _ByteLiteral,
+    _Context,
+    _IGNORECASE,
+    _Metadata,
+    _ParseFunction,
+    _Position,
+    _PositionInfo,
+    _StringLiteral,
+    _Traversing,
+    _caret_at,
+    _compile_re,
+    _extract_excerpt,
+    _finalize_parse_info,
+    _get_line_and_column,
+    _map_index_to_line_and_column,
+    _nt,
+    _run,
+    _transform,
+    _wrap_byte_literal,
+    _wrap_string_literal,
+    transform,
+    traverse,
+    visit,
+)
+'''
+
+_subgrammar_body = '''
+def parse(text, pos=0, fullparse=True):
+    return _run(_ctx, text, pos, $start, fullparse)
 '''

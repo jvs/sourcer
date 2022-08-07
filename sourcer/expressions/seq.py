@@ -28,7 +28,7 @@ class Seq(Expression):
     def __str__(self):
         return f'[{", ".join(str(x) for x in self.exprs)}]'
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         if self.needs_parse_info:
             start_pos = out.var('start_pos', POS)
 
@@ -38,7 +38,7 @@ class Seq(Expression):
         with utils.breakable(out):
             items = []
             for name, expr in zip(self.names, self.exprs):
-                with utils.if_fails(out, expr):
+                with utils.if_fails(out, flags, expr):
                     out += BREAK
 
                 item = out.var('item') if name is None else Code(name)

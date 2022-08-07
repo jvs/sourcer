@@ -15,13 +15,13 @@ class Call(Expression):
         args = ', '.join(str(x) for x in self.args)
         return f'{self.func}({args})'
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         args, kwargs = [], []
 
         for arg in self.args:
             is_kw = isinstance(arg, KeywordArg)
             expr = arg.expr if is_kw else arg
-            value = expr.argumentize(out)
+            value = expr.argumentize(out, flags)
 
             if is_kw:
                 kwargs.append((arg.name, value))

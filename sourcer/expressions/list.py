@@ -34,7 +34,7 @@ class List(Expression):
     def can_partially_succeed(self):
         return not self.always_succeeds() and self.expr.can_partially_succeed()
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         if self.max_len == 0 or self.max_len == '0':
             out += RESULT << []
             out += STATUS << True
@@ -47,7 +47,7 @@ class List(Expression):
             if self.expr.can_partially_succeed():
                 checkpoint = out.var('checkpoint', POS)
 
-            with utils.if_fails(out, self.expr):
+            with utils.if_fails(out, flags, self.expr):
                 if self.expr.can_partially_succeed():
                     out += POS << checkpoint
                 out += BREAK

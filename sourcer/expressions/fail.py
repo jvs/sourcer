@@ -14,7 +14,7 @@ class Fail(Expression):
     def __str__(self):
         return 'Fail()' if self.message is None else f'Fail({self.message!r})'
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         out += RESULT << self.error_func()
         out += STATUS << False
 

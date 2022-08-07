@@ -8,13 +8,13 @@ from .precedence import OperatorPrecedenceRule
 class Prefix(OperatorPrecedenceRule):
     num_blocks = 2
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         prev = out.var('prev', None)
         checkpoint = out.var('checkpoint', POS)
         staging = out.var('staging')
 
         with out.WHILE(True):
-            with utils.if_fails(out, self.operators):
+            with utils.if_fails(out, flags, self.operators):
                 out += POS << checkpoint
                 out += BREAK
 
@@ -28,7 +28,7 @@ class Prefix(OperatorPrecedenceRule):
                 out += prev.right << step
                 out += prev << step
 
-        self.operand.compile(out)
+        self.operand.compile(out, flags)
 
         with out.IF(Code(STATUS, ' and ', prev)):
             out += prev.right << RESULT

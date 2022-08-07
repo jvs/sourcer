@@ -22,8 +22,8 @@ class Ref(Expression):
     def __str__(self):
         return self.name
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         out += (STATUS, RESULT, POS) << Yield((CALL, Code(self.resolved), POS))
 
-    def argumentize(self, out):
+    def argumentize(self, out, flags):
         return Code(self.resolved)

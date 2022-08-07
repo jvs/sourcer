@@ -13,12 +13,12 @@ class OperatorPrecedence(Expression):
         lines = ',\n'.join(f'    {x}' for x in rules)
         return f'OperatorPrecedence(\n{lines}\n)'
 
-    def _compile(self, pb):
+    def _compile(self, out, flags):
         prev = self.atom
         for rule in self.rules:
             rule.operand = prev
             prev = rule
-        prev.compile(pb)
+        prev.compile(out, flags)
 
 
 class OperatorPrecedenceRule(Expression):

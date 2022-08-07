@@ -9,13 +9,13 @@ class LeftAssoc(OperatorPrecedenceRule):
     associativity = 'left'
     num_blocks = 2
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         is_first = out.var('is_first', True)
         staging = out.var('staging', None)
         operator = out.var('operator')
 
         with out.WHILE(True):
-            with utils.if_fails(out, self.operand):
+            with utils.if_fails(out, flags, self.operand):
                 out += BREAK
 
             checkpoint = out.var('checkpoint', POS)
@@ -29,7 +29,7 @@ class LeftAssoc(OperatorPrecedenceRule):
                 if self.associativity is None:
                     out += BREAK
 
-            with utils.if_fails(out, self.operators):
+            with utils.if_fails(out, flags, self.operators):
                 out += BREAK
 
             out += operator << RESULT
@@ -48,7 +48,7 @@ class RightAssoc(OperatorPrecedenceRule):
     associativity = 'right'
     num_blocks = 4
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         backup = out.var('backup', None)
         prev = out.var('prev', None)
 
@@ -56,7 +56,7 @@ class RightAssoc(OperatorPrecedenceRule):
         checkpoint = out.var('checkpoint')
 
         with out.WHILE(True):
-            with utils.if_fails(out, self.operand):
+            with utils.if_fails(out, flags, self.operand):
                 with out.IF(prev):
                     with out.IF(backup):
                         out += backup.right << prev.left
@@ -72,7 +72,7 @@ class RightAssoc(OperatorPrecedenceRule):
             out += checkpoint << POS
             operand = out.var('operand', RESULT)
 
-            with utils.if_fails(out, self.operators):
+            with utils.if_fails(out, flags, self.operators):
                 with out.IF(prev):
                     out += prev.right << operand
                     out += RESULT << staging

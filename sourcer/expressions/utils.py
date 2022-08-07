@@ -4,8 +4,8 @@ from .constants import BREAK, CALL, STATUS
 
 
 @contextmanager
-def if_succeeds(out, expr):
-    expr.compile(out)
+def if_succeeds(out, flags, expr):
+    expr.compile(out, flags)
     if expr.always_succeeds():
         yield
     else:
@@ -14,8 +14,8 @@ def if_succeeds(out, expr):
 
 
 @contextmanager
-def if_fails(out, expr):
-    expr.compile(out)
+def if_fails(out, flags, expr):
+    expr.compile(out, flags)
     if expr.always_succeeds():
         with out._sandbox():
             yield
@@ -37,7 +37,7 @@ def infix_str(expr1, op, expr2):
     return f'{arg1} {op} {arg2}'
 
 
-def skip_ignored(pos):
+def skip_ignored(pos, flags):
     return Yield((CALL, Code(implementation_name('_ignored')), pos))[2]
 
 

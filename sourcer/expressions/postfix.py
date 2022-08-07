@@ -8,13 +8,13 @@ from .precedence import OperatorPrecedenceRule
 class Postfix(OperatorPrecedenceRule):
     num_blocks = 3
 
-    def _compile(self, out):
-        with utils.if_succeeds(out, self.operand):
+    def _compile(self, out, flags):
+        with utils.if_succeeds(out, flags, self.operand):
             staging = out.var('staging', RESULT)
             checkpoint = out.var('checkpoint', POS)
 
             with out.WHILE(True):
-                self.operators.compile(out)
+                self.operators.compile(out, flags)
 
                 with out.IF(STATUS):
                     out += staging << Code('Postfix')(staging, RESULT)

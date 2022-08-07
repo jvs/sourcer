@@ -41,14 +41,19 @@ class Regex(Expression):
             with out.global_section():
                 out.state[func] = out.var('matcher', Code(func))
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         func = out.state[self._match_func()]
         match = out.var('match', func(TEXT, POS))
         end = match.end()
 
         with out.IF(match):
             out += RESULT << match.group(0)
-            out += POS << (utils.skip_ignored(end) if self.skip_ignored else end)
+
+            if self.skip_ignored:
+                out += POS << utils.skip_ignored(end, flags)
+            else:
+                out += POS << end
+
             out += STATUS << True
 
         with out.ELSE():

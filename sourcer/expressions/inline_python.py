@@ -21,11 +21,11 @@ class PythonExpression(Expression):
     def can_partially_succeed(self):
         return False
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         out += RESULT << Code(self.source_code)
         out += STATUS << True
 
-    def argumentize(self, out):
+    def argumentize(self, out, flags):
         return Code(self.source_code)
 
 

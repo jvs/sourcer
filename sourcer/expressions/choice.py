@@ -25,7 +25,7 @@ class Choice(Expression):
             any(x.can_partially_succeed() for x in self.exprs)
         )
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         needs_err = not self.always_succeeds()
         needs_backtrack = any(x.can_partially_succeed() for x in self.exprs)
 
@@ -49,7 +49,7 @@ class Choice(Expression):
                     comment += ' (always_succeeds)'
                 out.add_comment(comment)
 
-                with utils.if_succeeds(out, expr):
+                with utils.if_succeeds(out, flags, expr):
                     if expr.always_succeeds():
                         break
                     else:

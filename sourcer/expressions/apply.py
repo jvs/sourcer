@@ -21,9 +21,9 @@ class Apply(Expression):
     def always_succeeds(self):
         return self.expr1.always_succeeds() and self.expr2.always_succeeds()
 
-    def _compile(self, out):
-        with utils.if_succeeds(out, self.expr1):
+    def _compile(self, out, flags):
+        with utils.if_succeeds(out, flags, self.expr1):
             first = out.var('func' if self.apply_left else 'arg', RESULT)
-            with utils.if_succeeds(out, self.expr2):
+            with utils.if_succeeds(out, flags, self.expr2):
                 result = first(RESULT) if self.apply_left else RESULT(first)
                 out += RESULT << result

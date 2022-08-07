@@ -22,14 +22,14 @@ class Discard(Expression):
         return (self.expr1.always_succeeds()
             and self.expr2.always_succeeds())
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         with utils.breakable(out):
-            with utils.if_fails(out, self.expr1):
+            with utils.if_fails(out, flags, self.expr1):
                 out += BREAK
 
             if self.discard_left:
-                self.expr2.compile(out)
+                self.expr2.compile(out, flags)
             else:
                 staging = out.var('staging', RESULT)
-                with utils.if_succeeds(out, self.expr2):
+                with utils.if_succeeds(out, flags, self.expr2):
                     out += RESULT << staging

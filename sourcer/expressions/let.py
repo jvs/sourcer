@@ -24,7 +24,7 @@ class Let(Expression):
         return (self.expr.always_succeeds()
             and self.body.always_succeeds())
 
-    def _compile(self, out):
-        with utils.if_succeeds(out, self.expr):
+    def _compile(self, out, flags):
+        with utils.if_succeeds(out, flags, self.expr):
             out += Code(self.name) << RESULT
-            self.body.compile(out)
+            self.body.compile(out, flags)
