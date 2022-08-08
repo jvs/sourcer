@@ -206,7 +206,7 @@ def generate_source_code(docstring, parsed):
         rule.compile(out, flags)
         visit(rule, lambda x: maybe_compile_error_message(out, rule, x))
 
-    if parsed.name is not None:
+    if flags.uses_context:
         out += Code('_ctx = _Context()')
 
         if parsed.extends is not None:
