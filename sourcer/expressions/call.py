@@ -29,7 +29,13 @@ class Call(Expression):
                 args.append(value)
 
         _ParseFunction = Code('_ParseFunction')
-        func = _ParseFunction(Code(self.func.resolved), tuple(args), tuple(kwargs))
+
+        if flags.uses_context and not self.func.is_local:
+            resolved_func = f'_ctx.{self.func.resolved}'
+        else:
+            resolved_func = self.func.resolved
+
+        func = _ParseFunction(Code(resolved_func), tuple(args), tuple(kwargs))
         func = out.var('func', func)
         out += (STATUS, RESULT, POS) << Yield((CALL, func, POS))
 

@@ -70,6 +70,11 @@ class Class(Expression):
         out += Code('_fields') << tuple(field_names)
         out.add_newline()
 
+        if flags.uses_context:
+            parse_func = Code(f'_ctx.{parse_func}')
+        else:
+            parse_func = Code(parse_func)
+
         if class_attrs:
             for name, value in class_attrs:
                 out += Code(f'{name} = {value}')
