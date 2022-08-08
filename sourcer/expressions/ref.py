@@ -23,7 +23,7 @@ class Ref(Expression):
         return self.name
 
     def _compile(self, out, flags):
-        if flags.uses_context:
+        if flags.uses_context and not self.is_local:
             func = Code(f'_ctx.{self.resolved}')
         else:
             func = Code(self.resolved)

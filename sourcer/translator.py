@@ -568,7 +568,7 @@ class _ParseFunction(_nt('_ParseFunction', 'func, args, kwargs')):
 
 class _StringLiteral(str):
     def __call__(self, ${ctx}_text, _pos):
-        return self._parse_function(_text, _pos)
+        return self._parse_function(${ctx}_text, _pos)
 
 
 def _wrap_string_literal(string_value, parse_function):
@@ -579,7 +579,7 @@ def _wrap_string_literal(string_value, parse_function):
 
 class _ByteLiteral(int):
     def __call__(self, ${ctx}_text, _pos):
-        return self._parse_function(_text, _pos)
+        return self._parse_function(${ctx}_text, _pos)
 
 
 def _wrap_byte_literal(byte_value, parse_function):

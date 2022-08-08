@@ -47,7 +47,8 @@ class Expression:
 
     def argumentize(self, out, flags):
         func, params = self.functionalize(out, flags, is_generator=True)
-        if len(params) <= 2:
+        cutoff = 3 if flags.uses_context else 2
+        if len(params) <= 3:
             return func
         else:
             _ParseFunction = Code('_ParseFunction')
@@ -59,7 +60,9 @@ class Expression:
 
     def functionalize(self, out, flags, is_generator=False):
         name = f'_parse_function_{self.program_id}'
-        params = [str(TEXT), str(POS)] + list(sorted(self.freevars()))
+
+        extras = ['_ctx'] if flags.uses_context else []
+        params = extras + [str(TEXT), str(POS)] + list(sorted(self.freevars()))
 
         with out.global_section():
             with out.DEF(name, params):

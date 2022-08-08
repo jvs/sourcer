@@ -33,7 +33,7 @@ class Class(Expression):
         return all(x.expr.always_succeeds() for x in self.members)
 
     def _compile(self, out, flags):
-        parse_func = Code(utils.implementation_name(self.name))
+        parse_func = utils.implementation_name(self.name)
         all_names = [x.name for x in self.members]
         field_names = [x.name for x in self.members if not x.is_omitted]
         class_attrs = []
