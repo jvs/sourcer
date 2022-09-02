@@ -167,6 +167,7 @@ class Node:
 
     def __init__(self):
         self._metadata = _Metadata()
+        self._hash = None
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -175,6 +176,13 @@ class Node:
             if getattr(self, field) != getattr(other, field):
                 return False
         return True
+
+    def __hash__(self):
+        if self._hash is not None:
+            return self._hash
+        result = hash(tuple(getattr(self, x) for x in self._fields))
+        self._hash = result
+        return result
 
     def _asdict(self):
         return {k: getattr(self, k) for k in self._fields}
