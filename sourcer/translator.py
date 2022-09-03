@@ -446,10 +446,14 @@ class Node:
         self._hash = None
 
     def __eq__(self, other):
+        if self is other:
+            return True
         if not isinstance(other, self.__class__):
             return False
         for field in self._fields:
-            if getattr(self, field) != getattr(other, field):
+            left = getattr(self, field)
+            right = getattr(other, field)
+            if left is not right and left != right:
                 return False
         return True
 
