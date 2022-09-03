@@ -456,7 +456,10 @@ class Node:
     def __hash__(self):
         if self._hash is not None:
             return self._hash
-        result = hash(tuple(getattr(self, x) for x in self._fields))
+        self._hash = 0
+        result = 0
+        for field in self._fields:
+            result ^= _hash(getattr(self, field))
         self._hash = result
         return result
 
@@ -470,6 +473,24 @@ class Node:
         result = self.__class__(**kw)
         result._metadata.update(self._metadata)
         return result
+
+
+def _hash(value):
+    try:
+        return hash(value)
+    except TypeError:
+        if isinstance(value, (tuple, list)):
+            result = 0
+            for item in value:
+                result ^= _hash(item)
+            return result
+        elif isinstance(value, dict):
+            result = 0
+            for pair in value.items():
+                result ^= _hash(pair)
+            return result
+        else:
+            raise
 
 
 class _Metadata:
