@@ -61,6 +61,10 @@ def test_arithmetic_expressions():
     result = g.parse('12 * 34%')
     assert result == g.Infix(12, '*', g.Postfix(34, '%'))
 
+    # Postfix operator used in the left-hand operand:
+    result = g.parse('12% * 34')
+    assert result == g.Infix(g.Postfix(12, '%'), '*', 34)
+
 
 def test_simple_json_grammar():
     g = Grammar(r'''
