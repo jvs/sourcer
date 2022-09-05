@@ -44,7 +44,7 @@ class Choice(Expression):
 
         with utils.breakable(out):
             for i, expr in enumerate(self.exprs):
-                comment = f'Option {i+1}:'
+                comment = f'Option {i + 1}:'
                 if expr.always_succeeds():
                     comment += ' (always_succeeds)'
                 out.add_comment(comment)

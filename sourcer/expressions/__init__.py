@@ -11,6 +11,7 @@ from .fail import Fail
 from .inline_python import PythonExpression, PythonSection
 from .let import Let
 from .list import List
+from .longest import Longest
 from .opt import Opt
 from .precedence import (
     LeftAssoc,

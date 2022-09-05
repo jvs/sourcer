@@ -3,6 +3,7 @@ from .base import Expression
 from .choice import Choice
 from .inline_python import PythonExpression
 from .list import List
+from .longest import Longest
 from .sep import Sep
 from .seq import Seq
 
@@ -37,7 +38,7 @@ def OperatorPrecedence(atom, *rules):
 
     def combine(parts, is_list=False):
         if parts:
-            choice = parts[0] if len(parts) == 1 else Choice(*reversed(parts))
+            choice = parts[0] if len(parts) == 1 else Longest(*reversed(parts))
             return List(choice) if is_list else choice
         else:
             return PythonExpression('None')
