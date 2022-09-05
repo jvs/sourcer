@@ -634,6 +634,7 @@ def test_traverse_function():
         }
 
         Word = /[_a-zA-Z][_a-zA-Z0-9]*/
+        Int = /\d+/ |> `int`
         ignored Space = /\s+/
     ''')
     result = g.parse('''
