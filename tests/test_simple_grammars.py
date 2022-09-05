@@ -805,3 +805,39 @@ def test_extending_a_grammar():
         g2.Sleep(line=20, duration=99),
         g1.Halt(line=40),
     ]
+
+
+def test_low_priority_postfix_operator():
+    g = Grammar('''
+        kw(word) => Name where `lambda x: x == word`
+        ParensList(T) => "(" >> (T /? ",") << ")"
+        Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+
+        Expression = OperatorPrecedence(
+            Name,
+            Mixfix("(" >> Expression << ")"),
+            Postfix(FieldList),
+            LeftAssoc(kw("and")),
+            LeftAssoc(kw("or")),
+            LeftAssoc(kw("but") >> kw("not")),
+            Postfix(Where),
+        )
+
+        class FieldList {
+            fields: ParensList(Name)
+        }
+
+        class Where {
+            condition: kw("where") >> Name
+        }
+
+        ignore Space = /[ \t\r\n]+/
+        start = Expression
+    ''')
+    I, P, Where = g.Infix, g.Postfix, g.Where
+
+    tree = g.parse('Foo and Fiz where Buz')
+    assert tree == P(I('Foo', 'and', 'Fiz'), Where('Buz'))
+
+    tree = g.parse('Foo where Bar and Fiz where Buz')
+    assert tree == P(I(P('Foo', Where('Bar')), 'and', 'Fiz'), Where('Buz'))

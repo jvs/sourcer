@@ -1,5 +1,4 @@
 from .apply import Apply
-from .assoc import LeftAssoc, NonAssoc, RightAssoc
 from .base import SymbolCounter, visit
 from .byte import Byte
 from .call import Call, KeywordArg
@@ -14,9 +13,15 @@ from .let import Let
 from .list import List
 from .mixfix import Mixfix
 from .opt import Opt
-from .postfix import Postfix
-from .precedence import OperatorPrecedence
-from .prefix import Prefix
+from .precedence import (
+    LeftAssoc,
+    Mixfix,
+    NonAssoc,
+    OperatorPrecedence,
+    Postfix,
+    Prefix,
+    RightAssoc,
+)
 from .ref import Ref
 from .regex import Regex
 from .rule import Rule
