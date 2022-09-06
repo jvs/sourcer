@@ -65,6 +65,24 @@ def test_arithmetic_expressions():
     result = g.parse('12% * 34')
     assert result == g.Infix(g.Postfix(12, '%'), '*', 34)
 
+    # Postfix operator used in the left-hand operand of an operator with higher
+    # precedence:
+    result = g.parse('12% ^ 34')
+    assert result == g.Infix(g.Postfix(12, '%'), '^', 34)
+
+    # A number by itself:
+    result = g.parse('10')
+    assert result == 10
+
+    # A stack of postfix operators:
+    result = g.parse('100%%%')
+    assert result == g.Postfix(g.Postfix(g.Postfix(100, '%'), '%'), '%')
+
+    # Stacks of prefix and postfix operators:
+    result = g.parse('-+-456%%%')
+    assert result == g.Postfix(g.Postfix(g.Postfix(
+        P('-', P('+', P('-', 456))), '%'), '%'), '%')
+
 
 def test_simple_json_grammar():
     g = Grammar(r'''
