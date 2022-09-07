@@ -4494,6 +4494,9 @@ def _try_Expr(_text, _pos):
                     _operand_stack1.append(Infix(_left, _operator, _right))
                 else:
                     _operand_stack1.append(Prefix(_operator, _right))
+            elif _top_prec == _prec and _top_assoc == 3:
+                _pos = _outer_checkpoint1
+                break
             else:
                 break
         _operator_marker1 = len(_operator_stack1)

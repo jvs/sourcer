@@ -628,6 +628,13 @@ def test_mixfix_operator():
     result = g.parse('1 * (if 2 >= 3 then 4 else 5) / 6')
     assert result == I(I(1, '*', g.IfThenElse(I(2, '>=', 3), 4, 5)), '/', 6)
 
+    # Try mixing some non-associative infix operators. These should fail.
+    with pytest.raises(g.PartialParseError):
+        g.parse('1 < 2 < 3')
+
+    with pytest.raises(g.PartialParseError):
+        g.parse('1 == 2 != 3')
+
 
 def test_traverse_function():
     g = Grammar(r'''

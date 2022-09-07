@@ -147,6 +147,9 @@ class OperatorTable(Expression):
 
                 with out.IF(Code(f'_top_prec < _prec or (_top_prec == _prec and _top_assoc == 1)')):
                     pop_operator()
+                with out.ELIF(Code(f'_top_prec == _prec and _top_assoc == 3')):
+                    out += (POS << outer_checkpoint)
+                    out += BREAK
                 with out.ELSE():
                     out += BREAK
 
