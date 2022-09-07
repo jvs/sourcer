@@ -22,7 +22,7 @@ g = Grammar(r'''
 
     Object = "{" >> (Member // ",") << "}" |> `dict`
 
-    Member = [String << ":", Value]
+    Member = [String, ":" >> Value]
 
     Array = "[" >> (Value // ",") << "]"
 

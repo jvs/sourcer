@@ -16,19 +16,18 @@ def test_simple_words():
 
 def test_arithmetic_expressions():
     g = Grammar(r'''
-        ignored Space = /\s+/
+        ignore Space = /\s+/
 
         Int = /\d+/ |> `int`
 
-        Expr = OperatorPrecedence(
-            Int,
-            Mixfix('(' >> Expr << ')'),
-            Prefix('+' | '-'),
-            RightAssoc('^'),
-            Postfix('%'),
-            LeftAssoc('*' | '/'),
-            LeftAssoc('+' | '-'),
-        )
+        Expr = Int between {
+            mixfix: "(" >> Expr << ")"
+            prefix: "+", "-"
+            right: "^"
+            postfix: "%"
+            left: "*", "/"
+            left: "+", "-"
+        }
         start = Expr
     ''')
 
@@ -65,6 +64,24 @@ def test_arithmetic_expressions():
     result = g.parse('12% * 34')
     assert result == g.Infix(g.Postfix(12, '%'), '*', 34)
 
+    # Postfix operator used in the left-hand operand of an operator with higher
+    # precedence:
+    result = g.parse('12% ^ 34')
+    assert result == g.Infix(g.Postfix(12, '%'), '^', 34)
+
+    # A number by itself:
+    result = g.parse('10')
+    assert result == 10
+
+    # A stack of postfix operators:
+    result = g.parse('100%%%')
+    assert result == g.Postfix(g.Postfix(g.Postfix(100, '%'), '%'), '%')
+
+    # Stacks of prefix and postfix operators:
+    result = g.parse('-+-456%%%')
+    assert result == g.Postfix(g.Postfix(g.Postfix(
+        P('-', P('+', P('-', 456))), '%'), '%'), '%')
+
 
 def test_simple_json_grammar():
     g = Grammar(r'''
@@ -76,7 +93,7 @@ def test_simple_json_grammar():
 
         Object = "{" >> (Member // ",") << "}" |> `dict`
 
-        Member = [String << ":", Value]
+        Member = [String, ":" >> Value]
 
         Array = "[" >> (Value // ",") << "]"
 
@@ -86,7 +103,7 @@ def test_simple_json_grammar():
 
         Keyword = "true" >> `True` | "false" >> `False` | "null" >> `None`
 
-        ignored Space = /\s+/
+        ignore Space = /\s+/
     ''')
 
     result = g.parse('{"foo": "bar", "baz": true}')
@@ -145,12 +162,11 @@ def test_postfix_operators():
             args: "(" >> (Expr /? ",") << ")"
         }
 
-        Expr = OperatorPrecedence(
-            Atom,
-            Postfix(ArgList),
-            Postfix("?" | "*" | "+" | "!"),
-            LeftAssoc("|"),
-        )
+        Expr = Atom between {
+            postfix: ArgList
+            postfix: "?", "*", "+", "!"
+            left: "|"
+        }
 
         start = Expr
     ''')
@@ -243,7 +259,7 @@ def test_simple_data_dependent_class():
 
 def test_simple_rule_with_parameter():
     g = Grammar(r'''
-        ignored Space = /[ \t]+/
+        ignore Space = /[ \t]+/
         Name = /[_a-zA-Z][_a-zA-Z0-9]*/
         Pair(x) = "(" >> [x << ",", x] << ")"
 
@@ -567,23 +583,22 @@ def test_mixfix_operator():
 
         Int = /\d+/ |> `int`
 
-        Expr = OperatorPrecedence(
-            Int,
-            Mixfix('(' >> Expr << ')'),
-            Prefix('+' | '-'),
-            RightAssoc('^'),
-            Postfix('%'),
-            LeftAssoc('*' | '/'),
-            LeftAssoc('+' | '-'),
-            NonAssoc("<=" | "<" | ">=" | ">" | "as"),
-            NonAssoc("==" | "!="),
-            Prefix("not"),
-            LeftAssoc("and"),
-            LeftAssoc("or"),
-            RightAssoc("->"),
-            Mixfix(IfThenElse),
-            Prefix("assert"),
-        )
+        Expr = Int between {
+            mixfix: '(' >> Expr << ')'
+            prefix: '+', '-'
+            right: '^'
+            postfix: '%'
+            left: '*', '/'
+            left: '+', '-'
+            infix: "<=", "<", ">=", ">", "as"
+            infix: "==", "!="
+            prefix: "not"
+            left: "and"
+            left: "or"
+            right: "->"
+            mixfix: IfThenElse
+            prefix: "assert"
+        }
 
         class IfThenElse {
             test: "if" >> Expr
@@ -628,11 +643,11 @@ def test_traverse_function():
             body: "=>" >> Expr
         }
 
-        Expr = OperatorPrecedence(
-            Word | Int,
-            Mixfix('(' >> Expr << ')'),
-            Postfix(ArgList),
-        )
+        Expr = (Word | Int) between {
+            mixfix: '(' >> Expr << ')'
+            postfix: ArgList
+        }
+
         class ArgList {
             args: "(" >> (Expr /? ",") << ")"
         }
@@ -813,15 +828,14 @@ def test_low_priority_postfix_operator():
         ParensList(T) => "(" >> (T /? ",") << ")"
         Name = /[_a-zA-Z][_a-zA-Z0-9]*/
 
-        Expression = OperatorPrecedence(
-            Name,
-            Mixfix("(" >> Expression << ")"),
-            Postfix(FieldList),
-            LeftAssoc(kw("and")),
-            LeftAssoc(kw("or")),
-            LeftAssoc(kw("but") >> kw("not")),
-            Postfix(Where),
-        )
+        Expression = Name between {
+            mixfix: "(" >> Expression << ")"
+            postfix: FieldList
+            left: kw("and")
+            left: kw("or")
+            left: kw("but") >> kw("not")
+            postfix: Where
+        }
 
         class FieldList {
             fields: ParensList(Name)

@@ -164,7 +164,11 @@ def generate_source_code(docstring, parsed):
 
     visited = set()
     def maybe_compile_error_message(out, rule, expr):
-        if not hasattr(expr, 'complain') or expr.program_id in visited:
+        if (
+            not hasattr(expr, 'complain')
+            or expr.program_id is None
+            or expr.program_id in visited
+        ):
             return
 
         visited.add(expr.program_id)
@@ -258,6 +262,8 @@ def _assign_ids(rules):
 
     def assign_id(node):
         nonlocal next_id
+        if getattr(node, 'program_id', None) is not None:
+            return
         node.program_id = next_id
         next_id += 1
         if isinstance(node, ex.Class):
@@ -359,6 +365,16 @@ def _create_parsing_expression(tree):
             )
         else:
             return ex.Call(left, args)
+
+    if isinstance(tree, (parser.OperatorTable, parser.OperatorRow)):
+        return tree
+
+    if isinstance(tree, parser.Postfix) and isinstance(tree.operator, parser.OperatorTable):
+        rows = tree.operator.rows
+        if rows:
+            return ex.OperatorTable.create(operand=tree.left, rows=rows)
+        else:
+            return tree.left
 
     if isinstance(tree, parser.Postfix):
         left, op = tree.left, tree.operator
@@ -839,62 +855,6 @@ def _map_index_to_line_and_column(text):
         column_numbers.append(current_column)
 
     return line_numbers, column_numbers
-
-
-def _apply_shunting_yard(stage):
-    operands = []
-    operators = []
-
-    def pop_operator():
-        _, assoc, operator = operators.pop()
-        if assoc:
-            right = operands.pop()
-            left = operands.pop()
-            operands.append(Infix(left, operator, right))
-        else:
-            right = operands.pop()
-            operands.append(Prefix(operator, right))
-
-    it = iter(stage)
-
-    while True:
-        prefixes, operand, postfixes = next(it)
-
-        if prefixes:
-            operators.extend(prefixes)
-
-        operands.append(operand)
-
-        if postfixes:
-
-            for precedence, operator in postfixes:
-                while operators and operators[-1][0] > precedence:
-                    pop_operator()
-                operand = operands.pop()
-                operand = Postfix(operand, operator)
-                operands.append(operand)
-
-        try:
-            next_operator = next(it)
-        except StopIteration:
-            break
-
-        precedence = next_operator[0]
-
-        while operators:
-            top_prec, top_assoc, _ = operators[-1]
-            if top_prec > precedence or (top_prec == precedence and top_assoc == 1):
-                pop_operator()
-            else:
-                break
-
-        operators.append(next_operator)
-
-    while operators:
-        pop_operator()
-
-    assert len(operands) == 1
-    return operands[0]
 '''
 
 

@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from outsourcer import Code, Yield
-from .constants import BREAK, CALL, STATUS
+from .constants import BREAK, CALL, POS, STATUS
 
 
 @contextmanager
@@ -29,6 +29,22 @@ def breakable(out):
     with out.WHILE(True):
         yield
         out += BREAK
+
+
+@contextmanager
+def repeat(out, flags, expr, checkpoint):
+    can_partially_succeed = expr.can_partially_succeed()
+
+    with out.WHILE(True):
+        if can_partially_succeed:
+            out += (checkpoint << POS)
+
+        with if_fails(out, flags, expr):
+            if can_partially_succeed:
+                out += (POS << checkpoint)
+            out += BREAK
+
+        yield
 
 
 def infix_str(expr1, op, expr2):

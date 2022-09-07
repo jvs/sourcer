@@ -9,8 +9,8 @@ Sourcer's grammar, using Sourcer's grammar, if that makes any sense.)
 import textwrap
 ```
 
-ignored Space = /[ \t]+/
-ignored Comment = /#[^\r\n]*/
+ignore Space = /[ \t]+/
+ignore Comment = /#[^\r\n]*/
 
 Newline = /[\r\n][\s]*/
 LineSep = Some(Newline | ";")
@@ -133,16 +133,16 @@ class ArgList {
     args: "(" >> (wrap(KeywordArg | Expr) /? Comma) << ")"
 }
 
-Expr = OperatorPrecedence(
-    Atom,
-    Mixfix("(" >> wrap(Expr) << ")"),
-    Postfix(ArgList | FieldAccess),
-    Postfix("?" | "*" | "+" | Repeat),
-    LeftAssoc(wrap("//" | "/?")),
-    LeftAssoc(wrap("<<" | ">>")),
-    LeftAssoc(wrap("<|" | "|>" | "where")),
-    LeftAssoc(wrap("|")),
-)
+Expr = Atom between {
+    mixfix: "(" >> wrap(Expr) << ")"
+    postfix: ArgList, FieldAccess
+    postfix: "?", "*", "+", Repeat
+    left: wrap("//" | "/?")
+    left: wrap("<<" | ">>")
+    left: wrap("<|" | "|>" | "where")
+    left: wrap("|")
+    postfix: OperatorTable
+}
 
 class FieldAccess {
     field: "." >> Name
@@ -156,6 +156,26 @@ class Repeat {
 }
 
 RepeatArg = PythonExpression | Ref
+
+class OperatorTable {
+    rows: wrap(kw("between"))
+        >> "{"
+        >> Skip(Newline)
+        >> Sep(OperatorRow, LineSep, allow_trailer=True, allow_empty=True)
+        << "}"
+}
+
+class OperatorRow {
+    associativity: Associativity
+    operators: ":" >> (Expr // ",")
+}
+
+Associativity = kw("left")
+    | kw("right")
+    | kw("infix")
+    | kw("mixfix")
+    | kw("postfix")
+    | kw("prefix")
 
 ManyStmts = Sep(Stmt, LineSep, allow_trailer=True, allow_empty=False)
 SingleExpr = Expr << Opt(LineSep)
