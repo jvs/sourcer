@@ -154,7 +154,7 @@ g = Grammar(r'''
     Object = "{" >> (Member // ",") << "}" |> `dict`
 
     # A member is a pair of string literal and value, separated by a colon.
-    Member = [String << ":", Value]
+    Member = [String, ":" >> Value]
 
     # An array is zero or more values separated by commas, enclosed in
     # square braces.

@@ -93,7 +93,7 @@ def test_simple_json_grammar():
 
         Object = "{" >> (Member // ",") << "}" |> `dict`
 
-        Member = [String << ":", Value]
+        Member = [String, ":" >> Value]
 
         Array = "[" >> (Value // ",") << "]"
 

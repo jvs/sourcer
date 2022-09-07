@@ -5,8 +5,8 @@
 import textwrap
 ```
 
-ignored Space = /[ \\t]+/
-ignored Comment = /#[^\\r\\n]*/
+ignore Space = /[ \\t]+/
+ignore Comment = /#[^\\r\\n]*/
 
 Newline = /[\\r\\n][\\s]*/
 LineSep = Some(Newline | ";")
