@@ -275,17 +275,17 @@ class Rule:
 import textwrap
 
 
-class SourcerError(Exception):
+class InputError(Exception):
     """Common superclass for ParseError and PartialParseError."""
 
 
-class ParseError(SourcerError):
+class ParseError(InputError):
     def __init__(self, message, index, line, column):
         super().__init__(message)
         self.position = _Position(index, line, column)
 
 
-class PartialParseError(SourcerError):
+class PartialParseError(InputError):
     def __init__(self, partial_result, last_position, excerpt):
         super().__init__('Incomplete parse. Unexpected input on line'
             f' {last_position.line}, column {last_position.column}:\n{excerpt}')

@@ -546,17 +546,17 @@ class Rule:
 
 
 _main_template = r'''
-class SourcerError(Exception):
+class InputError(Exception):
     """Common superclass for ParseError and PartialParseError."""
 
 
-class ParseError(SourcerError):
+class ParseError(InputError):
     def __init__(self, message, index, line, column):
         super().__init__(message)
         self.position = _Position(index, line, column)
 
 
-class PartialParseError(SourcerError):
+class PartialParseError(InputError):
     def __init__(self, partial_result, last_position, excerpt):
         super().__init__('Incomplete parse. Unexpected input on line'
             f' {last_position.line}, column {last_position.column}:\n{excerpt}')
@@ -867,13 +867,13 @@ class _Context:
 _subgrammar_setup = r'''
 from $super_module import (
     Infix,
+    InputError,
     Node,
     ParseError,
     PartialParseError,
     Postfix,
     Prefix,
     Rule,
-    SourcerError,
     _ByteLiteral,
     _Context,
     _IGNORECASE,
