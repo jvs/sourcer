@@ -873,10 +873,13 @@ def test_operator_rows_with_trailing_commas():
         # Allow trailing spaces after the operators.
         Expr = Int between {
             mixfix: "(" >> Expr << ")",
-            prefix: "+", "-",
+            prefix:
+                "+",
+                "-",
             right: "^",
             postfix: "%",
-            left: "*", "/",
+            left: "*"
+                , "/",
             left: "+", "-",
         }
         start = Expr

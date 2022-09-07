@@ -161,14 +161,17 @@ class OperatorTable {
     rows: wrap(kw("between"))
         >> "{"
         >> Skip(Newline)
-        >> Sep(OperatorRow, LineSep, allow_trailer=True, allow_empty=True)
+        >> OperatorRow*
         << "}"
 }
 
 class OperatorRow {
     associativity: Associativity
-    operators: ":" >> (Expr /? ",")
+    operators: wrap(":") >> (Operator /? Comma)
+    tail: Opt(LineSep)
 }
+
+Operator = Expr << ExpectNot(wrap(":"))
 
 Associativity = kw("left")
     | kw("right")
