@@ -22,8 +22,13 @@ class Ref(Expression):
     def __str__(self):
         return self.name
 
-    def _compile(self, out):
-        out += (STATUS, RESULT, POS) << Yield((CALL, Code(self.resolved), POS))
+    def _compile(self, out, flags):
+        if flags.uses_context and not self.is_local:
+            func = Code(f'_ctx.{self.resolved}')
+        else:
+            func = Code(self.resolved)
 
-    def argumentize(self, out):
+        out += (STATUS, RESULT, POS) << Yield((CALL, func, POS))
+
+    def argumentize(self, out, flags):
         return Code(self.resolved)

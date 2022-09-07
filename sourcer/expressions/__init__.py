@@ -1,5 +1,4 @@
 from .apply import Apply
-from .assoc import LeftAssoc, NonAssoc, RightAssoc
 from .base import SymbolCounter, visit
 from .byte import Byte
 from .call import Call, KeywordArg
@@ -12,11 +11,9 @@ from .fail import Fail
 from .inline_python import PythonExpression, PythonSection
 from .let import Let
 from .list import List
-from .mixfix import Mixfix
+from .longest import Longest
+from .operator_table import OperatorTable
 from .opt import Opt
-from .postfix import Postfix
-from .precedence import OperatorPrecedence
-from .prefix import Prefix
 from .ref import Ref
 from .regex import Regex
 from .rule import Rule

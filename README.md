@@ -101,15 +101,14 @@ g = Grammar(r'''
     start = Expr
 
     # Define operatator precedence, from highest to lowest.
-    Expr = OperatorPrecedence(
-        Int,
-        Mixfix('(' >> Expr << ')'),
-        Prefix('+' | '-'),
-        RightAssoc('^'),
-        Postfix('%'),
-        LeftAssoc('*' | '/'),
-        LeftAssoc('+' | '-'),
-    )
+    Expr = Int between {
+        mixfix: '(' >> Expr << ')'
+        prefix: '+', '-'
+        right: '^'
+        postfix: '%'
+        left: '*', '/'
+        left: '+', '-'
+    }
 
     # Turn integers into Python int objects.
     Int = /\d+/ |> `int`
@@ -155,7 +154,7 @@ g = Grammar(r'''
     Object = "{" >> (Member // ",") << "}" |> `dict`
 
     # A member is a pair of string literal and value, separated by a colon.
-    Member = [String << ":", Value]
+    Member = [String, ":" >> Value]
 
     # An array is zero or more values separated by commas, enclosed in
     # square braces.
@@ -411,9 +410,9 @@ For now, here's a list of the supported expressions:
     - `foo |> bar` -- parses foo then parses bar, then returns `bar(foo)`.
     - `foo <| bar` -- parses foo then parses bar, then returns `foo(bar)`.
 
-- OperatorPrecedence:
+- Operator Precedence:
 
-    - `OperatorPrecedence(...)` -- defines an operator precedence table.
+    - `foo between { ... }` -- defines an operator precedence table.
 
 - Option:
 

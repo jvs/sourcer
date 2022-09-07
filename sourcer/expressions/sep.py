@@ -32,12 +32,12 @@ class Sep(Expression):
     def always_succeeds(self):
         return self.allow_empty
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         staging = out.var('staging', [])
         checkpoint = out.var('checkpoint', POS)
 
         with out.WHILE(True):
-            with utils.if_fails(out, self.expr):
+            with utils.if_fails(out, flags, self.expr):
                 # If we're not discarding separators, and if we're also not
                 # allowing a trailing separator, then we need to pop the last
                 # separator off of our list.
@@ -50,7 +50,7 @@ class Sep(Expression):
             out += staging.append(RESULT)
             out += checkpoint << POS
 
-            with utils.if_fails(out, self.separator):
+            with utils.if_fails(out, flags, self.separator):
                 out += BREAK
 
             if not self.discard_separators:

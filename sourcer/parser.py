@@ -5,12 +5,14 @@
 import textwrap
 ```
 
-ignored Space = /[ \\t]+/
-ignored Comment = /#[^\\r\\n]*/
+ignore Space = /[ \\t]+/
+ignore Comment = /#[^\\r\\n]*/
 
 Newline = /[\\r\\n][\\s]*/
 LineSep = Some(Newline | ";")
 Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+QualifiedName = (Name // ".") |> `lambda x: '.'.join(x)`
+
 Comma = wrap(",")
 
 wrap(x) => Skip(Newline) >> x << Skip(Newline)
@@ -22,6 +24,7 @@ kw(word) => Name where `lambda x: x == word`
 
 Params = wrap("(") >> (wrap(Name) /? Comma) << ")"
 IgnoreKeyword = kw("ignored") | kw("ignore")
+OverrideKeyword = kw("overrides") | kw("override")
 
 class StringLiteral {
     value: (
@@ -51,6 +54,7 @@ class PythonExpression {
 }
 
 class RuleDef {
+    is_override: Opt(OverrideKeyword) |> `bool`
     is_ignored: Opt(IgnoreKeyword) |> `bool`
     name: Name
     params: Opt(Params) << wrap("=>" | "=" | ":")
@@ -71,6 +75,16 @@ class ClassMember {
 
 class IgnoreStmt {
     expr: IgnoreKeyword >> Expr
+}
+
+class GrammarDef {
+    head: Opt(GrammarHead << Skip(Newline))
+    body: ManyStmts | SingleExpr
+}
+
+class GrammarHead {
+    name: kw("grammar") >> QualifiedName
+    extends: Opt(kw("extends") >> QualifiedName)
 }
 
 Stmt = ClassDef
@@ -115,16 +129,20 @@ class ArgList {
     args: "(" >> (wrap(KeywordArg | Expr) /? Comma) << ")"
 }
 
-Expr = OperatorPrecedence(
-    Atom,
-    Mixfix("(" >> wrap(Expr) << ")"),
-    Postfix(ArgList),
-    Postfix("?" | "*" | "+" | Repeat),
-    LeftAssoc(wrap("//" | "/?")),
-    LeftAssoc(wrap("<<" | ">>")),
-    LeftAssoc(wrap("<|" | "|>" | "where")),
-    LeftAssoc(wrap("|")),
-)
+Expr = Atom between {
+    mixfix: "(" >> wrap(Expr) << ")"
+    postfix: ArgList, FieldAccess
+    postfix: "?", "*", "+", Repeat
+    left: wrap("//" | "/?")
+    left: wrap("<<" | ">>")
+    left: wrap("<|" | "|>" | "where")
+    left: wrap("|")
+    postfix: OperatorTable
+}
+
+class FieldAccess {
+    field: "." >> Name
+}
 
 class Repeat {
     open: "{"
@@ -135,10 +153,32 @@ class Repeat {
 
 RepeatArg = PythonExpression | Ref
 
+class OperatorTable {
+    rows: wrap(kw("between"))
+        >> "{"
+        >> Skip(Newline)
+        >> OperatorRow*
+        << "}"
+}
+
+class OperatorRow {
+    associativity: Associativity
+    operators: wrap(":") >> (Operator /? Comma)
+    tail: Opt(LineSep)
+}
+
+Operator = Expr << ExpectNot(wrap(":"))
+
+Associativity = kw("left")
+    | kw("right")
+    | kw("infix")
+    | kw("mixfix")
+    | kw("postfix")
+    | kw("prefix")
+
 ManyStmts = Sep(Stmt, LineSep, allow_trailer=True, allow_empty=False)
 SingleExpr = Expr << Opt(LineSep)
-
-start = Skip(Newline) >> (ManyStmts | SingleExpr)
+start = Skip(Newline) >> GrammarDef
 
 """
 
@@ -150,14 +190,29 @@ class Node:
 
     def __init__(self):
         self._metadata = _Metadata()
+        self._hash = None
 
     def __eq__(self, other):
+        if self is other:
+            return True
         if not isinstance(other, self.__class__):
             return False
         for field in self._fields:
-            if getattr(self, field) != getattr(other, field):
+            left = getattr(self, field)
+            right = getattr(other, field)
+            if left is not right and left != right:
                 return False
         return True
+
+    def __hash__(self):
+        if self._hash is not None:
+            return self._hash
+        self._hash = 0
+        result = 0
+        for field in self._fields:
+            result ^= _hash(getattr(self, field))
+        self._hash = result
+        return result
 
     def _asdict(self):
         return {k: getattr(self, k) for k in self._fields}
@@ -169,6 +224,24 @@ class Node:
         result = self.__class__(**kw)
         result._metadata.update(self._metadata)
         return result
+
+
+def _hash(value):
+    try:
+        return hash(value)
+    except TypeError:
+        if isinstance(value, (tuple, list)):
+            result = 0
+            for item in value:
+                result ^= _hash(item)
+            return result
+        elif isinstance(value, dict):
+            result = 0
+            for pair in value.items():
+                result ^= _hash(pair)
+            return result
+        else:
+            raise
 
 
 class _Metadata:
@@ -205,17 +278,17 @@ class Rule:
 import textwrap
 
 
-class SourcerError(Exception):
+class InputError(Exception):
     """Common superclass for ParseError and PartialParseError."""
 
 
-class ParseError(SourcerError):
+class ParseError(InputError):
     def __init__(self, message, index, line, column):
         super().__init__(message)
         self.position = _Position(index, line, column)
 
 
-class PartialParseError(SourcerError):
+class PartialParseError(InputError):
     def __init__(self, partial_result, last_position, excerpt):
         super().__init__('Incomplete parse. Unexpected input on line'
             f' {last_position.line}, column {last_position.column}:\n{excerpt}')
@@ -416,6 +489,7 @@ def transform(node, *callbacks):
                     and not node._metadata
                 ):
                     node._metadata.update(prev._metadata)
+
         return node
 
     return _transform(node, callback)
@@ -764,16 +838,78 @@ def _raise_error13(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _parse_function_17(_text, _pos):
+def _try_QualifiedName(_text, _pos):
+    # Rule 'QualifiedName'
+    # Begin Apply
+    # (Name // '.') |> `lambda x: '.'.join(x)`
+    # Begin Sep
+    # Name // '.'
+    staging2 = []
+    checkpoint2 = _pos
+    while True:
+        # Begin Ref
+        (_status, _result, _pos) = (yield (3, _try_Name, _pos))
+        # End Ref
+        if not (_status):
+            break
+        staging2.append(_result)
+        checkpoint2 = _pos
+        # Begin Str
+        value2 = '.'
+        end2 = (_pos + 1)
+        if (_text[slice(_pos, end2, None)] == value2):
+            _result = value2
+            _pos = (yield (3, _try__ignored, end2))[2]
+            _status = True
+        else:
+            _result = _raise_error18
+            _status = False
+        # End Str
+        if not (_status):
+            break
+    _result = staging2
+    _pos = checkpoint2
+    _status = True
+    # End Sep
+    arg1 = _result
+    _result = lambda x: '.'.join(x)
+    _status = True
+    _result = _result(arg1)
+    # End Apply
+    yield (_status, _result, _pos)
+
+def _parse_QualifiedName(text, pos=0, fullparse=True):
+    return _run(text, pos, _try_QualifiedName, fullparse)
+
+QualifiedName = Rule('QualifiedName', _parse_QualifiedName, """
+    QualifiedName = (Name // '.') |> `lambda x: '.'.join(x)`
+""")
+def _raise_error18(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'QualifiedName' rule, at the expression:\n"
+    "    '.'\n\n"
+    "Expected to match the string '.'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _parse_function_23(_text, _pos):
     # Begin Str
-    value2 = ','
-    end2 = (_pos + 1)
-    if (_text[slice(_pos, end2, None)] == value2):
-        _result = value2
-        _pos = (yield (3, _try__ignored, end2))[2]
+    value3 = ','
+    end3 = (_pos + 1)
+    if (_text[slice(_pos, end3, None)] == value3):
+        _result = value3
+        _pos = (yield (3, _try__ignored, end3))[2]
         _status = True
     else:
-        _result = _raise_error17
+        _result = _raise_error23
         _status = False
     # End Str
     yield (_status, _result, _pos)
@@ -782,8 +918,8 @@ def _try_Comma(_text, _pos):
     # Rule 'Comma'
     # Begin Call
     # wrap(',')
-    arg1 = _wrap_string_literal(',', _parse_function_17)
-    func1 = _ParseFunction(_try_wrap, (arg1,), ())
+    arg2 = _wrap_string_literal(',', _parse_function_23)
+    func1 = _ParseFunction(_try_wrap, (arg2,), ())
     (_status, _result, _pos) = (yield (3, func1, _pos))
     # End Call
     yield (_status, _result, _pos)
@@ -794,7 +930,7 @@ def _parse_Comma(text, pos=0, fullparse=True):
 Comma = Rule('Comma', _parse_Comma, """
     Comma = wrap(',')
 """)
-def _raise_error17(_text, _pos):
+def _raise_error23(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -821,14 +957,14 @@ def _try_wrap(_text, _pos, x):
             # Begin Skip
             # Skip(Newline)
             while True:
-                checkpoint2 = _pos
+                checkpoint3 = _pos
                 # Begin Ref
                 (_status, _result, _pos) = (yield (3, _try_Newline, _pos))
                 # End Ref
                 if _status:
                     continue
                 else:
-                    _pos = checkpoint2
+                    _pos = checkpoint3
                 break
             _result = None
             _status = True
@@ -840,23 +976,23 @@ def _try_wrap(_text, _pos, x):
         # End Discard
         if not (_status):
             break
-        staging2 = _result
+        staging3 = _result
         # Begin Skip
         # Skip(Newline)
         while True:
-            checkpoint3 = _pos
+            checkpoint4 = _pos
             # Begin Ref
             (_status, _result, _pos) = (yield (3, _try_Newline, _pos))
             # End Ref
             if _status:
                 continue
             else:
-                _pos = checkpoint3
+                _pos = checkpoint4
             break
         _result = None
         _status = True
         # End Skip
-        _result = staging2
+        _result = staging3
         break
     # End Discard
     yield (_status, _result, _pos)
@@ -875,13 +1011,13 @@ def _try_kw(_text, _pos, word):
     (_status, _result, _pos) = (yield (3, _try_Name, _pos))
     # End Ref
     if _status:
-        arg2 = _result
+        arg3 = _result
         _result = lambda x: x == word
         _status = True
-        if _result(arg2):
-            _result = arg2
+        if _result(arg3):
+            _result = arg3
         else:
-            _result = _raise_error27
+            _result = _raise_error33
             _status = False
     # End Where
     yield (_status, _result, _pos)
@@ -892,7 +1028,7 @@ def _parse_kw(text, pos=0, fullparse=True):
 kw = Rule('kw', _parse_kw, """
     kw(word) = Name where `lambda x: x == word`
 """)
-def _raise_error27(_text, _pos):
+def _raise_error33(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -908,16 +1044,16 @@ def _raise_error27(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _parse_function_35(_text, _pos):
+def _parse_function_41(_text, _pos):
     # Begin Str
-    value3 = '('
-    end3 = (_pos + 1)
-    if (_text[slice(_pos, end3, None)] == value3):
-        _result = value3
-        _pos = (yield (3, _try__ignored, end3))[2]
+    value4 = '('
+    end4 = (_pos + 1)
+    if (_text[slice(_pos, end4, None)] == value4):
+        _result = value4
+        _pos = (yield (3, _try__ignored, end4))[2]
         _status = True
     else:
-        _result = _raise_error35
+        _result = _raise_error41
         _status = False
     # End Str
     yield (_status, _result, _pos)
@@ -932,16 +1068,16 @@ def _try_Params(_text, _pos):
         while True:
             # Begin Call
             # wrap('(')
-            arg3 = _wrap_string_literal('(', _parse_function_35)
-            func2 = _ParseFunction(_try_wrap, (arg3,), ())
+            arg4 = _wrap_string_literal('(', _parse_function_41)
+            func2 = _ParseFunction(_try_wrap, (arg4,), ())
             (_status, _result, _pos) = (yield (3, func2, _pos))
             # End Call
             if not (_status):
                 break
             # Begin Sep
             # wrap(Name) /? Comma
-            staging3 = []
-            checkpoint4 = _pos
+            staging4 = []
+            checkpoint5 = _pos
             while True:
                 # Begin Call
                 # wrap(Name)
@@ -950,36 +1086,36 @@ def _try_Params(_text, _pos):
                 # End Call
                 if not (_status):
                     break
-                staging3.append(_result)
-                checkpoint4 = _pos
+                staging4.append(_result)
+                checkpoint5 = _pos
                 # Begin Ref
                 (_status, _result, _pos) = (yield (3, _try_Comma, _pos))
                 # End Ref
                 if not (_status):
                     break
-                checkpoint4 = _pos
-            _result = staging3
-            _pos = checkpoint4
+                checkpoint5 = _pos
+            _result = staging4
+            _pos = checkpoint5
             _status = True
             # End Sep
             break
         # End Discard
         if not (_status):
             break
-        staging4 = _result
+        staging5 = _result
         # Begin Str
-        value4 = ')'
-        end4 = (_pos + 1)
-        if (_text[slice(_pos, end4, None)] == value4):
-            _result = value4
-            _pos = (yield (3, _try__ignored, end4))[2]
+        value5 = ')'
+        end5 = (_pos + 1)
+        if (_text[slice(_pos, end5, None)] == value5):
+            _result = value5
+            _pos = (yield (3, _try__ignored, end5))[2]
             _status = True
         else:
-            _result = _raise_error41
+            _result = _raise_error47
             _status = False
         # End Str
         if _status:
-            _result = staging4
+            _result = staging5
         break
     # End Discard
     yield (_status, _result, _pos)
@@ -990,7 +1126,7 @@ def _parse_Params(text, pos=0, fullparse=True):
 Params = Rule('Params', _parse_Params, """
     Params = (wrap('(') >> (wrap(Name) /? Comma)) << ')'
 """)
-def _raise_error35(_text, _pos):
+def _raise_error41(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1006,7 +1142,7 @@ def _raise_error35(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error41(_text, _pos):
+def _raise_error47(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1022,30 +1158,30 @@ def _raise_error41(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _parse_function_46(_text, _pos):
+def _parse_function_52(_text, _pos):
     # Begin Str
-    value5 = 'ignored'
-    end5 = (_pos + 7)
-    if (_text[slice(_pos, end5, None)] == value5):
-        _result = value5
-        _pos = (yield (3, _try__ignored, end5))[2]
-        _status = True
-    else:
-        _result = _raise_error46
-        _status = False
-    # End Str
-    yield (_status, _result, _pos)
-
-def _parse_function_49(_text, _pos):
-    # Begin Str
-    value6 = 'ignore'
-    end6 = (_pos + 6)
+    value6 = 'ignored'
+    end6 = (_pos + 7)
     if (_text[slice(_pos, end6, None)] == value6):
         _result = value6
         _pos = (yield (3, _try__ignored, end6))[2]
         _status = True
     else:
-        _result = _raise_error49
+        _result = _raise_error52
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _parse_function_55(_text, _pos):
+    # Begin Str
+    value7 = 'ignore'
+    end7 = (_pos + 6)
+    if (_text[slice(_pos, end7, None)] == value7):
+        _result = value7
+        _pos = (yield (3, _try__ignored, end7))[2]
+        _status = True
+    else:
+        _result = _raise_error55
         _status = False
     # End Str
     yield (_status, _result, _pos)
@@ -1053,14 +1189,14 @@ def _parse_function_49(_text, _pos):
 def _try_IgnoreKeyword(_text, _pos):
     # Rule 'IgnoreKeyword'
     # Begin Choice
-    farthest_err2 = _raise_error43
+    farthest_err2 = _raise_error49
     backtrack2 = farthest_pos2 = _pos
     while True:
         # Option 1:
         # Begin Call
         # kw('ignored')
-        arg4 = _wrap_string_literal('ignored', _parse_function_46)
-        func4 = _ParseFunction(_try_kw, (arg4,), ())
+        arg5 = _wrap_string_literal('ignored', _parse_function_52)
+        func4 = _ParseFunction(_try_kw, (arg5,), ())
         (_status, _result, _pos) = (yield (3, func4, _pos))
         # End Call
         if _status:
@@ -1072,8 +1208,8 @@ def _try_IgnoreKeyword(_text, _pos):
         # Option 2:
         # Begin Call
         # kw('ignore')
-        arg5 = _wrap_string_literal('ignore', _parse_function_49)
-        func5 = _ParseFunction(_try_kw, (arg5,), ())
+        arg6 = _wrap_string_literal('ignore', _parse_function_55)
+        func5 = _ParseFunction(_try_kw, (arg6,), ())
         (_status, _result, _pos) = (yield (3, func5, _pos))
         # End Call
         if _status:
@@ -1093,7 +1229,7 @@ def _parse_IgnoreKeyword(text, pos=0, fullparse=True):
 IgnoreKeyword = Rule('IgnoreKeyword', _parse_IgnoreKeyword, """
     IgnoreKeyword = kw('ignored') | kw('ignore')
 """)
-def _raise_error43(_text, _pos):
+def _raise_error49(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1109,7 +1245,7 @@ def _raise_error43(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error46(_text, _pos):
+def _raise_error52(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1125,7 +1261,7 @@ def _raise_error46(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error49(_text, _pos):
+def _raise_error55(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1138,6 +1274,125 @@ def _raise_error49(_text, _pos):
     "Failed to parse the 'IgnoreKeyword' rule, at the expression:\n"
     "    'ignore'\n\n"
     "Expected to match the string 'ignore'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _parse_function_60(_text, _pos):
+    # Begin Str
+    value8 = 'overrides'
+    end8 = (_pos + 9)
+    if (_text[slice(_pos, end8, None)] == value8):
+        _result = value8
+        _pos = (yield (3, _try__ignored, end8))[2]
+        _status = True
+    else:
+        _result = _raise_error60
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _parse_function_63(_text, _pos):
+    # Begin Str
+    value9 = 'override'
+    end9 = (_pos + 8)
+    if (_text[slice(_pos, end9, None)] == value9):
+        _result = value9
+        _pos = (yield (3, _try__ignored, end9))[2]
+        _status = True
+    else:
+        _result = _raise_error63
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _try_OverrideKeyword(_text, _pos):
+    # Rule 'OverrideKeyword'
+    # Begin Choice
+    farthest_err3 = _raise_error57
+    backtrack3 = farthest_pos3 = _pos
+    while True:
+        # Option 1:
+        # Begin Call
+        # kw('overrides')
+        arg7 = _wrap_string_literal('overrides', _parse_function_60)
+        func6 = _ParseFunction(_try_kw, (arg7,), ())
+        (_status, _result, _pos) = (yield (3, func6, _pos))
+        # End Call
+        if _status:
+            break
+        if (farthest_pos3 < _pos):
+            farthest_pos3 = _pos
+            farthest_err3 = _result
+        _pos = backtrack3
+        # Option 2:
+        # Begin Call
+        # kw('override')
+        arg8 = _wrap_string_literal('override', _parse_function_63)
+        func7 = _ParseFunction(_try_kw, (arg8,), ())
+        (_status, _result, _pos) = (yield (3, func7, _pos))
+        # End Call
+        if _status:
+            break
+        if (farthest_pos3 < _pos):
+            farthest_pos3 = _pos
+            farthest_err3 = _result
+        _pos = farthest_pos3
+        _result = farthest_err3
+        break
+    # End Choice
+    yield (_status, _result, _pos)
+
+def _parse_OverrideKeyword(text, pos=0, fullparse=True):
+    return _run(text, pos, _try_OverrideKeyword, fullparse)
+
+OverrideKeyword = Rule('OverrideKeyword', _parse_OverrideKeyword, """
+    OverrideKeyword = kw('overrides') | kw('override')
+""")
+def _raise_error57(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'OverrideKeyword' rule, at the expression:\n"
+    "    kw('overrides') | kw('override')\n\n"
+    'Unexpected input'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error60(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'OverrideKeyword' rule, at the expression:\n"
+    "    'overrides'\n\n"
+    "Expected to match the string 'overrides'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error63(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'OverrideKeyword' rule, at the expression:\n"
+    "    'override'\n\n"
+    "Expected to match the string 'override'"
     )
     raise ParseError((title + details), _pos, line, col)
 
@@ -1166,8 +1421,8 @@ def _try_StringLiteral(_text, _pos):
     start_pos1 = _pos
     while True:
         # Begin Choice
-        farthest_err3 = _raise_error53
-        farthest_pos3 = _pos
+        farthest_err4 = _raise_error67
+        farthest_pos4 = _pos
         while True:
             # Option 1:
             # Begin Regex
@@ -1178,7 +1433,7 @@ def _try_StringLiteral(_text, _pos):
                 _pos = (yield (3, _try__ignored, match5.end()))[2]
                 _status = True
             else:
-                _result = _raise_error54
+                _result = _raise_error68
                 _status = False
             # End Regex
             if _status:
@@ -1192,7 +1447,7 @@ def _try_StringLiteral(_text, _pos):
                 _pos = (yield (3, _try__ignored, match6.end()))[2]
                 _status = True
             else:
-                _result = _raise_error55
+                _result = _raise_error69
                 _status = False
             # End Regex
             if _status:
@@ -1206,7 +1461,7 @@ def _try_StringLiteral(_text, _pos):
                 _pos = (yield (3, _try__ignored, match7.end()))[2]
                 _status = True
             else:
-                _result = _raise_error56
+                _result = _raise_error70
                 _status = False
             # End Regex
             if _status:
@@ -1220,13 +1475,13 @@ def _try_StringLiteral(_text, _pos):
                 _pos = (yield (3, _try__ignored, match8.end()))[2]
                 _status = True
             else:
-                _result = _raise_error57
+                _result = _raise_error71
                 _status = False
             # End Regex
             if _status:
                 break
-            _pos = farthest_pos3
-            _result = farthest_err3
+            _pos = farthest_pos4
+            _result = farthest_err4
             break
         # End Choice
         if not (_status):
@@ -1238,7 +1493,7 @@ def _try_StringLiteral(_text, _pos):
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error53(_text, _pos):
+def _raise_error67(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1254,7 +1509,7 @@ def _raise_error53(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error54(_text, _pos):
+def _raise_error68(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1270,7 +1525,7 @@ def _raise_error54(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error55(_text, _pos):
+def _raise_error69(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1286,7 +1541,7 @@ def _raise_error55(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error56(_text, _pos):
+def _raise_error70(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1302,7 +1557,7 @@ def _raise_error56(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error57(_text, _pos):
+def _raise_error71(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1350,7 +1605,7 @@ def _try_RegexLiteral(_text, _pos):
             _pos = (yield (3, _try__ignored, match9.end()))[2]
             _status = True
         else:
-            _result = _raise_error61
+            _result = _raise_error75
             _status = False
         # End Regex
         if not (_status):
@@ -1362,7 +1617,7 @@ def _try_RegexLiteral(_text, _pos):
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error61(_text, _pos):
+def _raise_error75(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1412,14 +1667,14 @@ def _try_PythonSection(_text, _pos):
             _pos = (yield (3, _try__ignored, match10.end()))[2]
             _status = True
         else:
-            _result = _raise_error66
+            _result = _raise_error80
             _status = False
         # End Regex
         if _status:
-            arg6 = _result
+            arg9 = _result
             _result = lambda x: textwrap.dedent(x[3:-3])
             _status = True
-            _result = _result(arg6)
+            _result = _result(arg9)
         # End Apply
         if not (_status):
             break
@@ -1430,7 +1685,7 @@ def _try_PythonSection(_text, _pos):
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error66(_text, _pos):
+def _raise_error80(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1471,8 +1726,8 @@ def _try_PythonExpression(_text, _pos):
     start_pos4 = _pos
     while True:
         # Begin Choice
-        farthest_err4 = _raise_error71
-        backtrack3 = farthest_pos4 = _pos
+        farthest_err5 = _raise_error85
+        backtrack4 = farthest_pos5 = _pos
         while True:
             # Option 1:
             # Begin Apply
@@ -1485,21 +1740,21 @@ def _try_PythonExpression(_text, _pos):
                 _pos = (yield (3, _try__ignored, match11.end()))[2]
                 _status = True
             else:
-                _result = _raise_error73
+                _result = _raise_error87
                 _status = False
             # End Regex
             if _status:
-                arg7 = _result
+                arg10 = _result
                 _result = lambda x: x[1:-1]
                 _status = True
-                _result = _result(arg7)
+                _result = _result(arg10)
             # End Apply
             if _status:
                 break
-            if (farthest_pos4 < _pos):
-                farthest_pos4 = _pos
-                farthest_err4 = _result
-            _pos = backtrack3
+            if (farthest_pos5 < _pos):
+                farthest_pos5 = _pos
+                farthest_err5 = _result
+            _pos = backtrack4
             # Option 2:
             # Begin Regex
             # /\\d+/
@@ -1509,55 +1764,55 @@ def _try_PythonExpression(_text, _pos):
                 _pos = (yield (3, _try__ignored, match12.end()))[2]
                 _status = True
             else:
-                _result = _raise_error75
+                _result = _raise_error89
                 _status = False
             # End Regex
             if _status:
                 break
             # Option 3:
             # Begin Str
-            value7 = 'True'
-            end7 = (_pos + 4)
-            if (_text[slice(_pos, end7, None)] == value7):
-                _result = value7
-                _pos = (yield (3, _try__ignored, end7))[2]
+            value10 = 'True'
+            end10 = (_pos + 4)
+            if (_text[slice(_pos, end10, None)] == value10):
+                _result = value10
+                _pos = (yield (3, _try__ignored, end10))[2]
                 _status = True
             else:
-                _result = _raise_error76
+                _result = _raise_error90
                 _status = False
             # End Str
             if _status:
                 break
             # Option 4:
             # Begin Str
-            value8 = 'False'
-            end8 = (_pos + 5)
-            if (_text[slice(_pos, end8, None)] == value8):
-                _result = value8
-                _pos = (yield (3, _try__ignored, end8))[2]
+            value11 = 'False'
+            end11 = (_pos + 5)
+            if (_text[slice(_pos, end11, None)] == value11):
+                _result = value11
+                _pos = (yield (3, _try__ignored, end11))[2]
                 _status = True
             else:
-                _result = _raise_error77
+                _result = _raise_error91
                 _status = False
             # End Str
             if _status:
                 break
             # Option 5:
             # Begin Str
-            value9 = 'None'
-            end9 = (_pos + 4)
-            if (_text[slice(_pos, end9, None)] == value9):
-                _result = value9
-                _pos = (yield (3, _try__ignored, end9))[2]
+            value12 = 'None'
+            end12 = (_pos + 4)
+            if (_text[slice(_pos, end12, None)] == value12):
+                _result = value12
+                _pos = (yield (3, _try__ignored, end12))[2]
                 _status = True
             else:
-                _result = _raise_error78
+                _result = _raise_error92
                 _status = False
             # End Str
             if _status:
                 break
-            _pos = farthest_pos4
-            _result = farthest_err4
+            _pos = farthest_pos5
+            _result = farthest_err5
             break
         # End Choice
         if not (_status):
@@ -1569,7 +1824,7 @@ def _try_PythonExpression(_text, _pos):
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error71(_text, _pos):
+def _raise_error85(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1585,7 +1840,7 @@ def _raise_error71(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error73(_text, _pos):
+def _raise_error87(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1601,7 +1856,7 @@ def _raise_error73(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error75(_text, _pos):
+def _raise_error89(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1617,7 +1872,7 @@ def _raise_error75(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error76(_text, _pos):
+def _raise_error90(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1633,7 +1888,7 @@ def _raise_error76(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error77(_text, _pos):
+def _raise_error91(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1649,7 +1904,7 @@ def _raise_error77(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error78(_text, _pos):
+def _raise_error92(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1668,78 +1923,80 @@ def _raise_error78(_text, _pos):
 class RuleDef(Node):
     """
     class RuleDef {
+        is_override: Opt(OverrideKeyword) |> `bool`
         is_ignored: Opt(IgnoreKeyword) |> `bool`
         name: Name
         params: Opt(Params) << wrap('=>' | '=' | ':')
         expr: Expr
     }
     """
-    _fields = ('is_ignored', 'name', 'params', 'expr')
+    _fields = ('is_override', 'is_ignored', 'name', 'params', 'expr')
 
-    def __init__(self, is_ignored, name, params, expr):
+    def __init__(self, is_override, is_ignored, name, params, expr):
         Node.__init__(self)
+        self.is_override = is_override
         self.is_ignored = is_ignored
         self.name = name
         self.params = params
         self.expr = expr
 
     def __repr__(self):
-        return f'RuleDef(is_ignored={self.is_ignored!r}, name={self.name!r}, params={self.params!r}, expr={self.expr!r})'
+        return f'RuleDef(is_override={self.is_override!r}, is_ignored={self.is_ignored!r}, name={self.name!r}, params={self.params!r}, expr={self.expr!r})'
 
     @staticmethod
     def parse(text, pos=0, fullparse=True):
         return _run(text, pos, _try_RuleDef, fullparse)
 
 
-def _parse_function_94(_text, _pos):
+def _parse_function_113(_text, _pos):
     # Begin Choice
-    farthest_err5 = _raise_error94
-    farthest_pos5 = _pos
+    farthest_err6 = _raise_error113
+    farthest_pos6 = _pos
     while True:
         # Option 1:
         # Begin Str
-        value10 = '=>'
-        end10 = (_pos + 2)
-        if (_text[slice(_pos, end10, None)] == value10):
-            _result = value10
-            _pos = (yield (3, _try__ignored, end10))[2]
+        value13 = '=>'
+        end13 = (_pos + 2)
+        if (_text[slice(_pos, end13, None)] == value13):
+            _result = value13
+            _pos = (yield (3, _try__ignored, end13))[2]
             _status = True
         else:
-            _result = _raise_error95
+            _result = _raise_error114
             _status = False
         # End Str
         if _status:
             break
         # Option 2:
         # Begin Str
-        value11 = '='
-        end11 = (_pos + 1)
-        if (_text[slice(_pos, end11, None)] == value11):
-            _result = value11
-            _pos = (yield (3, _try__ignored, end11))[2]
+        value14 = '='
+        end14 = (_pos + 1)
+        if (_text[slice(_pos, end14, None)] == value14):
+            _result = value14
+            _pos = (yield (3, _try__ignored, end14))[2]
             _status = True
         else:
-            _result = _raise_error96
+            _result = _raise_error115
             _status = False
         # End Str
         if _status:
             break
         # Option 3:
         # Begin Str
-        value12 = ':'
-        end12 = (_pos + 1)
-        if (_text[slice(_pos, end12, None)] == value12):
-            _result = value12
-            _pos = (yield (3, _try__ignored, end12))[2]
+        value15 = ':'
+        end15 = (_pos + 1)
+        if (_text[slice(_pos, end15, None)] == value15):
+            _result = value15
+            _pos = (yield (3, _try__ignored, end15))[2]
             _status = True
         else:
-            _result = _raise_error97
+            _result = _raise_error116
             _status = False
         # End Str
         if _status:
             break
-        _pos = farthest_pos5
-        _result = farthest_err5
+        _pos = farthest_pos6
+        _result = farthest_err6
         break
     # End Choice
     yield (_status, _result, _pos)
@@ -1749,22 +2006,41 @@ def _try_RuleDef(_text, _pos):
     start_pos5 = _pos
     while True:
         # Begin Apply
+        # Opt(OverrideKeyword) |> `bool`
+        # Begin Opt
+        # Opt(OverrideKeyword)
+        backtrack5 = _pos
+        # Begin Ref
+        (_status, _result, _pos) = (yield (3, _try_OverrideKeyword, _pos))
+        # End Ref
+        if not (_status):
+            _pos = backtrack5
+            _result = None
+            _status = True
+        # End Opt
+        arg11 = _result
+        _result = bool
+        _status = True
+        _result = _result(arg11)
+        # End Apply
+        is_override = _result
+        # Begin Apply
         # Opt(IgnoreKeyword) |> `bool`
         # Begin Opt
         # Opt(IgnoreKeyword)
-        backtrack4 = _pos
+        backtrack6 = _pos
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_IgnoreKeyword, _pos))
         # End Ref
         if not (_status):
-            _pos = backtrack4
+            _pos = backtrack6
             _result = None
             _status = True
         # End Opt
-        arg8 = _result
+        arg12 = _result
         _result = bool
         _status = True
-        _result = _result(arg8)
+        _result = _result(arg12)
         # End Apply
         is_ignored = _result
         # Begin Ref
@@ -1778,23 +2054,23 @@ def _try_RuleDef(_text, _pos):
         while True:
             # Begin Opt
             # Opt(Params)
-            backtrack5 = _pos
+            backtrack7 = _pos
             # Begin Ref
             (_status, _result, _pos) = (yield (3, _try_Params, _pos))
             # End Ref
             if not (_status):
-                _pos = backtrack5
+                _pos = backtrack7
                 _result = None
                 _status = True
             # End Opt
-            staging5 = _result
+            staging6 = _result
             # Begin Call
             # wrap('=>' | '=' | ':')
-            func6 = _ParseFunction(_try_wrap, (_parse_function_94,), ())
-            (_status, _result, _pos) = (yield (3, func6, _pos))
+            func8 = _ParseFunction(_try_wrap, (_parse_function_113,), ())
+            (_status, _result, _pos) = (yield (3, func8, _pos))
             # End Call
             if _status:
-                _result = staging5
+                _result = staging6
             break
         # End Discard
         if not (_status):
@@ -1806,13 +2082,13 @@ def _try_RuleDef(_text, _pos):
         if not (_status):
             break
         expr = _result
-        _result = RuleDef(is_ignored, name, params, expr)
+        _result = RuleDef(is_override, is_ignored, name, params, expr)
         _result._metadata.position_info = (start_pos5, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error94(_text, _pos):
+def _raise_error113(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1828,7 +2104,7 @@ def _raise_error94(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error95(_text, _pos):
+def _raise_error114(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1844,7 +2120,7 @@ def _raise_error95(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error96(_text, _pos):
+def _raise_error115(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1860,7 +2136,7 @@ def _raise_error96(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error97(_text, _pos):
+def _raise_error116(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -1900,30 +2176,30 @@ class ClassDef(Node):
         return _run(text, pos, _try_ClassDef, fullparse)
 
 
-def _parse_function_106(_text, _pos):
+def _parse_function_125(_text, _pos):
     # Begin Str
-    value13 = 'class'
-    end13 = (_pos + 5)
-    if (_text[slice(_pos, end13, None)] == value13):
-        _result = value13
-        _pos = (yield (3, _try__ignored, end13))[2]
+    value16 = 'class'
+    end16 = (_pos + 5)
+    if (_text[slice(_pos, end16, None)] == value16):
+        _result = value16
+        _pos = (yield (3, _try__ignored, end16))[2]
         _status = True
     else:
-        _result = _raise_error106
+        _result = _raise_error125
         _status = False
     # End Str
     yield (_status, _result, _pos)
 
-def _parse_function_116(_text, _pos):
+def _parse_function_135(_text, _pos):
     # Begin Str
-    value14 = '{'
-    end14 = (_pos + 1)
-    if (_text[slice(_pos, end14, None)] == value14):
-        _result = value14
-        _pos = (yield (3, _try__ignored, end14))[2]
+    value17 = '{'
+    end17 = (_pos + 1)
+    if (_text[slice(_pos, end17, None)] == value17):
+        _result = value17
+        _pos = (yield (3, _try__ignored, end17))[2]
         _status = True
     else:
-        _result = _raise_error116
+        _result = _raise_error135
         _status = False
     # End Str
     yield (_status, _result, _pos)
@@ -1937,9 +2213,9 @@ def _try_ClassDef(_text, _pos):
         while True:
             # Begin Call
             # kw('class')
-            arg9 = _wrap_string_literal('class', _parse_function_106)
-            func7 = _ParseFunction(_try_kw, (arg9,), ())
-            (_status, _result, _pos) = (yield (3, func7, _pos))
+            arg13 = _wrap_string_literal('class', _parse_function_125)
+            func9 = _ParseFunction(_try_kw, (arg13,), ())
+            (_status, _result, _pos) = (yield (3, func9, _pos))
             # End Call
             if not (_status):
                 break
@@ -1953,12 +2229,12 @@ def _try_ClassDef(_text, _pos):
         name = _result
         # Begin Opt
         # Opt(Params)
-        backtrack6 = _pos
+        backtrack8 = _pos
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Params, _pos))
         # End Ref
         if not (_status):
-            _pos = backtrack6
+            _pos = backtrack8
             _result = None
             _status = True
         # End Opt
@@ -1971,52 +2247,52 @@ def _try_ClassDef(_text, _pos):
             while True:
                 # Begin Call
                 # wrap('{')
-                arg10 = _wrap_string_literal('{', _parse_function_116)
-                func8 = _ParseFunction(_try_wrap, (arg10,), ())
-                (_status, _result, _pos) = (yield (3, func8, _pos))
+                arg14 = _wrap_string_literal('{', _parse_function_135)
+                func10 = _ParseFunction(_try_wrap, (arg14,), ())
+                (_status, _result, _pos) = (yield (3, func10, _pos))
                 # End Call
                 if not (_status):
                     break
                 # Begin Sep
                 # ClassMember /? LineSep
-                staging6 = []
-                checkpoint5 = _pos
+                staging7 = []
+                checkpoint6 = _pos
                 while True:
                     # Begin Ref
                     (_status, _result, _pos) = (yield (3, _try_ClassMember, _pos))
                     # End Ref
                     if not (_status):
                         break
-                    staging6.append(_result)
-                    checkpoint5 = _pos
+                    staging7.append(_result)
+                    checkpoint6 = _pos
                     # Begin Ref
                     (_status, _result, _pos) = (yield (3, _try_LineSep, _pos))
                     # End Ref
                     if not (_status):
                         break
-                    checkpoint5 = _pos
-                _result = staging6
-                _pos = checkpoint5
+                    checkpoint6 = _pos
+                _result = staging7
+                _pos = checkpoint6
                 _status = True
                 # End Sep
                 break
             # End Discard
             if not (_status):
                 break
-            staging7 = _result
+            staging8 = _result
             # Begin Str
-            value15 = '}'
-            end15 = (_pos + 1)
-            if (_text[slice(_pos, end15, None)] == value15):
-                _result = value15
-                _pos = (yield (3, _try__ignored, end15))[2]
+            value18 = '}'
+            end18 = (_pos + 1)
+            if (_text[slice(_pos, end18, None)] == value18):
+                _result = value18
+                _pos = (yield (3, _try__ignored, end18))[2]
                 _status = True
             else:
-                _result = _raise_error120
+                _result = _raise_error139
                 _status = False
             # End Str
             if _status:
-                _result = staging7
+                _result = staging8
             break
         # End Discard
         if not (_status):
@@ -2028,7 +2304,7 @@ def _try_ClassDef(_text, _pos):
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error106(_text, _pos):
+def _raise_error125(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2044,7 +2320,7 @@ def _raise_error106(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error116(_text, _pos):
+def _raise_error135(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2060,7 +2336,7 @@ def _raise_error116(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error120(_text, _pos):
+def _raise_error139(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2100,55 +2376,55 @@ class ClassMember(Node):
         return _run(text, pos, _try_ClassMember, fullparse)
 
 
-def _parse_function_133(_text, _pos):
+def _parse_function_152(_text, _pos):
     # Begin Choice
-    farthest_err6 = _raise_error133
-    farthest_pos6 = _pos
+    farthest_err7 = _raise_error152
+    farthest_pos7 = _pos
     while True:
         # Option 1:
         # Begin Str
-        value17 = '=>'
-        end17 = (_pos + 2)
-        if (_text[slice(_pos, end17, None)] == value17):
-            _result = value17
-            _pos = (yield (3, _try__ignored, end17))[2]
+        value20 = '=>'
+        end20 = (_pos + 2)
+        if (_text[slice(_pos, end20, None)] == value20):
+            _result = value20
+            _pos = (yield (3, _try__ignored, end20))[2]
             _status = True
         else:
-            _result = _raise_error134
+            _result = _raise_error153
             _status = False
         # End Str
         if _status:
             break
         # Option 2:
         # Begin Str
-        value18 = '='
-        end18 = (_pos + 1)
-        if (_text[slice(_pos, end18, None)] == value18):
-            _result = value18
-            _pos = (yield (3, _try__ignored, end18))[2]
+        value21 = '='
+        end21 = (_pos + 1)
+        if (_text[slice(_pos, end21, None)] == value21):
+            _result = value21
+            _pos = (yield (3, _try__ignored, end21))[2]
             _status = True
         else:
-            _result = _raise_error135
+            _result = _raise_error154
             _status = False
         # End Str
         if _status:
             break
         # Option 3:
         # Begin Str
-        value19 = ':'
-        end19 = (_pos + 1)
-        if (_text[slice(_pos, end19, None)] == value19):
-            _result = value19
-            _pos = (yield (3, _try__ignored, end19))[2]
+        value22 = ':'
+        end22 = (_pos + 1)
+        if (_text[slice(_pos, end22, None)] == value22):
+            _result = value22
+            _pos = (yield (3, _try__ignored, end22))[2]
             _status = True
         else:
-            _result = _raise_error136
+            _result = _raise_error155
             _status = False
         # End Str
         if _status:
             break
-        _pos = farthest_pos6
-        _result = farthest_err6
+        _pos = farthest_pos7
+        _result = farthest_err7
         break
     # End Choice
     yield (_status, _result, _pos)
@@ -2161,27 +2437,27 @@ def _try_ClassMember(_text, _pos):
         # Opt('let') |> `bool`
         # Begin Opt
         # Opt('let')
-        backtrack7 = _pos
+        backtrack9 = _pos
         # Begin Str
-        value16 = 'let'
-        end16 = (_pos + 3)
-        if (_text[slice(_pos, end16, None)] == value16):
-            _result = value16
-            _pos = (yield (3, _try__ignored, end16))[2]
+        value19 = 'let'
+        end19 = (_pos + 3)
+        if (_text[slice(_pos, end19, None)] == value19):
+            _result = value19
+            _pos = (yield (3, _try__ignored, end19))[2]
             _status = True
         else:
-            _result = _raise_error126
+            _result = _raise_error145
             _status = False
         # End Str
         if not (_status):
-            _pos = backtrack7
+            _pos = backtrack9
             _result = None
             _status = True
         # End Opt
-        arg11 = _result
+        arg15 = _result
         _result = bool
         _status = True
-        _result = _result(arg11)
+        _result = _result(arg15)
         # End Apply
         is_omitted = _result
         # Begin Discard
@@ -2192,14 +2468,14 @@ def _try_ClassMember(_text, _pos):
             # End Ref
             if not (_status):
                 break
-            staging8 = _result
+            staging9 = _result
             # Begin Call
             # wrap('=>' | '=' | ':')
-            func9 = _ParseFunction(_try_wrap, (_parse_function_133,), ())
-            (_status, _result, _pos) = (yield (3, func9, _pos))
+            func11 = _ParseFunction(_try_wrap, (_parse_function_152,), ())
+            (_status, _result, _pos) = (yield (3, func11, _pos))
             # End Call
             if _status:
-                _result = staging8
+                _result = staging9
             break
         # End Discard
         if not (_status):
@@ -2217,7 +2493,7 @@ def _try_ClassMember(_text, _pos):
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error126(_text, _pos):
+def _raise_error145(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2233,7 +2509,7 @@ def _raise_error126(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error133(_text, _pos):
+def _raise_error152(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2249,7 +2525,7 @@ def _raise_error133(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error134(_text, _pos):
+def _raise_error153(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2265,7 +2541,7 @@ def _raise_error134(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error135(_text, _pos):
+def _raise_error154(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2281,7 +2557,7 @@ def _raise_error135(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error136(_text, _pos):
+def _raise_error155(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2343,11 +2619,261 @@ def _try_IgnoreStmt(_text, _pos):
     # End Seq
     yield (_status, _result, _pos)
 
+class GrammarDef(Node):
+    """
+    class GrammarDef {
+        head: Opt(GrammarHead << Skip(Newline))
+        body: ManyStmts | SingleExpr
+    }
+    """
+    _fields = ('head', 'body')
+
+    def __init__(self, head, body):
+        Node.__init__(self)
+        self.head = head
+        self.body = body
+
+    def __repr__(self):
+        return f'GrammarDef(head={self.head!r}, body={self.body!r})'
+
+    @staticmethod
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _try_GrammarDef, fullparse)
+
+
+def _try_GrammarDef(_text, _pos):
+    # Begin Seq
+    start_pos9 = _pos
+    while True:
+        # Begin Opt
+        # Opt(GrammarHead << Skip(Newline))
+        backtrack10 = _pos
+        # Begin Discard
+        # GrammarHead << Skip(Newline)
+        while True:
+            # Begin Ref
+            (_status, _result, _pos) = (yield (3, _try_GrammarHead, _pos))
+            # End Ref
+            if not (_status):
+                break
+            staging10 = _result
+            # Begin Skip
+            # Skip(Newline)
+            while True:
+                checkpoint7 = _pos
+                # Begin Ref
+                (_status, _result, _pos) = (yield (3, _try_Newline, _pos))
+                # End Ref
+                if _status:
+                    continue
+                else:
+                    _pos = checkpoint7
+                break
+            _result = None
+            _status = True
+            # End Skip
+            _result = staging10
+            break
+        # End Discard
+        if not (_status):
+            _pos = backtrack10
+            _result = None
+            _status = True
+        # End Opt
+        head = _result
+        # Begin Choice
+        farthest_err8 = _raise_error173
+        backtrack11 = farthest_pos8 = _pos
+        while True:
+            # Option 1:
+            # Begin Ref
+            (_status, _result, _pos) = (yield (3, _try_ManyStmts, _pos))
+            # End Ref
+            if _status:
+                break
+            if (farthest_pos8 < _pos):
+                farthest_pos8 = _pos
+                farthest_err8 = _result
+            _pos = backtrack11
+            # Option 2:
+            # Begin Ref
+            (_status, _result, _pos) = (yield (3, _try_SingleExpr, _pos))
+            # End Ref
+            if _status:
+                break
+            if (farthest_pos8 < _pos):
+                farthest_pos8 = _pos
+                farthest_err8 = _result
+            _pos = farthest_pos8
+            _result = farthest_err8
+            break
+        # End Choice
+        if not (_status):
+            break
+        body = _result
+        _result = GrammarDef(head, body)
+        _result._metadata.position_info = (start_pos9, _pos)
+        break
+    # End Seq
+    yield (_status, _result, _pos)
+
+def _raise_error173(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'GrammarDef' rule, at the expression:\n"
+    '    ManyStmts | SingleExpr\n\n'
+    'Unexpected input'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+class GrammarHead(Node):
+    """
+    class GrammarHead {
+        name: kw('grammar') >> QualifiedName
+        extends: Opt(kw('extends') >> QualifiedName)
+    }
+    """
+    _fields = ('name', 'extends')
+
+    def __init__(self, name, extends):
+        Node.__init__(self)
+        self.name = name
+        self.extends = extends
+
+    def __repr__(self):
+        return f'GrammarHead(name={self.name!r}, extends={self.extends!r})'
+
+    @staticmethod
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _try_GrammarHead, fullparse)
+
+
+def _parse_function_182(_text, _pos):
+    # Begin Str
+    value23 = 'grammar'
+    end23 = (_pos + 7)
+    if (_text[slice(_pos, end23, None)] == value23):
+        _result = value23
+        _pos = (yield (3, _try__ignored, end23))[2]
+        _status = True
+    else:
+        _result = _raise_error182
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _parse_function_189(_text, _pos):
+    # Begin Str
+    value24 = 'extends'
+    end24 = (_pos + 7)
+    if (_text[slice(_pos, end24, None)] == value24):
+        _result = value24
+        _pos = (yield (3, _try__ignored, end24))[2]
+        _status = True
+    else:
+        _result = _raise_error189
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _try_GrammarHead(_text, _pos):
+    # Begin Seq
+    start_pos10 = _pos
+    while True:
+        # Begin Discard
+        # kw('grammar') >> QualifiedName
+        while True:
+            # Begin Call
+            # kw('grammar')
+            arg16 = _wrap_string_literal('grammar', _parse_function_182)
+            func12 = _ParseFunction(_try_kw, (arg16,), ())
+            (_status, _result, _pos) = (yield (3, func12, _pos))
+            # End Call
+            if not (_status):
+                break
+            # Begin Ref
+            (_status, _result, _pos) = (yield (3, _try_QualifiedName, _pos))
+            # End Ref
+            break
+        # End Discard
+        if not (_status):
+            break
+        name = _result
+        # Begin Opt
+        # Opt(kw('extends') >> QualifiedName)
+        backtrack12 = _pos
+        # Begin Discard
+        # kw('extends') >> QualifiedName
+        while True:
+            # Begin Call
+            # kw('extends')
+            arg17 = _wrap_string_literal('extends', _parse_function_189)
+            func13 = _ParseFunction(_try_kw, (arg17,), ())
+            (_status, _result, _pos) = (yield (3, func13, _pos))
+            # End Call
+            if not (_status):
+                break
+            # Begin Ref
+            (_status, _result, _pos) = (yield (3, _try_QualifiedName, _pos))
+            # End Ref
+            break
+        # End Discard
+        if not (_status):
+            _pos = backtrack12
+            _result = None
+            _status = True
+        # End Opt
+        extends = _result
+        _result = GrammarHead(name, extends)
+        _result._metadata.position_info = (start_pos10, _pos)
+        break
+    # End Seq
+    yield (_status, _result, _pos)
+
+def _raise_error182(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'GrammarHead' rule, at the expression:\n"
+    "    'grammar'\n\n"
+    "Expected to match the string 'grammar'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error189(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'GrammarHead' rule, at the expression:\n"
+    "    'extends'\n\n"
+    "Expected to match the string 'extends'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
 def _try_Stmt(_text, _pos):
     # Rule 'Stmt'
     # Begin Choice
-    farthest_err7 = _raise_error146
-    backtrack8 = farthest_pos7 = _pos
+    farthest_err9 = _raise_error192
+    backtrack13 = farthest_pos9 = _pos
     while True:
         # Option 1:
         # Begin Ref
@@ -2355,51 +2881,51 @@ def _try_Stmt(_text, _pos):
         # End Ref
         if _status:
             break
-        if (farthest_pos7 < _pos):
-            farthest_pos7 = _pos
-            farthest_err7 = _result
-        _pos = backtrack8
+        if (farthest_pos9 < _pos):
+            farthest_pos9 = _pos
+            farthest_err9 = _result
+        _pos = backtrack13
         # Option 2:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_RuleDef, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos7 < _pos):
-            farthest_pos7 = _pos
-            farthest_err7 = _result
-        _pos = backtrack8
+        if (farthest_pos9 < _pos):
+            farthest_pos9 = _pos
+            farthest_err9 = _result
+        _pos = backtrack13
         # Option 3:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_IgnoreStmt, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos7 < _pos):
-            farthest_pos7 = _pos
-            farthest_err7 = _result
-        _pos = backtrack8
+        if (farthest_pos9 < _pos):
+            farthest_pos9 = _pos
+            farthest_err9 = _result
+        _pos = backtrack13
         # Option 4:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_PythonSection, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos7 < _pos):
-            farthest_pos7 = _pos
-            farthest_err7 = _result
-        _pos = backtrack8
+        if (farthest_pos9 < _pos):
+            farthest_pos9 = _pos
+            farthest_err9 = _result
+        _pos = backtrack13
         # Option 5:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_PythonExpression, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos7 < _pos):
-            farthest_pos7 = _pos
-            farthest_err7 = _result
-        _pos = farthest_pos7
-        _result = farthest_err7
+        if (farthest_pos9 < _pos):
+            farthest_pos9 = _pos
+            farthest_err9 = _result
+        _pos = farthest_pos9
+        _result = farthest_err9
         break
     # End Choice
     yield (_status, _result, _pos)
@@ -2410,7 +2936,7 @@ def _parse_Stmt(text, pos=0, fullparse=True):
 Stmt = Rule('Stmt', _parse_Stmt, """
     Stmt = ClassDef | RuleDef | IgnoreStmt | PythonSection | PythonExpression
 """)
-def _raise_error146(_text, _pos):
+def _raise_error192(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2450,99 +2976,99 @@ class LetExpression(Node):
         return _run(text, pos, _try_LetExpression, fullparse)
 
 
-def _parse_function_159(_text, _pos):
+def _parse_function_205(_text, _pos):
     # Begin Str
-    value20 = 'let'
-    end20 = (_pos + 3)
-    if (_text[slice(_pos, end20, None)] == value20):
-        _result = value20
-        _pos = (yield (3, _try__ignored, end20))[2]
+    value25 = 'let'
+    end25 = (_pos + 3)
+    if (_text[slice(_pos, end25, None)] == value25):
+        _result = value25
+        _pos = (yield (3, _try__ignored, end25))[2]
         _status = True
     else:
-        _result = _raise_error159
+        _result = _raise_error205
         _status = False
     # End Str
     yield (_status, _result, _pos)
 
-def _parse_function_163(_text, _pos):
+def _parse_function_209(_text, _pos):
     # Begin Choice
-    farthest_err8 = _raise_error163
-    farthest_pos8 = _pos
+    farthest_err10 = _raise_error209
+    farthest_pos10 = _pos
     while True:
         # Option 1:
         # Begin Str
-        value21 = '=>'
-        end21 = (_pos + 2)
-        if (_text[slice(_pos, end21, None)] == value21):
-            _result = value21
-            _pos = (yield (3, _try__ignored, end21))[2]
+        value26 = '=>'
+        end26 = (_pos + 2)
+        if (_text[slice(_pos, end26, None)] == value26):
+            _result = value26
+            _pos = (yield (3, _try__ignored, end26))[2]
             _status = True
         else:
-            _result = _raise_error164
+            _result = _raise_error210
             _status = False
         # End Str
         if _status:
             break
         # Option 2:
         # Begin Str
-        value22 = '='
-        end22 = (_pos + 1)
-        if (_text[slice(_pos, end22, None)] == value22):
-            _result = value22
-            _pos = (yield (3, _try__ignored, end22))[2]
+        value27 = '='
+        end27 = (_pos + 1)
+        if (_text[slice(_pos, end27, None)] == value27):
+            _result = value27
+            _pos = (yield (3, _try__ignored, end27))[2]
             _status = True
         else:
-            _result = _raise_error165
+            _result = _raise_error211
             _status = False
         # End Str
         if _status:
             break
         # Option 3:
         # Begin Str
-        value23 = ':'
-        end23 = (_pos + 1)
-        if (_text[slice(_pos, end23, None)] == value23):
-            _result = value23
-            _pos = (yield (3, _try__ignored, end23))[2]
+        value28 = ':'
+        end28 = (_pos + 1)
+        if (_text[slice(_pos, end28, None)] == value28):
+            _result = value28
+            _pos = (yield (3, _try__ignored, end28))[2]
             _status = True
         else:
-            _result = _raise_error166
+            _result = _raise_error212
             _status = False
         # End Str
         if _status:
             break
-        _pos = farthest_pos8
-        _result = farthest_err8
+        _pos = farthest_pos10
+        _result = farthest_err10
         break
     # End Choice
     yield (_status, _result, _pos)
 
-def _parse_function_174(_text, _pos):
+def _parse_function_220(_text, _pos):
     # Begin Str
-    value24 = 'in'
-    end24 = (_pos + 2)
-    if (_text[slice(_pos, end24, None)] == value24):
-        _result = value24
-        _pos = (yield (3, _try__ignored, end24))[2]
+    value29 = 'in'
+    end29 = (_pos + 2)
+    if (_text[slice(_pos, end29, None)] == value29):
+        _result = value29
+        _pos = (yield (3, _try__ignored, end29))[2]
         _status = True
     else:
-        _result = _raise_error174
+        _result = _raise_error220
         _status = False
     # End Str
     yield (_status, _result, _pos)
 
-def _parse_function_172(_text, _pos):
+def _parse_function_218(_text, _pos):
     # Begin Call
     # kw('in')
-    arg13 = _wrap_string_literal('in', _parse_function_174)
-    func12 = _ParseFunction(_try_kw, (arg13,), ())
-    (_status, _result, _pos) = (yield (3, func12, _pos))
+    arg19 = _wrap_string_literal('in', _parse_function_220)
+    func16 = _ParseFunction(_try_kw, (arg19,), ())
+    (_status, _result, _pos) = (yield (3, func16, _pos))
     # End Call
     yield (_status, _result, _pos)
 
 def _try_LetExpression(_text, _pos):
     # Begin Seq
-    start_pos9 = _pos
+    start_pos11 = _pos
     while True:
         # Begin Discard
         # (kw('let') >> Name) << wrap('=>' | '=' | ':')
@@ -2552,9 +3078,9 @@ def _try_LetExpression(_text, _pos):
             while True:
                 # Begin Call
                 # kw('let')
-                arg12 = _wrap_string_literal('let', _parse_function_159)
-                func10 = _ParseFunction(_try_kw, (arg12,), ())
-                (_status, _result, _pos) = (yield (3, func10, _pos))
+                arg18 = _wrap_string_literal('let', _parse_function_205)
+                func14 = _ParseFunction(_try_kw, (arg18,), ())
+                (_status, _result, _pos) = (yield (3, func14, _pos))
                 # End Call
                 if not (_status):
                     break
@@ -2565,14 +3091,14 @@ def _try_LetExpression(_text, _pos):
             # End Discard
             if not (_status):
                 break
-            staging9 = _result
+            staging11 = _result
             # Begin Call
             # wrap('=>' | '=' | ':')
-            func11 = _ParseFunction(_try_wrap, (_parse_function_163,), ())
-            (_status, _result, _pos) = (yield (3, func11, _pos))
+            func15 = _ParseFunction(_try_wrap, (_parse_function_209,), ())
+            (_status, _result, _pos) = (yield (3, func15, _pos))
             # End Call
             if _status:
-                _result = staging9
+                _result = staging11
             break
         # End Discard
         if not (_status):
@@ -2586,14 +3112,14 @@ def _try_LetExpression(_text, _pos):
             # End Ref
             if not (_status):
                 break
-            staging10 = _result
+            staging12 = _result
             # Begin Call
             # wrap(kw('in'))
-            func13 = _ParseFunction(_try_wrap, (_parse_function_172,), ())
-            (_status, _result, _pos) = (yield (3, func13, _pos))
+            func17 = _ParseFunction(_try_wrap, (_parse_function_218,), ())
+            (_status, _result, _pos) = (yield (3, func17, _pos))
             # End Call
             if _status:
-                _result = staging10
+                _result = staging12
             break
         # End Discard
         if not (_status):
@@ -2606,12 +3132,12 @@ def _try_LetExpression(_text, _pos):
             break
         body = _result
         _result = LetExpression(name, expr, body)
-        _result._metadata.position_info = (start_pos9, _pos)
+        _result._metadata.position_info = (start_pos11, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error159(_text, _pos):
+def _raise_error205(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2627,7 +3153,7 @@ def _raise_error159(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error163(_text, _pos):
+def _raise_error209(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2643,7 +3169,7 @@ def _raise_error163(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error164(_text, _pos):
+def _raise_error210(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2659,7 +3185,7 @@ def _raise_error164(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error165(_text, _pos):
+def _raise_error211(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2675,7 +3201,7 @@ def _raise_error165(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error166(_text, _pos):
+def _raise_error212(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2691,7 +3217,7 @@ def _raise_error166(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error174(_text, _pos):
+def _raise_error220(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2729,7 +3255,7 @@ class Ref(Node):
 
 def _try_Ref(_text, _pos):
     # Begin Seq
-    start_pos10 = _pos
+    start_pos12 = _pos
     while True:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Name, _pos))
@@ -2738,7 +3264,7 @@ def _try_Ref(_text, _pos):
             break
         value = _result
         _result = Ref(value)
-        _result._metadata.position_info = (start_pos10, _pos)
+        _result._metadata.position_info = (start_pos12, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
@@ -2765,7 +3291,7 @@ class ListLiteral(Node):
 
 def _try_ListLiteral(_text, _pos):
     # Begin Seq
-    start_pos11 = _pos
+    start_pos13 = _pos
     while True:
         # Begin Discard
         # ('[' >> (wrap(Expr) /? Comma)) << ']'
@@ -2774,72 +3300,72 @@ def _try_ListLiteral(_text, _pos):
             # '[' >> (wrap(Expr) /? Comma)
             while True:
                 # Begin Str
-                value25 = '['
-                end25 = (_pos + 1)
-                if (_text[slice(_pos, end25, None)] == value25):
-                    _result = value25
-                    _pos = (yield (3, _try__ignored, end25))[2]
+                value30 = '['
+                end30 = (_pos + 1)
+                if (_text[slice(_pos, end30, None)] == value30):
+                    _result = value30
+                    _pos = (yield (3, _try__ignored, end30))[2]
                     _status = True
                 else:
-                    _result = _raise_error186
+                    _result = _raise_error232
                     _status = False
                 # End Str
                 if not (_status):
                     break
                 # Begin Sep
                 # wrap(Expr) /? Comma
-                staging11 = []
-                checkpoint6 = _pos
+                staging13 = []
+                checkpoint8 = _pos
                 while True:
                     # Begin Call
                     # wrap(Expr)
-                    func14 = _ParseFunction(_try_wrap, (_try_Expr,), ())
-                    (_status, _result, _pos) = (yield (3, func14, _pos))
+                    func18 = _ParseFunction(_try_wrap, (_try_Expr,), ())
+                    (_status, _result, _pos) = (yield (3, func18, _pos))
                     # End Call
                     if not (_status):
                         break
-                    staging11.append(_result)
-                    checkpoint6 = _pos
+                    staging13.append(_result)
+                    checkpoint8 = _pos
                     # Begin Ref
                     (_status, _result, _pos) = (yield (3, _try_Comma, _pos))
                     # End Ref
                     if not (_status):
                         break
-                    checkpoint6 = _pos
-                _result = staging11
-                _pos = checkpoint6
+                    checkpoint8 = _pos
+                _result = staging13
+                _pos = checkpoint8
                 _status = True
                 # End Sep
                 break
             # End Discard
             if not (_status):
                 break
-            staging12 = _result
+            staging14 = _result
             # Begin Str
-            value26 = ']'
-            end26 = (_pos + 1)
-            if (_text[slice(_pos, end26, None)] == value26):
-                _result = value26
-                _pos = (yield (3, _try__ignored, end26))[2]
+            value31 = ']'
+            end31 = (_pos + 1)
+            if (_text[slice(_pos, end31, None)] == value31):
+                _result = value31
+                _pos = (yield (3, _try__ignored, end31))[2]
                 _status = True
             else:
-                _result = _raise_error192
+                _result = _raise_error238
                 _status = False
             # End Str
             if _status:
-                _result = staging12
+                _result = staging14
             break
         # End Discard
         if not (_status):
             break
         elements = _result
         _result = ListLiteral(elements)
-        _result._metadata.position_info = (start_pos11, _pos)
+        _result._metadata.position_info = (start_pos13, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error186(_text, _pos):
+def _raise_error232(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2855,7 +3381,7 @@ def _raise_error186(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error192(_text, _pos):
+def _raise_error238(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2895,7 +3421,7 @@ class ByteLiteral(Node):
 
 def _try_ByteLiteral(_text, _pos):
     # Begin Seq
-    start_pos12 = _pos
+    start_pos14 = _pos
     while True:
         # Begin Regex
         # /0[xX]/
@@ -2905,7 +3431,7 @@ def _try_ByteLiteral(_text, _pos):
             _pos = (yield (3, _try__ignored, match13.end()))[2]
             _status = True
         else:
-            _result = _raise_error196
+            _result = _raise_error242
             _status = False
         # End Regex
         if not (_status):
@@ -2921,25 +3447,25 @@ def _try_ByteLiteral(_text, _pos):
             _pos = (yield (3, _try__ignored, match14.end()))[2]
             _status = True
         else:
-            _result = _raise_error199
+            _result = _raise_error245
             _status = False
         # End Regex
         if _status:
-            arg14 = _result
+            arg20 = _result
             _result = lambda x: int(x, 16)
             _status = True
-            _result = _result(arg14)
+            _result = _result(arg20)
         # End Apply
         if not (_status):
             break
         value = _result
         _result = ByteLiteral(prefix, value)
-        _result._metadata.position_info = (start_pos12, _pos)
+        _result._metadata.position_info = (start_pos14, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error196(_text, _pos):
+def _raise_error242(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2955,7 +3481,7 @@ def _raise_error196(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error199(_text, _pos):
+def _raise_error245(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -2974,8 +3500,8 @@ def _raise_error199(_text, _pos):
 def _try_Atom(_text, _pos):
     # Rule 'Atom'
     # Begin Choice
-    farthest_err9 = _raise_error202
-    backtrack9 = farthest_pos9 = _pos
+    farthest_err11 = _raise_error248
+    backtrack14 = farthest_pos11 = _pos
     while True:
         # Option 1:
         # Begin Ref
@@ -2983,71 +3509,71 @@ def _try_Atom(_text, _pos):
         # End Ref
         if _status:
             break
-        if (farthest_pos9 < _pos):
-            farthest_pos9 = _pos
-            farthest_err9 = _result
-        _pos = backtrack9
+        if (farthest_pos11 < _pos):
+            farthest_pos11 = _pos
+            farthest_err11 = _result
+        _pos = backtrack14
         # Option 2:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_RegexLiteral, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos9 < _pos):
-            farthest_pos9 = _pos
-            farthest_err9 = _result
-        _pos = backtrack9
+        if (farthest_pos11 < _pos):
+            farthest_pos11 = _pos
+            farthest_err11 = _result
+        _pos = backtrack14
         # Option 3:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_LetExpression, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos9 < _pos):
-            farthest_pos9 = _pos
-            farthest_err9 = _result
-        _pos = backtrack9
+        if (farthest_pos11 < _pos):
+            farthest_pos11 = _pos
+            farthest_err11 = _result
+        _pos = backtrack14
         # Option 4:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_ListLiteral, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos9 < _pos):
-            farthest_pos9 = _pos
-            farthest_err9 = _result
-        _pos = backtrack9
+        if (farthest_pos11 < _pos):
+            farthest_pos11 = _pos
+            farthest_err11 = _result
+        _pos = backtrack14
         # Option 5:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_ByteLiteral, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos9 < _pos):
-            farthest_pos9 = _pos
-            farthest_err9 = _result
-        _pos = backtrack9
+        if (farthest_pos11 < _pos):
+            farthest_pos11 = _pos
+            farthest_err11 = _result
+        _pos = backtrack14
         # Option 6:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_PythonExpression, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos9 < _pos):
-            farthest_pos9 = _pos
-            farthest_err9 = _result
-        _pos = backtrack9
+        if (farthest_pos11 < _pos):
+            farthest_pos11 = _pos
+            farthest_err11 = _result
+        _pos = backtrack14
         # Option 7:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Ref, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos9 < _pos):
-            farthest_pos9 = _pos
-            farthest_err9 = _result
-        _pos = farthest_pos9
-        _result = farthest_err9
+        if (farthest_pos11 < _pos):
+            farthest_pos11 = _pos
+            farthest_err11 = _result
+        _pos = farthest_pos11
+        _result = farthest_err11
         break
     # End Choice
     yield (_status, _result, _pos)
@@ -3058,7 +3584,7 @@ def _parse_Atom(text, pos=0, fullparse=True):
 Atom = Rule('Atom', _parse_Atom, """
     Atom = StringLiteral | RegexLiteral | LetExpression | ListLiteral | ByteLiteral | PythonExpression | Ref
 """)
-def _raise_error202(_text, _pos):
+def _raise_error248(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3098,7 +3624,7 @@ class KeywordArg(Node):
 
 def _try_KeywordArg(_text, _pos):
     # Begin Seq
-    start_pos13 = _pos
+    start_pos15 = _pos
     while True:
         # Begin Discard
         # Name << ('=>' | '=' | ':')
@@ -3108,59 +3634,59 @@ def _try_KeywordArg(_text, _pos):
             # End Ref
             if not (_status):
                 break
-            staging13 = _result
+            staging15 = _result
             # Begin Choice
-            farthest_err10 = _raise_error215
-            farthest_pos10 = _pos
+            farthest_err12 = _raise_error261
+            farthest_pos12 = _pos
             while True:
                 # Option 1:
                 # Begin Str
-                value27 = '=>'
-                end27 = (_pos + 2)
-                if (_text[slice(_pos, end27, None)] == value27):
-                    _result = value27
-                    _pos = (yield (3, _try__ignored, end27))[2]
+                value32 = '=>'
+                end32 = (_pos + 2)
+                if (_text[slice(_pos, end32, None)] == value32):
+                    _result = value32
+                    _pos = (yield (3, _try__ignored, end32))[2]
                     _status = True
                 else:
-                    _result = _raise_error216
+                    _result = _raise_error262
                     _status = False
                 # End Str
                 if _status:
                     break
                 # Option 2:
                 # Begin Str
-                value28 = '='
-                end28 = (_pos + 1)
-                if (_text[slice(_pos, end28, None)] == value28):
-                    _result = value28
-                    _pos = (yield (3, _try__ignored, end28))[2]
+                value33 = '='
+                end33 = (_pos + 1)
+                if (_text[slice(_pos, end33, None)] == value33):
+                    _result = value33
+                    _pos = (yield (3, _try__ignored, end33))[2]
                     _status = True
                 else:
-                    _result = _raise_error217
+                    _result = _raise_error263
                     _status = False
                 # End Str
                 if _status:
                     break
                 # Option 3:
                 # Begin Str
-                value29 = ':'
-                end29 = (_pos + 1)
-                if (_text[slice(_pos, end29, None)] == value29):
-                    _result = value29
-                    _pos = (yield (3, _try__ignored, end29))[2]
+                value34 = ':'
+                end34 = (_pos + 1)
+                if (_text[slice(_pos, end34, None)] == value34):
+                    _result = value34
+                    _pos = (yield (3, _try__ignored, end34))[2]
                     _status = True
                 else:
-                    _result = _raise_error218
+                    _result = _raise_error264
                     _status = False
                 # End Str
                 if _status:
                     break
-                _pos = farthest_pos10
-                _result = farthest_err10
+                _pos = farthest_pos12
+                _result = farthest_err12
                 break
             # End Choice
             if _status:
-                _result = staging13
+                _result = staging15
             break
         # End Discard
         if not (_status):
@@ -3173,12 +3699,12 @@ def _try_KeywordArg(_text, _pos):
             break
         expr = _result
         _result = KeywordArg(name, expr)
-        _result._metadata.position_info = (start_pos13, _pos)
+        _result._metadata.position_info = (start_pos15, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error215(_text, _pos):
+def _raise_error261(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3194,7 +3720,7 @@ def _raise_error215(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error216(_text, _pos):
+def _raise_error262(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3210,7 +3736,7 @@ def _raise_error216(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error217(_text, _pos):
+def _raise_error263(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3226,7 +3752,7 @@ def _raise_error217(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error218(_text, _pos):
+def _raise_error264(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3262,10 +3788,10 @@ class ArgList(Node):
         return _run(text, pos, _try_ArgList, fullparse)
 
 
-def _parse_function_230(_text, _pos):
+def _parse_function_276(_text, _pos):
     # Begin Choice
-    farthest_err11 = _raise_error230
-    backtrack10 = farthest_pos11 = _pos
+    farthest_err13 = _raise_error276
+    backtrack15 = farthest_pos13 = _pos
     while True:
         # Option 1:
         # Begin Ref
@@ -3273,28 +3799,28 @@ def _parse_function_230(_text, _pos):
         # End Ref
         if _status:
             break
-        if (farthest_pos11 < _pos):
-            farthest_pos11 = _pos
-            farthest_err11 = _result
-        _pos = backtrack10
+        if (farthest_pos13 < _pos):
+            farthest_pos13 = _pos
+            farthest_err13 = _result
+        _pos = backtrack15
         # Option 2:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Expr, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos11 < _pos):
-            farthest_pos11 = _pos
-            farthest_err11 = _result
-        _pos = farthest_pos11
-        _result = farthest_err11
+        if (farthest_pos13 < _pos):
+            farthest_pos13 = _pos
+            farthest_err13 = _result
+        _pos = farthest_pos13
+        _result = farthest_err13
         break
     # End Choice
     yield (_status, _result, _pos)
 
 def _try_ArgList(_text, _pos):
     # Begin Seq
-    start_pos14 = _pos
+    start_pos16 = _pos
     while True:
         # Begin Discard
         # ('(' >> (wrap(KeywordArg | Expr) /? Comma)) << ')'
@@ -3303,72 +3829,72 @@ def _try_ArgList(_text, _pos):
             # '(' >> (wrap(KeywordArg | Expr) /? Comma)
             while True:
                 # Begin Str
-                value30 = '('
-                end30 = (_pos + 1)
-                if (_text[slice(_pos, end30, None)] == value30):
-                    _result = value30
-                    _pos = (yield (3, _try__ignored, end30))[2]
+                value35 = '('
+                end35 = (_pos + 1)
+                if (_text[slice(_pos, end35, None)] == value35):
+                    _result = value35
+                    _pos = (yield (3, _try__ignored, end35))[2]
                     _status = True
                 else:
-                    _result = _raise_error226
+                    _result = _raise_error272
                     _status = False
                 # End Str
                 if not (_status):
                     break
                 # Begin Sep
                 # wrap(KeywordArg | Expr) /? Comma
-                staging14 = []
-                checkpoint7 = _pos
+                staging16 = []
+                checkpoint9 = _pos
                 while True:
                     # Begin Call
                     # wrap(KeywordArg | Expr)
-                    func15 = _ParseFunction(_try_wrap, (_parse_function_230,), ())
-                    (_status, _result, _pos) = (yield (3, func15, _pos))
+                    func19 = _ParseFunction(_try_wrap, (_parse_function_276,), ())
+                    (_status, _result, _pos) = (yield (3, func19, _pos))
                     # End Call
                     if not (_status):
                         break
-                    staging14.append(_result)
-                    checkpoint7 = _pos
+                    staging16.append(_result)
+                    checkpoint9 = _pos
                     # Begin Ref
                     (_status, _result, _pos) = (yield (3, _try_Comma, _pos))
                     # End Ref
                     if not (_status):
                         break
-                    checkpoint7 = _pos
-                _result = staging14
-                _pos = checkpoint7
+                    checkpoint9 = _pos
+                _result = staging16
+                _pos = checkpoint9
                 _status = True
                 # End Sep
                 break
             # End Discard
             if not (_status):
                 break
-            staging15 = _result
+            staging17 = _result
             # Begin Str
-            value31 = ')'
-            end31 = (_pos + 1)
-            if (_text[slice(_pos, end31, None)] == value31):
-                _result = value31
-                _pos = (yield (3, _try__ignored, end31))[2]
+            value36 = ')'
+            end36 = (_pos + 1)
+            if (_text[slice(_pos, end36, None)] == value36):
+                _result = value36
+                _pos = (yield (3, _try__ignored, end36))[2]
                 _status = True
             else:
-                _result = _raise_error234
+                _result = _raise_error280
                 _status = False
             # End Str
             if _status:
-                _result = staging15
+                _result = staging17
             break
         # End Discard
         if not (_status):
             break
         args = _result
         _result = ArgList(args)
-        _result._metadata.position_info = (start_pos14, _pos)
+        _result._metadata.position_info = (start_pos16, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error226(_text, _pos):
+def _raise_error272(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3384,7 +3910,7 @@ def _raise_error226(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error230(_text, _pos):
+def _raise_error276(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3400,7 +3926,7 @@ def _raise_error230(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error234(_text, _pos):
+def _raise_error280(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3416,436 +3942,631 @@ def _raise_error234(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _parse_function_257(_text, _pos):
+def _parse_function_312(_text, _pos):
     # Begin Choice
-    farthest_err13 = _raise_error257
-    farthest_pos13 = _pos
+    farthest_err16 = _raise_error312
+    farthest_pos16 = _pos
     while True:
         # Option 1:
         # Begin Str
-        value37 = '//'
-        end37 = (_pos + 2)
-        if (_text[slice(_pos, end37, None)] == value37):
-            _result = value37
-            _pos = (yield (3, _try__ignored, end37))[2]
-            _status = True
-        else:
-            _result = _raise_error258
-            _status = False
-        # End Str
-        if _status:
-            break
-        # Option 2:
-        # Begin Str
-        value38 = '/?'
-        end38 = (_pos + 2)
-        if (_text[slice(_pos, end38, None)] == value38):
-            _result = value38
-            _pos = (yield (3, _try__ignored, end38))[2]
-            _status = True
-        else:
-            _result = _raise_error259
-            _status = False
-        # End Str
-        if _status:
-            break
-        _pos = farthest_pos13
-        _result = farthest_err13
-        break
-    # End Choice
-    yield (_status, _result, _pos)
-
-def _parse_function_263(_text, _pos):
-    # Begin Choice
-    farthest_err14 = _raise_error263
-    farthest_pos14 = _pos
-    while True:
-        # Option 1:
-        # Begin Str
-        value39 = '<<'
-        end39 = (_pos + 2)
-        if (_text[slice(_pos, end39, None)] == value39):
-            _result = value39
-            _pos = (yield (3, _try__ignored, end39))[2]
-            _status = True
-        else:
-            _result = _raise_error264
-            _status = False
-        # End Str
-        if _status:
-            break
-        # Option 2:
-        # Begin Str
-        value40 = '>>'
-        end40 = (_pos + 2)
-        if (_text[slice(_pos, end40, None)] == value40):
-            _result = value40
-            _pos = (yield (3, _try__ignored, end40))[2]
-            _status = True
-        else:
-            _result = _raise_error265
-            _status = False
-        # End Str
-        if _status:
-            break
-        _pos = farthest_pos14
-        _result = farthest_err14
-        break
-    # End Choice
-    yield (_status, _result, _pos)
-
-def _parse_function_269(_text, _pos):
-    # Begin Choice
-    farthest_err15 = _raise_error269
-    farthest_pos15 = _pos
-    while True:
-        # Option 1:
-        # Begin Str
-        value41 = '<|'
-        end41 = (_pos + 2)
-        if (_text[slice(_pos, end41, None)] == value41):
-            _result = value41
-            _pos = (yield (3, _try__ignored, end41))[2]
-            _status = True
-        else:
-            _result = _raise_error270
-            _status = False
-        # End Str
-        if _status:
-            break
-        # Option 2:
-        # Begin Str
-        value42 = '|>'
+        value42 = '//'
         end42 = (_pos + 2)
         if (_text[slice(_pos, end42, None)] == value42):
             _result = value42
             _pos = (yield (3, _try__ignored, end42))[2]
             _status = True
         else:
-            _result = _raise_error271
+            _result = _raise_error313
+            _status = False
+        # End Str
+        if _status:
+            break
+        # Option 2:
+        # Begin Str
+        value43 = '/?'
+        end43 = (_pos + 2)
+        if (_text[slice(_pos, end43, None)] == value43):
+            _result = value43
+            _pos = (yield (3, _try__ignored, end43))[2]
+            _status = True
+        else:
+            _result = _raise_error314
+            _status = False
+        # End Str
+        if _status:
+            break
+        _pos = farthest_pos16
+        _result = farthest_err16
+        break
+    # End Choice
+    yield (_status, _result, _pos)
+
+def _parse_function_319(_text, _pos):
+    # Begin Choice
+    farthest_err17 = _raise_error319
+    farthest_pos17 = _pos
+    while True:
+        # Option 1:
+        # Begin Str
+        value44 = '<<'
+        end44 = (_pos + 2)
+        if (_text[slice(_pos, end44, None)] == value44):
+            _result = value44
+            _pos = (yield (3, _try__ignored, end44))[2]
+            _status = True
+        else:
+            _result = _raise_error320
+            _status = False
+        # End Str
+        if _status:
+            break
+        # Option 2:
+        # Begin Str
+        value45 = '>>'
+        end45 = (_pos + 2)
+        if (_text[slice(_pos, end45, None)] == value45):
+            _result = value45
+            _pos = (yield (3, _try__ignored, end45))[2]
+            _status = True
+        else:
+            _result = _raise_error321
+            _status = False
+        # End Str
+        if _status:
+            break
+        _pos = farthest_pos17
+        _result = farthest_err17
+        break
+    # End Choice
+    yield (_status, _result, _pos)
+
+def _parse_function_326(_text, _pos):
+    # Begin Choice
+    farthest_err18 = _raise_error326
+    farthest_pos18 = _pos
+    while True:
+        # Option 1:
+        # Begin Str
+        value46 = '<|'
+        end46 = (_pos + 2)
+        if (_text[slice(_pos, end46, None)] == value46):
+            _result = value46
+            _pos = (yield (3, _try__ignored, end46))[2]
+            _status = True
+        else:
+            _result = _raise_error327
+            _status = False
+        # End Str
+        if _status:
+            break
+        # Option 2:
+        # Begin Str
+        value47 = '|>'
+        end47 = (_pos + 2)
+        if (_text[slice(_pos, end47, None)] == value47):
+            _result = value47
+            _pos = (yield (3, _try__ignored, end47))[2]
+            _status = True
+        else:
+            _result = _raise_error328
             _status = False
         # End Str
         if _status:
             break
         # Option 3:
         # Begin Str
-        value43 = 'where'
-        end43 = (_pos + 5)
-        if (_text[slice(_pos, end43, None)] == value43):
-            _result = value43
-            _pos = (yield (3, _try__ignored, end43))[2]
+        value48 = 'where'
+        end48 = (_pos + 5)
+        if (_text[slice(_pos, end48, None)] == value48):
+            _result = value48
+            _pos = (yield (3, _try__ignored, end48))[2]
             _status = True
         else:
-            _result = _raise_error272
+            _result = _raise_error329
             _status = False
         # End Str
         if _status:
             break
-        _pos = farthest_pos15
-        _result = farthest_err15
+        _pos = farthest_pos18
+        _result = farthest_err18
         break
     # End Choice
     yield (_status, _result, _pos)
 
-def _parse_function_276(_text, _pos):
+def _parse_function_334(_text, _pos):
     # Begin Str
-    value44 = '|'
-    end44 = (_pos + 1)
-    if (_text[slice(_pos, end44, None)] == value44):
-        _result = value44
-        _pos = (yield (3, _try__ignored, end44))[2]
+    value49 = '|'
+    end49 = (_pos + 1)
+    if (_text[slice(_pos, end49, None)] == value49):
+        _result = value49
+        _pos = (yield (3, _try__ignored, end49))[2]
         _status = True
     else:
-        _result = _raise_error276
+        _result = _raise_error334
         _status = False
     # End Str
     yield (_status, _result, _pos)
 
 def _try_Expr(_text, _pos):
     # Rule 'Expr'
-    # Begin OperatorPrecedence
-    # OperatorPrecedence(
-    #     Atom,
-    #     Mixfix(('(' >> wrap(Expr)) << ')'),
-    #     Postfix(ArgList),
-    #     Postfix('?' | '*' | '+' | Repeat),
-    #     LeftAssoc(wrap('//' | '/?')),
-    #     LeftAssoc(wrap('<<' | '>>')),
-    #     LeftAssoc(wrap('<|' | '|>' | 'where')),
-    #     LeftAssoc(wrap('|'))
-    # )
-    # Begin LeftAssoc
-    # LeftAssoc(wrap('|'))
-    is_first1 = True
-    staging16 = None
+    # Begin OperatorTable
+    # Atom with operators {
+    #     mixfix: ('(' >> wrap(Expr)) << ')'
+    #     postfix: ArgList, FieldAccess
+    #     postfix: '?', '*', '+', Repeat
+    #     left: wrap('//' | '/?')
+    #     left: wrap('<<' | '>>')
+    #     left: wrap('<|' | '|>' | 'where')
+    #     left: wrap('|')
+    #     postfix: OperatorTable
+    # }
+    _outer_checkpoint1 = _pos
+    _operand_stack1 = []
+    _operator_stack1 = []
+    _operator_marker1 = 0
     while True:
-        # Begin LeftAssoc
-        # LeftAssoc(wrap('<|' | '|>' | 'where'))
-        is_first2 = True
-        staging17 = None
+        _inner_checkpoint1 = _pos
+        # Begin Longest
+        has_result1 = False
+        farthest_error_result1 = _raise_error283
+        farthest_error_position1 = _raise_error283
+        backtrack16 = farthest_position1 = farthest_error_position1 = _pos
+        # Option 1:
+        # Begin Ref
+        (_status, _result, _pos) = (yield (3, _try_Atom, _pos))
+        # End Ref
+        if _status:
+            farthest_result1 = _result
+            farthest_position1 = _pos
+            has_result1 = True
+        elif 'not has_result1 and ((farthest_error_position1 < _pos))':
+            farthest_error_position1 = _pos
+            farthest_error_result1 = _result
+        _pos = backtrack16
+        # Option 2:
+        # Begin Discard
+        # ('(' >> wrap(Expr)) << ')'
         while True:
-            # Begin LeftAssoc
-            # LeftAssoc(wrap('<<' | '>>'))
-            is_first3 = True
-            staging18 = None
+            # Begin Discard
+            # '(' >> wrap(Expr)
             while True:
-                # Begin LeftAssoc
-                # LeftAssoc(wrap('//' | '/?'))
-                is_first4 = True
-                staging19 = None
-                while True:
-                    # Begin Postfix
-                    # Postfix('?' | '*' | '+' | Repeat)
-                    # Begin Postfix
-                    # Postfix(ArgList)
-                    # Begin Mixfix
-                    # Mixfix(('(' >> wrap(Expr)) << ')')
-                    backtrack11 = _pos
-                    while True:
-                        # Begin Discard
-                        # ('(' >> wrap(Expr)) << ')'
-                        while True:
-                            # Begin Discard
-                            # '(' >> wrap(Expr)
-                            while True:
-                                # Begin Str
-                                value32 = '('
-                                end32 = (_pos + 1)
-                                if (_text[slice(_pos, end32, None)] == value32):
-                                    _result = value32
-                                    _pos = (yield (3, _try__ignored, end32))[2]
-                                    _status = True
-                                else:
-                                    _result = _raise_error241
-                                    _status = False
-                                # End Str
-                                if not (_status):
-                                    break
-                                # Begin Call
-                                # wrap(Expr)
-                                func16 = _ParseFunction(_try_wrap, (_try_Expr,), ())
-                                (_status, _result, _pos) = (yield (3, func16, _pos))
-                                # End Call
-                                break
-                            # End Discard
-                            if not (_status):
-                                break
-                            staging20 = _result
-                            # Begin Str
-                            value33 = ')'
-                            end33 = (_pos + 1)
-                            if (_text[slice(_pos, end33, None)] == value33):
-                                _result = value33
-                                _pos = (yield (3, _try__ignored, end33))[2]
-                                _status = True
-                            else:
-                                _result = _raise_error245
-                                _status = False
-                            # End Str
-                            if _status:
-                                _result = staging20
-                            break
-                        # End Discard
-                        if _status:
-                            break
-                        _pos = backtrack11
-                        # Begin Ref
-                        (_status, _result, _pos) = (yield (3, _try_Atom, _pos))
-                        # End Ref
-                        break
-                    # End Mixfix
-                    if _status:
-                        staging21 = _result
-                        checkpoint8 = _pos
-                        while True:
-                            # Begin Ref
-                            (_status, _result, _pos) = (yield (3, _try_ArgList, _pos))
-                            # End Ref
-                            if _status:
-                                staging21 = Postfix(staging21, _result)
-                                checkpoint8 = _pos
-                            else:
-                                _pos = checkpoint8
-                                _result = staging21
-                                _status = True
-                                break
-                    # End Postfix
-                    if _status:
-                        staging22 = _result
-                        checkpoint9 = _pos
-                        while True:
-                            # Begin Choice
-                            farthest_err12 = _raise_error249
-                            backtrack12 = farthest_pos12 = _pos
-                            while True:
-                                # Option 1:
-                                # Begin Str
-                                value34 = '?'
-                                end34 = (_pos + 1)
-                                if (_text[slice(_pos, end34, None)] == value34):
-                                    _result = value34
-                                    _pos = (yield (3, _try__ignored, end34))[2]
-                                    _status = True
-                                else:
-                                    _result = _raise_error250
-                                    _status = False
-                                # End Str
-                                if _status:
-                                    break
-                                # Option 2:
-                                # Begin Str
-                                value35 = '*'
-                                end35 = (_pos + 1)
-                                if (_text[slice(_pos, end35, None)] == value35):
-                                    _result = value35
-                                    _pos = (yield (3, _try__ignored, end35))[2]
-                                    _status = True
-                                else:
-                                    _result = _raise_error251
-                                    _status = False
-                                # End Str
-                                if _status:
-                                    break
-                                # Option 3:
-                                # Begin Str
-                                value36 = '+'
-                                end36 = (_pos + 1)
-                                if (_text[slice(_pos, end36, None)] == value36):
-                                    _result = value36
-                                    _pos = (yield (3, _try__ignored, end36))[2]
-                                    _status = True
-                                else:
-                                    _result = _raise_error252
-                                    _status = False
-                                # End Str
-                                if _status:
-                                    break
-                                # Option 4:
-                                # Begin Ref
-                                (_status, _result, _pos) = (yield (3, _try_Repeat, _pos))
-                                # End Ref
-                                if _status:
-                                    break
-                                if (farthest_pos12 < _pos):
-                                    farthest_pos12 = _pos
-                                    farthest_err12 = _result
-                                _pos = farthest_pos12
-                                _result = farthest_err12
-                                break
-                            # End Choice
-                            if _status:
-                                staging22 = Postfix(staging22, _result)
-                                checkpoint9 = _pos
-                            else:
-                                _pos = checkpoint9
-                                _result = staging22
-                                _status = True
-                                break
-                    # End Postfix
-                    if not (_status):
-                        break
-                    checkpoint10 = _pos
-                    if is_first4:
-                        is_first4 = False
-                        staging19 = _result
-                    else:
-                        staging19 = Infix(staging19, operator4, _result)
-                    # Begin Call
-                    # wrap('//' | '/?')
-                    func17 = _ParseFunction(_try_wrap, (_parse_function_257,), ())
-                    (_status, _result, _pos) = (yield (3, func17, _pos))
-                    # End Call
-                    if not (_status):
-                        break
-                    operator4 = _result
-                if not (is_first4):
+                # Begin Str
+                value37 = '('
+                end37 = (_pos + 1)
+                if (_text[slice(_pos, end37, None)] == value37):
+                    _result = value37
+                    _pos = (yield (3, _try__ignored, end37))[2]
                     _status = True
-                    _result = staging19
-                    _pos = checkpoint10
-                # End LeftAssoc
-                if not (_status):
-                    break
-                checkpoint11 = _pos
-                if is_first3:
-                    is_first3 = False
-                    staging18 = _result
                 else:
-                    staging18 = Infix(staging18, operator3, _result)
-                # Begin Call
-                # wrap('<<' | '>>')
-                func18 = _ParseFunction(_try_wrap, (_parse_function_263,), ())
-                (_status, _result, _pos) = (yield (3, func18, _pos))
-                # End Call
+                    _result = _raise_error287
+                    _status = False
+                # End Str
                 if not (_status):
                     break
-                operator3 = _result
-            if not (is_first3):
+                # Begin Call
+                # wrap(Expr)
+                func20 = _ParseFunction(_try_wrap, (_try_Expr,), ())
+                (_status, _result, _pos) = (yield (3, func20, _pos))
+                # End Call
+                break
+            # End Discard
+            if not (_status):
+                break
+            staging18 = _result
+            # Begin Str
+            value38 = ')'
+            end38 = (_pos + 1)
+            if (_text[slice(_pos, end38, None)] == value38):
+                _result = value38
+                _pos = (yield (3, _try__ignored, end38))[2]
                 _status = True
-                _result = staging18
-                _pos = checkpoint11
-            # End LeftAssoc
-            if not (_status):
-                break
-            checkpoint12 = _pos
-            if is_first2:
-                is_first2 = False
-                staging17 = _result
             else:
-                staging17 = Infix(staging17, operator2, _result)
-            # Begin Call
-            # wrap('<|' | '|>' | 'where')
-            func19 = _ParseFunction(_try_wrap, (_parse_function_269,), ())
-            (_status, _result, _pos) = (yield (3, func19, _pos))
-            # End Call
-            if not (_status):
-                break
-            operator2 = _result
-        if not (is_first2):
-            _status = True
-            _result = staging17
-            _pos = checkpoint12
-        # End LeftAssoc
-        if not (_status):
+                _result = _raise_error291
+                _status = False
+            # End Str
+            if _status:
+                _result = staging18
             break
-        checkpoint13 = _pos
-        if is_first1:
-            is_first1 = False
-            staging16 = _result
+        # End Discard
+        if _status:
+            if not (has_result1):
+                farthest_result1 = _result
+                farthest_position1 = _pos
+                has_result1 = True
+            elif (farthest_position1 < _pos):
+                farthest_result1 = _result
+                farthest_position1 = _pos
+        elif 'not has_result1 and ((farthest_error_position1 < _pos))':
+            farthest_error_position1 = _pos
+            farthest_error_result1 = _result
+        if has_result1:
+            _result = farthest_result1
+            _pos = farthest_position1
+            _status = True
         else:
-            staging16 = Infix(staging16, operator1, _result)
+            _result = farthest_error_result1
+            _pos = farthest_error_position1
+        # End Longest
+        if not (_status):
+            if _operand_stack1:
+                _pos = _outer_checkpoint1
+            break
+        _operand_stack1.append(_result)
+        while True:
+            _inner_checkpoint1 = _pos
+            # Begin Longest
+            has_result2 = False
+            farthest_error_result2 = _raise_error292
+            farthest_error_position2 = _raise_error292
+            backtrack17 = farthest_position2 = farthest_error_position2 = _pos
+            # Option 1:
+            # Begin Apply
+            # (ArgList | FieldAccess) |> `lambda x: (1, x)`
+            # Begin Choice
+            farthest_err14 = _raise_error294
+            backtrack18 = farthest_pos14 = _pos
+            while True:
+                # Option 1:
+                # Begin Ref
+                (_status, _result, _pos) = (yield (3, _try_ArgList, _pos))
+                # End Ref
+                if _status:
+                    break
+                if (farthest_pos14 < _pos):
+                    farthest_pos14 = _pos
+                    farthest_err14 = _result
+                _pos = backtrack18
+                # Option 2:
+                # Begin Ref
+                (_status, _result, _pos) = (yield (3, _try_FieldAccess, _pos))
+                # End Ref
+                if _status:
+                    break
+                if (farthest_pos14 < _pos):
+                    farthest_pos14 = _pos
+                    farthest_err14 = _result
+                _pos = farthest_pos14
+                _result = farthest_err14
+                break
+            # End Choice
+            if _status:
+                arg21 = _result
+                _result = lambda x: (1, x)
+                _status = True
+                _result = _result(arg21)
+            # End Apply
+            if _status:
+                farthest_result2 = _result
+                farthest_position2 = _pos
+                has_result2 = True
+            elif 'not has_result2 and ((farthest_error_position2 < _pos))':
+                farthest_error_position2 = _pos
+                farthest_error_result2 = _result
+            _pos = backtrack17
+            # Option 2:
+            # Begin Apply
+            # ('?' | '*' | '+' | Repeat) |> `lambda x: (2, x)`
+            # Begin Choice
+            farthest_err15 = _raise_error299
+            backtrack19 = farthest_pos15 = _pos
+            while True:
+                # Option 1:
+                # Begin Str
+                value39 = '?'
+                end39 = (_pos + 1)
+                if (_text[slice(_pos, end39, None)] == value39):
+                    _result = value39
+                    _pos = (yield (3, _try__ignored, end39))[2]
+                    _status = True
+                else:
+                    _result = _raise_error300
+                    _status = False
+                # End Str
+                if _status:
+                    break
+                # Option 2:
+                # Begin Str
+                value40 = '*'
+                end40 = (_pos + 1)
+                if (_text[slice(_pos, end40, None)] == value40):
+                    _result = value40
+                    _pos = (yield (3, _try__ignored, end40))[2]
+                    _status = True
+                else:
+                    _result = _raise_error301
+                    _status = False
+                # End Str
+                if _status:
+                    break
+                # Option 3:
+                # Begin Str
+                value41 = '+'
+                end41 = (_pos + 1)
+                if (_text[slice(_pos, end41, None)] == value41):
+                    _result = value41
+                    _pos = (yield (3, _try__ignored, end41))[2]
+                    _status = True
+                else:
+                    _result = _raise_error302
+                    _status = False
+                # End Str
+                if _status:
+                    break
+                # Option 4:
+                # Begin Ref
+                (_status, _result, _pos) = (yield (3, _try_Repeat, _pos))
+                # End Ref
+                if _status:
+                    break
+                if (farthest_pos15 < _pos):
+                    farthest_pos15 = _pos
+                    farthest_err15 = _result
+                _pos = farthest_pos15
+                _result = farthest_err15
+                break
+            # End Choice
+            if _status:
+                arg22 = _result
+                _result = lambda x: (2, x)
+                _status = True
+                _result = _result(arg22)
+            # End Apply
+            if _status:
+                if not (has_result2):
+                    farthest_result2 = _result
+                    farthest_position2 = _pos
+                    has_result2 = True
+                elif (farthest_position2 < _pos):
+                    farthest_result2 = _result
+                    farthest_position2 = _pos
+            elif 'not has_result2 and ((farthest_error_position2 < _pos))':
+                farthest_error_position2 = _pos
+                farthest_error_result2 = _result
+            _pos = backtrack17
+            # Option 3:
+            # Begin Apply
+            # OperatorTable |> `lambda x: (7, x)`
+            # Begin Ref
+            (_status, _result, _pos) = (yield (3, _try_OperatorTable, _pos))
+            # End Ref
+            if _status:
+                arg23 = _result
+                _result = lambda x: (7, x)
+                _status = True
+                _result = _result(arg23)
+            # End Apply
+            if _status:
+                if not (has_result2):
+                    farthest_result2 = _result
+                    farthest_position2 = _pos
+                    has_result2 = True
+                elif (farthest_position2 < _pos):
+                    farthest_result2 = _result
+                    farthest_position2 = _pos
+            elif 'not has_result2 and ((farthest_error_position2 < _pos))':
+                farthest_error_position2 = _pos
+                farthest_error_result2 = _result
+            if has_result2:
+                _result = farthest_result2
+                _pos = farthest_position2
+                _status = True
+            else:
+                _result = farthest_error_result2
+                _pos = farthest_error_position2
+            # End Longest
+            if not (_status):
+                _pos = _inner_checkpoint1
+                break
+            while _operator_stack1 and _operator_stack1[-1][0] < _result[0]:
+                _, _is_infix, _operator = _operator_stack1.pop()
+                _right = _operand_stack1.pop()
+                if _is_infix:
+                    _left = _operand_stack1.pop()
+                    _operand_stack1.append(Infix(_left, _operator, _right))
+                else:
+                    _operand_stack1.append(Prefix(_operator, _right))
+            _operand = _operand_stack1.pop()
+            _operand_stack1.append(Postfix(_operand, _result[1]))
+        _operator_marker1 = len(_operator_stack1)
+        _outer_checkpoint1 = _pos
+        # Begin Longest
+        has_result3 = False
+        farthest_error_result3 = _raise_error308
+        farthest_error_position3 = _raise_error308
+        backtrack20 = farthest_position3 = farthest_error_position3 = _pos
+        # Option 1:
+        # Begin Apply
+        # wrap('//' | '/?') |> `lambda x: (3, 1, x)`
+        # Begin Call
+        # wrap('//' | '/?')
+        func21 = _ParseFunction(_try_wrap, (_parse_function_312,), ())
+        (_status, _result, _pos) = (yield (3, func21, _pos))
+        # End Call
+        if _status:
+            arg24 = _result
+            _result = lambda x: (3, 1, x)
+            _status = True
+            _result = _result(arg24)
+        # End Apply
+        if _status:
+            farthest_result3 = _result
+            farthest_position3 = _pos
+            has_result3 = True
+        elif 'not has_result3 and ((farthest_error_position3 < _pos))':
+            farthest_error_position3 = _pos
+            farthest_error_result3 = _result
+        _pos = backtrack20
+        # Option 2:
+        # Begin Apply
+        # wrap('<<' | '>>') |> `lambda x: (4, 1, x)`
+        # Begin Call
+        # wrap('<<' | '>>')
+        func22 = _ParseFunction(_try_wrap, (_parse_function_319,), ())
+        (_status, _result, _pos) = (yield (3, func22, _pos))
+        # End Call
+        if _status:
+            arg25 = _result
+            _result = lambda x: (4, 1, x)
+            _status = True
+            _result = _result(arg25)
+        # End Apply
+        if _status:
+            if not (has_result3):
+                farthest_result3 = _result
+                farthest_position3 = _pos
+                has_result3 = True
+            elif (farthest_position3 < _pos):
+                farthest_result3 = _result
+                farthest_position3 = _pos
+        elif 'not has_result3 and ((farthest_error_position3 < _pos))':
+            farthest_error_position3 = _pos
+            farthest_error_result3 = _result
+        _pos = backtrack20
+        # Option 3:
+        # Begin Apply
+        # wrap('<|' | '|>' | 'where') |> `lambda x: (5, 1, x)`
+        # Begin Call
+        # wrap('<|' | '|>' | 'where')
+        func23 = _ParseFunction(_try_wrap, (_parse_function_326,), ())
+        (_status, _result, _pos) = (yield (3, func23, _pos))
+        # End Call
+        if _status:
+            arg26 = _result
+            _result = lambda x: (5, 1, x)
+            _status = True
+            _result = _result(arg26)
+        # End Apply
+        if _status:
+            if not (has_result3):
+                farthest_result3 = _result
+                farthest_position3 = _pos
+                has_result3 = True
+            elif (farthest_position3 < _pos):
+                farthest_result3 = _result
+                farthest_position3 = _pos
+        elif 'not has_result3 and ((farthest_error_position3 < _pos))':
+            farthest_error_position3 = _pos
+            farthest_error_result3 = _result
+        _pos = backtrack20
+        # Option 4:
+        # Begin Apply
+        # wrap('|') |> `lambda x: (6, 1, x)`
         # Begin Call
         # wrap('|')
-        arg15 = _wrap_string_literal('|', _parse_function_276)
-        func20 = _ParseFunction(_try_wrap, (arg15,), ())
-        (_status, _result, _pos) = (yield (3, func20, _pos))
+        arg27 = _wrap_string_literal('|', _parse_function_334)
+        func24 = _ParseFunction(_try_wrap, (arg27,), ())
+        (_status, _result, _pos) = (yield (3, func24, _pos))
         # End Call
+        if _status:
+            arg28 = _result
+            _result = lambda x: (6, 1, x)
+            _status = True
+            _result = _result(arg28)
+        # End Apply
+        if _status:
+            if not (has_result3):
+                farthest_result3 = _result
+                farthest_position3 = _pos
+                has_result3 = True
+            elif (farthest_position3 < _pos):
+                farthest_result3 = _result
+                farthest_position3 = _pos
+        elif 'not has_result3 and ((farthest_error_position3 < _pos))':
+            farthest_error_position3 = _pos
+            farthest_error_result3 = _result
+        if has_result3:
+            _result = farthest_result3
+            _pos = farthest_position3
+            _status = True
+        else:
+            _result = farthest_error_result3
+            _pos = farthest_error_position3
+        # End Longest
         if not (_status):
+            if _operand_stack1:
+                _pos = _outer_checkpoint1
             break
-        operator1 = _result
-    if not (is_first1):
+        _prec = _result[0]
+        while _operator_stack1:
+            _top_prec, _top_assoc, _ = _operator_stack1[-1]
+            if _top_prec < _prec or (_top_prec == _prec and _top_assoc == 1):
+                _, _is_infix, _operator = _operator_stack1.pop()
+                _right = _operand_stack1.pop()
+                if _is_infix:
+                    _left = _operand_stack1.pop()
+                    _operand_stack1.append(Infix(_left, _operator, _right))
+                else:
+                    _operand_stack1.append(Prefix(_operator, _right))
+            elif _top_prec == _prec and _top_assoc == 3:
+                _pos = _outer_checkpoint1
+                break
+            else:
+                break
+        _operator_marker1 = len(_operator_stack1)
+        _operator_stack1.append(_result)
+    if _operand_stack1:
+        _operator_stack1 = _operator_stack1[:_operator_marker1]
+        while _operator_stack1:
+            _, _is_infix, _operator = _operator_stack1.pop()
+            _right = _operand_stack1.pop()
+            if _is_infix:
+                _left = _operand_stack1.pop()
+                _operand_stack1.append(Infix(_left, _operator, _right))
+            else:
+                _operand_stack1.append(Prefix(_operator, _right))
+        _result = _operand_stack1[0]
         _status = True
-        _result = staging16
-        _pos = checkpoint13
-    # End LeftAssoc
-    # End OperatorPrecedence
+    # End OperatorTable
     yield (_status, _result, _pos)
 
 def _parse_Expr(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Expr, fullparse)
 
 Expr = Rule('Expr', _parse_Expr, """
-    Expr = OperatorPrecedence(
-        Atom,
-        Mixfix(('(' >> wrap(Expr)) << ')'),
-        Postfix(ArgList),
-        Postfix('?' | '*' | '+' | Repeat),
-        LeftAssoc(wrap('//' | '/?')),
-        LeftAssoc(wrap('<<' | '>>')),
-        LeftAssoc(wrap('<|' | '|>' | 'where')),
-        LeftAssoc(wrap('|'))
-    )
+    Expr = Atom with operators {
+        mixfix: ('(' >> wrap(Expr)) << ')'
+        postfix: ArgList, FieldAccess
+        postfix: '?', '*', '+', Repeat
+        left: wrap('//' | '/?')
+        left: wrap('<<' | '>>')
+        left: wrap('<|' | '|>' | 'where')
+        left: wrap('|')
+        postfix: OperatorTable
+    }
 """)
-def _raise_error241(_text, _pos):
+def _raise_error282(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Expr' rule, at the expression:\n"
+    "    Atom with operators {\n    mixfix: ('(' >> wrap(Expr)) << ')'\n    postfix: ArgList, FieldAccess\n    postfix: '?', '*', '+', Repeat\n    left: wrap('//' | '/?')\n    left: wrap('<<' | '>>')\n    left: wrap('<|' | '|>' | 'where')\n    left: wrap('|')\n    postfix: OperatorTable\n}\n\n"
+    'Unexpected input'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error283(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Expr' rule, at the expression:\n"
+    "    Longest(Atom, ('(' >> wrap(Expr)) << ')')\n\n"
+    'Unexpected input'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error287(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3861,7 +4582,7 @@ def _raise_error241(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error245(_text, _pos):
+def _raise_error291(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3877,7 +4598,39 @@ def _raise_error245(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error249(_text, _pos):
+def _raise_error292(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Expr' rule, at the expression:\n"
+    "    Longest((ArgList | FieldAccess) |> `lambda x: (1, x)`, ('?' | '*' | '+' | Repeat) |> `lambda x: (2, x)`, OperatorTable |> `lambda x: (7, x)`)\n\n"
+    'Unexpected input'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error294(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Expr' rule, at the expression:\n"
+    '    ArgList | FieldAccess\n\n'
+    'Unexpected input'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error299(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3893,7 +4646,7 @@ def _raise_error249(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error250(_text, _pos):
+def _raise_error300(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3909,7 +4662,7 @@ def _raise_error250(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error251(_text, _pos):
+def _raise_error301(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3925,7 +4678,7 @@ def _raise_error251(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error252(_text, _pos):
+def _raise_error302(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3941,7 +4694,23 @@ def _raise_error252(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error257(_text, _pos):
+def _raise_error308(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Expr' rule, at the expression:\n"
+    "    Longest(wrap('//' | '/?') |> `lambda x: (3, 1, x)`, wrap('<<' | '>>') |> `lambda x: (4, 1, x)`, wrap('<|' | '|>' | 'where') |> `lambda x: (5, 1, x)`, wrap('|') |> `lambda x: (6, 1, x)`)\n\n"
+    'Unexpected input'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error312(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3957,7 +4726,7 @@ def _raise_error257(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error258(_text, _pos):
+def _raise_error313(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3973,7 +4742,7 @@ def _raise_error258(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error259(_text, _pos):
+def _raise_error314(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -3989,7 +4758,7 @@ def _raise_error259(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error263(_text, _pos):
+def _raise_error319(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4005,7 +4774,7 @@ def _raise_error263(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error264(_text, _pos):
+def _raise_error320(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4021,7 +4790,7 @@ def _raise_error264(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error265(_text, _pos):
+def _raise_error321(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4037,7 +4806,7 @@ def _raise_error265(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error269(_text, _pos):
+def _raise_error326(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4053,7 +4822,7 @@ def _raise_error269(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error270(_text, _pos):
+def _raise_error327(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4069,7 +4838,7 @@ def _raise_error270(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error271(_text, _pos):
+def _raise_error328(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4085,7 +4854,7 @@ def _raise_error271(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error272(_text, _pos):
+def _raise_error329(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4101,7 +4870,7 @@ def _raise_error272(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error276(_text, _pos):
+def _raise_error334(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4114,6 +4883,76 @@ def _raise_error276(_text, _pos):
     "Failed to parse the 'Expr' rule, at the expression:\n"
     "    '|'\n\n"
     "Expected to match the string '|'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+class FieldAccess(Node):
+    """
+    class FieldAccess {
+        field: '.' >> Name
+    }
+    """
+    _fields = ('field',)
+
+    def __init__(self, field):
+        Node.__init__(self)
+        self.field = field
+
+    def __repr__(self):
+        return f'FieldAccess(field={self.field!r})'
+
+    @staticmethod
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _try_FieldAccess, fullparse)
+
+
+def _try_FieldAccess(_text, _pos):
+    # Begin Seq
+    start_pos17 = _pos
+    while True:
+        # Begin Discard
+        # '.' >> Name
+        while True:
+            # Begin Str
+            value50 = '.'
+            end50 = (_pos + 1)
+            if (_text[slice(_pos, end50, None)] == value50):
+                _result = value50
+                _pos = (yield (3, _try__ignored, end50))[2]
+                _status = True
+            else:
+                _result = _raise_error340
+                _status = False
+            # End Str
+            if not (_status):
+                break
+            # Begin Ref
+            (_status, _result, _pos) = (yield (3, _try_Name, _pos))
+            # End Ref
+            break
+        # End Discard
+        if not (_status):
+            break
+        field = _result
+        _result = FieldAccess(field)
+        _result._metadata.position_info = (start_pos17, _pos)
+        break
+    # End Seq
+    yield (_status, _result, _pos)
+
+def _raise_error340(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'FieldAccess' rule, at the expression:\n"
+    "    '.'\n\n"
+    "Expected to match the string '.'"
     )
     raise ParseError((title + details), _pos, line, col)
 
@@ -4145,17 +4984,17 @@ class Repeat(Node):
 
 def _try_Repeat(_text, _pos):
     # Begin Seq
-    start_pos15 = _pos
+    start_pos18 = _pos
     while True:
         # Begin Str
-        value45 = '{'
-        end45 = (_pos + 1)
-        if (_text[slice(_pos, end45, None)] == value45):
-            _result = value45
-            _pos = (yield (3, _try__ignored, end45))[2]
+        value51 = '{'
+        end51 = (_pos + 1)
+        if (_text[slice(_pos, end51, None)] == value51):
+            _result = value51
+            _pos = (yield (3, _try__ignored, end51))[2]
             _status = True
         else:
-            _result = _raise_error280
+            _result = _raise_error345
             _status = False
         # End Str
         if not (_status):
@@ -4163,32 +5002,32 @@ def _try_Repeat(_text, _pos):
         open = _result
         # Begin Opt
         # Opt(RepeatArg)
-        backtrack13 = _pos
+        backtrack21 = _pos
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_RepeatArg, _pos))
         # End Ref
         if not (_status):
-            _pos = backtrack13
+            _pos = backtrack21
             _result = None
             _status = True
         # End Opt
         start = _result
         # Begin Choice
-        backtrack14 = _pos
+        backtrack22 = _pos
         while True:
             # Option 1:
             # Begin Discard
             # ',' >> RepeatArg
             while True:
                 # Begin Str
-                value46 = ','
-                end46 = (_pos + 1)
-                if (_text[slice(_pos, end46, None)] == value46):
-                    _result = value46
-                    _pos = (yield (3, _try__ignored, end46))[2]
+                value52 = ','
+                end52 = (_pos + 1)
+                if (_text[slice(_pos, end52, None)] == value52):
+                    _result = value52
+                    _pos = (yield (3, _try__ignored, end52))[2]
                     _status = True
                 else:
-                    _result = _raise_error287
+                    _result = _raise_error352
                     _status = False
                 # End Str
                 if not (_status):
@@ -4200,20 +5039,20 @@ def _try_Repeat(_text, _pos):
             # End Discard
             if _status:
                 break
-            _pos = backtrack14
+            _pos = backtrack22
             # Option 2:
             # Begin Discard
             # ',' >> `None`
             while True:
                 # Begin Str
-                value47 = ','
-                end47 = (_pos + 1)
-                if (_text[slice(_pos, end47, None)] == value47):
-                    _result = value47
-                    _pos = (yield (3, _try__ignored, end47))[2]
+                value53 = ','
+                end53 = (_pos + 1)
+                if (_text[slice(_pos, end53, None)] == value53):
+                    _result = value53
+                    _pos = (yield (3, _try__ignored, end53))[2]
                     _status = True
                 else:
-                    _result = _raise_error290
+                    _result = _raise_error355
                     _status = False
                 # End Str
                 if not (_status):
@@ -4224,7 +5063,7 @@ def _try_Repeat(_text, _pos):
             # End Discard
             if _status:
                 break
-            _pos = backtrack14
+            _pos = backtrack22
             # Option 3: (always_succeeds)
             _result = start
             _status = True
@@ -4232,26 +5071,26 @@ def _try_Repeat(_text, _pos):
         # End Choice
         stop = _result
         # Begin Str
-        value48 = '}'
-        end48 = (_pos + 1)
-        if (_text[slice(_pos, end48, None)] == value48):
-            _result = value48
-            _pos = (yield (3, _try__ignored, end48))[2]
+        value54 = '}'
+        end54 = (_pos + 1)
+        if (_text[slice(_pos, end54, None)] == value54):
+            _result = value54
+            _pos = (yield (3, _try__ignored, end54))[2]
             _status = True
         else:
-            _result = _raise_error294
+            _result = _raise_error359
             _status = False
         # End Str
         if not (_status):
             break
         close = _result
         _result = Repeat(open, start, stop, close)
-        _result._metadata.position_info = (start_pos15, _pos)
+        _result._metadata.position_info = (start_pos18, _pos)
         break
     # End Seq
     yield (_status, _result, _pos)
 
-def _raise_error280(_text, _pos):
+def _raise_error345(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4267,7 +5106,7 @@ def _raise_error280(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error287(_text, _pos):
+def _raise_error352(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4283,7 +5122,7 @@ def _raise_error287(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error290(_text, _pos):
+def _raise_error355(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4299,7 +5138,7 @@ def _raise_error290(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-def _raise_error294(_text, _pos):
+def _raise_error359(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4318,8 +5157,8 @@ def _raise_error294(_text, _pos):
 def _try_RepeatArg(_text, _pos):
     # Rule 'RepeatArg'
     # Begin Choice
-    farthest_err16 = _raise_error296
-    backtrack15 = farthest_pos16 = _pos
+    farthest_err19 = _raise_error361
+    backtrack23 = farthest_pos19 = _pos
     while True:
         # Option 1:
         # Begin Ref
@@ -4327,21 +5166,21 @@ def _try_RepeatArg(_text, _pos):
         # End Ref
         if _status:
             break
-        if (farthest_pos16 < _pos):
-            farthest_pos16 = _pos
-            farthest_err16 = _result
-        _pos = backtrack15
+        if (farthest_pos19 < _pos):
+            farthest_pos19 = _pos
+            farthest_err19 = _result
+        _pos = backtrack23
         # Option 2:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Ref, _pos))
         # End Ref
         if _status:
             break
-        if (farthest_pos16 < _pos):
-            farthest_pos16 = _pos
-            farthest_err16 = _result
-        _pos = farthest_pos16
-        _result = farthest_err16
+        if (farthest_pos19 < _pos):
+            farthest_pos19 = _pos
+            farthest_err19 = _result
+        _pos = farthest_pos19
+        _result = farthest_err19
         break
     # End Choice
     yield (_status, _result, _pos)
@@ -4352,7 +5191,7 @@ def _parse_RepeatArg(text, pos=0, fullparse=True):
 RepeatArg = Rule('RepeatArg', _parse_RepeatArg, """
     RepeatArg = PythonExpression | Ref
 """)
-def _raise_error296(_text, _pos):
+def _raise_error361(_text, _pos):
     if (len(_text) <= _pos):
         title = 'Unexpected end of input.'
         line = None
@@ -4368,12 +5207,701 @@ def _raise_error296(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
+class OperatorTable(Node):
+    """
+    class OperatorTable {
+        rows: (((wrap(kw('between')) >> '{') >> Skip(Newline)) >> OperatorRow*) << '}'
+    }
+    """
+    _fields = ('rows',)
+
+    def __init__(self, rows):
+        Node.__init__(self)
+        self.rows = rows
+
+    def __repr__(self):
+        return f'OperatorTable(rows={self.rows!r})'
+
+    @staticmethod
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _try_OperatorTable, fullparse)
+
+
+def _parse_function_375(_text, _pos):
+    # Begin Str
+    value55 = 'between'
+    end55 = (_pos + 7)
+    if (_text[slice(_pos, end55, None)] == value55):
+        _result = value55
+        _pos = (yield (3, _try__ignored, end55))[2]
+        _status = True
+    else:
+        _result = _raise_error375
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _parse_function_373(_text, _pos):
+    # Begin Call
+    # kw('between')
+    arg29 = _wrap_string_literal('between', _parse_function_375)
+    func25 = _ParseFunction(_try_kw, (arg29,), ())
+    (_status, _result, _pos) = (yield (3, func25, _pos))
+    # End Call
+    yield (_status, _result, _pos)
+
+def _try_OperatorTable(_text, _pos):
+    # Begin Seq
+    start_pos19 = _pos
+    while True:
+        # Begin Discard
+        # (((wrap(kw('between')) >> '{') >> Skip(Newline)) >> OperatorRow*) << '}'
+        while True:
+            # Begin Discard
+            # ((wrap(kw('between')) >> '{') >> Skip(Newline)) >> OperatorRow*
+            while True:
+                # Begin Discard
+                # (wrap(kw('between')) >> '{') >> Skip(Newline)
+                while True:
+                    # Begin Discard
+                    # wrap(kw('between')) >> '{'
+                    while True:
+                        # Begin Call
+                        # wrap(kw('between'))
+                        func26 = _ParseFunction(_try_wrap, (_parse_function_373,), ())
+                        (_status, _result, _pos) = (yield (3, func26, _pos))
+                        # End Call
+                        if not (_status):
+                            break
+                        # Begin Str
+                        value56 = '{'
+                        end56 = (_pos + 1)
+                        if (_text[slice(_pos, end56, None)] == value56):
+                            _result = value56
+                            _pos = (yield (3, _try__ignored, end56))[2]
+                            _status = True
+                        else:
+                            _result = _raise_error376
+                            _status = False
+                        # End Str
+                        break
+                    # End Discard
+                    if not (_status):
+                        break
+                    # Begin Skip
+                    # Skip(Newline)
+                    while True:
+                        checkpoint10 = _pos
+                        # Begin Ref
+                        (_status, _result, _pos) = (yield (3, _try_Newline, _pos))
+                        # End Ref
+                        if _status:
+                            continue
+                        else:
+                            _pos = checkpoint10
+                        break
+                    _result = None
+                    _status = True
+                    # End Skip
+                    break
+                # End Discard
+                if not (_status):
+                    break
+                # Begin List
+                # OperatorRow*
+                staging19 = []
+                while True:
+                    checkpoint11 = _pos
+                    # Begin Ref
+                    (_status, _result, _pos) = (yield (3, _try_OperatorRow, _pos))
+                    # End Ref
+                    if not (_status):
+                        _pos = checkpoint11
+                        break
+                    staging19.append(_result)
+                _result = staging19
+                _status = True
+                # End List
+                break
+            # End Discard
+            if not (_status):
+                break
+            staging20 = _result
+            # Begin Str
+            value57 = '}'
+            end57 = (_pos + 1)
+            if (_text[slice(_pos, end57, None)] == value57):
+                _result = value57
+                _pos = (yield (3, _try__ignored, end57))[2]
+                _status = True
+            else:
+                _result = _raise_error381
+                _status = False
+            # End Str
+            if _status:
+                _result = staging20
+            break
+        # End Discard
+        if not (_status):
+            break
+        rows = _result
+        _result = OperatorTable(rows)
+        _result._metadata.position_info = (start_pos19, _pos)
+        break
+    # End Seq
+    yield (_status, _result, _pos)
+
+def _raise_error375(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'OperatorTable' rule, at the expression:\n"
+    "    'between'\n\n"
+    "Expected to match the string 'between'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error376(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'OperatorTable' rule, at the expression:\n"
+    "    '{'\n\n"
+    "Expected to match the string '{'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error381(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'OperatorTable' rule, at the expression:\n"
+    "    '}'\n\n"
+    "Expected to match the string '}'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+class OperatorRow(Node):
+    """
+    class OperatorRow {
+        associativity: Associativity
+        operators: wrap(':') >> (Operator /? Comma)
+        tail: Opt(LineSep)
+    }
+    """
+    _fields = ('associativity', 'operators', 'tail')
+
+    def __init__(self, associativity, operators, tail):
+        Node.__init__(self)
+        self.associativity = associativity
+        self.operators = operators
+        self.tail = tail
+
+    def __repr__(self):
+        return f'OperatorRow(associativity={self.associativity!r}, operators={self.operators!r}, tail={self.tail!r})'
+
+    @staticmethod
+    def parse(text, pos=0, fullparse=True):
+        return _run(text, pos, _try_OperatorRow, fullparse)
+
+
+def _parse_function_390(_text, _pos):
+    # Begin Str
+    value58 = ':'
+    end58 = (_pos + 1)
+    if (_text[slice(_pos, end58, None)] == value58):
+        _result = value58
+        _pos = (yield (3, _try__ignored, end58))[2]
+        _status = True
+    else:
+        _result = _raise_error390
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _try_OperatorRow(_text, _pos):
+    # Begin Seq
+    start_pos20 = _pos
+    while True:
+        # Begin Ref
+        (_status, _result, _pos) = (yield (3, _try_Associativity, _pos))
+        # End Ref
+        if not (_status):
+            break
+        associativity = _result
+        # Begin Discard
+        # wrap(':') >> (Operator /? Comma)
+        while True:
+            # Begin Call
+            # wrap(':')
+            arg30 = _wrap_string_literal(':', _parse_function_390)
+            func27 = _ParseFunction(_try_wrap, (arg30,), ())
+            (_status, _result, _pos) = (yield (3, func27, _pos))
+            # End Call
+            if not (_status):
+                break
+            # Begin Sep
+            # Operator /? Comma
+            staging21 = []
+            checkpoint12 = _pos
+            while True:
+                # Begin Ref
+                (_status, _result, _pos) = (yield (3, _try_Operator, _pos))
+                # End Ref
+                if not (_status):
+                    break
+                staging21.append(_result)
+                checkpoint12 = _pos
+                # Begin Ref
+                (_status, _result, _pos) = (yield (3, _try_Comma, _pos))
+                # End Ref
+                if not (_status):
+                    break
+                checkpoint12 = _pos
+            _result = staging21
+            _pos = checkpoint12
+            _status = True
+            # End Sep
+            break
+        # End Discard
+        if not (_status):
+            break
+        operators = _result
+        # Begin Opt
+        # Opt(LineSep)
+        backtrack24 = _pos
+        # Begin Ref
+        (_status, _result, _pos) = (yield (3, _try_LineSep, _pos))
+        # End Ref
+        if not (_status):
+            _pos = backtrack24
+            _result = None
+            _status = True
+        # End Opt
+        tail = _result
+        _result = OperatorRow(associativity, operators, tail)
+        _result._metadata.position_info = (start_pos20, _pos)
+        break
+    # End Seq
+    yield (_status, _result, _pos)
+
+def _raise_error390(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'OperatorRow' rule, at the expression:\n"
+    "    ':'\n\n"
+    "Expected to match the string ':'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _parse_function_403(_text, _pos):
+    # Begin Str
+    value59 = ':'
+    end59 = (_pos + 1)
+    if (_text[slice(_pos, end59, None)] == value59):
+        _result = value59
+        _pos = (yield (3, _try__ignored, end59))[2]
+        _status = True
+    else:
+        _result = _raise_error403
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _try_Operator(_text, _pos):
+    # Rule 'Operator'
+    # Begin Discard
+    # Expr << ExpectNot(wrap(':'))
+    while True:
+        # Begin Ref
+        (_status, _result, _pos) = (yield (3, _try_Expr, _pos))
+        # End Ref
+        if not (_status):
+            break
+        staging22 = _result
+        # Begin ExpectNot
+        # ExpectNot(wrap(':'))
+        backtrack25 = _pos
+        # Begin Call
+        # wrap(':')
+        arg31 = _wrap_string_literal(':', _parse_function_403)
+        func28 = _ParseFunction(_try_wrap, (arg31,), ())
+        (_status, _result, _pos) = (yield (3, func28, _pos))
+        # End Call
+        _pos = backtrack25
+        if _status:
+            _status = False
+            _result = _raise_error400
+        else:
+            _status = True
+            _result = None
+        # End ExpectNot
+        if _status:
+            _result = staging22
+        break
+    # End Discard
+    yield (_status, _result, _pos)
+
+def _parse_Operator(text, pos=0, fullparse=True):
+    return _run(text, pos, _try_Operator, fullparse)
+
+Operator = Rule('Operator', _parse_Operator, """
+    Operator = Expr << ExpectNot(wrap(':'))
+""")
+def _raise_error400(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Operator' rule, at the expression:\n"
+    "    ExpectNot(wrap(':'))\n\n"
+    "Did not expect to match: wrap(':')"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error403(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Operator' rule, at the expression:\n"
+    "    ':'\n\n"
+    "Expected to match the string ':'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _parse_function_408(_text, _pos):
+    # Begin Str
+    value60 = 'left'
+    end60 = (_pos + 4)
+    if (_text[slice(_pos, end60, None)] == value60):
+        _result = value60
+        _pos = (yield (3, _try__ignored, end60))[2]
+        _status = True
+    else:
+        _result = _raise_error408
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _parse_function_411(_text, _pos):
+    # Begin Str
+    value61 = 'right'
+    end61 = (_pos + 5)
+    if (_text[slice(_pos, end61, None)] == value61):
+        _result = value61
+        _pos = (yield (3, _try__ignored, end61))[2]
+        _status = True
+    else:
+        _result = _raise_error411
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _parse_function_414(_text, _pos):
+    # Begin Str
+    value62 = 'infix'
+    end62 = (_pos + 5)
+    if (_text[slice(_pos, end62, None)] == value62):
+        _result = value62
+        _pos = (yield (3, _try__ignored, end62))[2]
+        _status = True
+    else:
+        _result = _raise_error414
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _parse_function_417(_text, _pos):
+    # Begin Str
+    value63 = 'mixfix'
+    end63 = (_pos + 6)
+    if (_text[slice(_pos, end63, None)] == value63):
+        _result = value63
+        _pos = (yield (3, _try__ignored, end63))[2]
+        _status = True
+    else:
+        _result = _raise_error417
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _parse_function_420(_text, _pos):
+    # Begin Str
+    value64 = 'postfix'
+    end64 = (_pos + 7)
+    if (_text[slice(_pos, end64, None)] == value64):
+        _result = value64
+        _pos = (yield (3, _try__ignored, end64))[2]
+        _status = True
+    else:
+        _result = _raise_error420
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _parse_function_423(_text, _pos):
+    # Begin Str
+    value65 = 'prefix'
+    end65 = (_pos + 6)
+    if (_text[slice(_pos, end65, None)] == value65):
+        _result = value65
+        _pos = (yield (3, _try__ignored, end65))[2]
+        _status = True
+    else:
+        _result = _raise_error423
+        _status = False
+    # End Str
+    yield (_status, _result, _pos)
+
+def _try_Associativity(_text, _pos):
+    # Rule 'Associativity'
+    # Begin Choice
+    farthest_err20 = _raise_error405
+    backtrack26 = farthest_pos20 = _pos
+    while True:
+        # Option 1:
+        # Begin Call
+        # kw('left')
+        arg32 = _wrap_string_literal('left', _parse_function_408)
+        func29 = _ParseFunction(_try_kw, (arg32,), ())
+        (_status, _result, _pos) = (yield (3, func29, _pos))
+        # End Call
+        if _status:
+            break
+        if (farthest_pos20 < _pos):
+            farthest_pos20 = _pos
+            farthest_err20 = _result
+        _pos = backtrack26
+        # Option 2:
+        # Begin Call
+        # kw('right')
+        arg33 = _wrap_string_literal('right', _parse_function_411)
+        func30 = _ParseFunction(_try_kw, (arg33,), ())
+        (_status, _result, _pos) = (yield (3, func30, _pos))
+        # End Call
+        if _status:
+            break
+        if (farthest_pos20 < _pos):
+            farthest_pos20 = _pos
+            farthest_err20 = _result
+        _pos = backtrack26
+        # Option 3:
+        # Begin Call
+        # kw('infix')
+        arg34 = _wrap_string_literal('infix', _parse_function_414)
+        func31 = _ParseFunction(_try_kw, (arg34,), ())
+        (_status, _result, _pos) = (yield (3, func31, _pos))
+        # End Call
+        if _status:
+            break
+        if (farthest_pos20 < _pos):
+            farthest_pos20 = _pos
+            farthest_err20 = _result
+        _pos = backtrack26
+        # Option 4:
+        # Begin Call
+        # kw('mixfix')
+        arg35 = _wrap_string_literal('mixfix', _parse_function_417)
+        func32 = _ParseFunction(_try_kw, (arg35,), ())
+        (_status, _result, _pos) = (yield (3, func32, _pos))
+        # End Call
+        if _status:
+            break
+        if (farthest_pos20 < _pos):
+            farthest_pos20 = _pos
+            farthest_err20 = _result
+        _pos = backtrack26
+        # Option 5:
+        # Begin Call
+        # kw('postfix')
+        arg36 = _wrap_string_literal('postfix', _parse_function_420)
+        func33 = _ParseFunction(_try_kw, (arg36,), ())
+        (_status, _result, _pos) = (yield (3, func33, _pos))
+        # End Call
+        if _status:
+            break
+        if (farthest_pos20 < _pos):
+            farthest_pos20 = _pos
+            farthest_err20 = _result
+        _pos = backtrack26
+        # Option 6:
+        # Begin Call
+        # kw('prefix')
+        arg37 = _wrap_string_literal('prefix', _parse_function_423)
+        func34 = _ParseFunction(_try_kw, (arg37,), ())
+        (_status, _result, _pos) = (yield (3, func34, _pos))
+        # End Call
+        if _status:
+            break
+        if (farthest_pos20 < _pos):
+            farthest_pos20 = _pos
+            farthest_err20 = _result
+        _pos = farthest_pos20
+        _result = farthest_err20
+        break
+    # End Choice
+    yield (_status, _result, _pos)
+
+def _parse_Associativity(text, pos=0, fullparse=True):
+    return _run(text, pos, _try_Associativity, fullparse)
+
+Associativity = Rule('Associativity', _parse_Associativity, """
+    Associativity = kw('left') | kw('right') | kw('infix') | kw('mixfix') | kw('postfix') | kw('prefix')
+""")
+def _raise_error405(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Associativity' rule, at the expression:\n"
+    "    kw('left') | kw('right') | kw('infix') | kw('mixfix') | kw('postfix') | kw('prefix')\n\n"
+    'Unexpected input'
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error408(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Associativity' rule, at the expression:\n"
+    "    'left'\n\n"
+    "Expected to match the string 'left'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error411(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Associativity' rule, at the expression:\n"
+    "    'right'\n\n"
+    "Expected to match the string 'right'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error414(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Associativity' rule, at the expression:\n"
+    "    'infix'\n\n"
+    "Expected to match the string 'infix'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error417(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Associativity' rule, at the expression:\n"
+    "    'mixfix'\n\n"
+    "Expected to match the string 'mixfix'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error420(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Associativity' rule, at the expression:\n"
+    "    'postfix'\n\n"
+    "Expected to match the string 'postfix'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
+def _raise_error423(_text, _pos):
+    if (len(_text) <= _pos):
+        title = 'Unexpected end of input.'
+        line = None
+        col = None
+    else:
+        (line, col) = _get_line_and_column(_text, _pos)
+        excerpt = _extract_excerpt(_text, _pos, col)
+        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
+    details = (
+    "Failed to parse the 'Associativity' rule, at the expression:\n"
+    "    'prefix'\n\n"
+    "Expected to match the string 'prefix'"
+    )
+    raise ParseError((title + details), _pos, line, col)
+
 def _try_ManyStmts(_text, _pos):
     # Rule 'ManyStmts'
     # Begin Sep
     # Stmt /? LineSep
     staging23 = []
-    checkpoint14 = _pos
+    checkpoint13 = _pos
     while True:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Stmt, _pos))
@@ -4381,16 +5909,16 @@ def _try_ManyStmts(_text, _pos):
         if not (_status):
             break
         staging23.append(_result)
-        checkpoint14 = _pos
+        checkpoint13 = _pos
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_LineSep, _pos))
         # End Ref
         if not (_status):
             break
-        checkpoint14 = _pos
+        checkpoint13 = _pos
     if staging23:
         _result = staging23
-        _pos = checkpoint14
+        _pos = checkpoint13
         _status = True
     # End Sep
     yield (_status, _result, _pos)
@@ -4414,12 +5942,12 @@ def _try_SingleExpr(_text, _pos):
         staging24 = _result
         # Begin Opt
         # Opt(LineSep)
-        backtrack16 = _pos
+        backtrack27 = _pos
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_LineSep, _pos))
         # End Ref
         if not (_status):
-            _pos = backtrack16
+            _pos = backtrack27
             _result = None
             _status = True
         # End Opt
@@ -4437,7 +5965,7 @@ SingleExpr = Rule('SingleExpr', _parse_SingleExpr, """
 def _try_start(_text, _pos):
     # Rule 'start'
     # Begin Discard
-    # _try__ignored >> (Skip(Newline) >> (ManyStmts | SingleExpr))
+    # _try__ignored >> (Skip(Newline) >> GrammarDef)
     while True:
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try__ignored, _pos))
@@ -4445,50 +5973,26 @@ def _try_start(_text, _pos):
         if not (_status):
             break
         # Begin Discard
-        # Skip(Newline) >> (ManyStmts | SingleExpr)
+        # Skip(Newline) >> GrammarDef
         while True:
             # Begin Skip
             # Skip(Newline)
             while True:
-                checkpoint15 = _pos
+                checkpoint14 = _pos
                 # Begin Ref
                 (_status, _result, _pos) = (yield (3, _try_Newline, _pos))
                 # End Ref
                 if _status:
                     continue
                 else:
-                    _pos = checkpoint15
+                    _pos = checkpoint14
                 break
             _result = None
             _status = True
             # End Skip
-            # Begin Choice
-            farthest_err17 = _raise_error314
-            backtrack17 = farthest_pos17 = _pos
-            while True:
-                # Option 1:
-                # Begin Ref
-                (_status, _result, _pos) = (yield (3, _try_ManyStmts, _pos))
-                # End Ref
-                if _status:
-                    break
-                if (farthest_pos17 < _pos):
-                    farthest_pos17 = _pos
-                    farthest_err17 = _result
-                _pos = backtrack17
-                # Option 2:
-                # Begin Ref
-                (_status, _result, _pos) = (yield (3, _try_SingleExpr, _pos))
-                # End Ref
-                if _status:
-                    break
-                if (farthest_pos17 < _pos):
-                    farthest_pos17 = _pos
-                    farthest_err17 = _result
-                _pos = farthest_pos17
-                _result = farthest_err17
-                break
-            # End Choice
+            # Begin Ref
+            (_status, _result, _pos) = (yield (3, _try_GrammarDef, _pos))
+            # End Ref
             break
         # End Discard
         break
@@ -4499,44 +6003,28 @@ def _parse_start(text, pos=0, fullparse=True):
     return _run(text, pos, _try_start, fullparse)
 
 start = Rule('start', _parse_start, """
-    start = _try__ignored >> (Skip(Newline) >> (ManyStmts | SingleExpr))
+    start = _try__ignored >> (Skip(Newline) >> GrammarDef)
 """)
-def _raise_error314(_text, _pos):
-    if (len(_text) <= _pos):
-        title = 'Unexpected end of input.'
-        line = None
-        col = None
-    else:
-        (line, col) = _get_line_and_column(_text, _pos)
-        excerpt = _extract_excerpt(_text, _pos, col)
-        title = f'Error on line {line}, column {col}:\n{excerpt}\n'
-    details = (
-    "Failed to parse the 'start' rule, at the expression:\n"
-    '    ManyStmts | SingleExpr\n\n'
-    'Unexpected input'
-    )
-    raise ParseError((title + details), _pos, line, col)
-
 def _try__ignored(_text, _pos):
     # Rule '_ignored'
     # Begin Skip
     # Skip(Space, Comment)
     while True:
-        checkpoint16 = _pos
+        checkpoint15 = _pos
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Space, _pos))
         # End Ref
         if _status:
             continue
         else:
-            _pos = checkpoint16
+            _pos = checkpoint15
         # Begin Ref
         (_status, _result, _pos) = (yield (3, _try_Comment, _pos))
         # End Ref
         if _status:
             continue
         else:
-            _pos = checkpoint16
+            _pos = checkpoint15
         break
     _result = None
     _status = True

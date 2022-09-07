@@ -24,15 +24,15 @@ class Str(Expression):
     def can_partially_succeed(self):
         return False
 
-    def argumentize(self, out):
+    def argumentize(self, out, flags):
         wrap = Code('_wrap_string_literal')
-        value = Expression.argumentize(self, out)
+        value = Expression.argumentize(self, out, flags)
         return out.var('arg', wrap(self.value, value))
 
     def constantize(self):
         return repr(self.value)
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         if not self.value:
             out += STATUS << True
             out += RESULT << ''
@@ -43,7 +43,12 @@ class Str(Expression):
 
         with out.IF(TEXT[POS : end] == value):
             out += RESULT << value
-            out += POS << (utils.skip_ignored(end) if self.skip_ignored else end)
+
+            if self.skip_ignored:
+                out += POS << utils.skip_ignored(end, flags)
+            else:
+                out += POS << end
+
             out += STATUS << True
 
         with out.ELSE():

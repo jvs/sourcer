@@ -16,19 +16,18 @@ def test_simple_words():
 
 def test_arithmetic_expressions():
     g = Grammar(r'''
-        ignored Space = /\s+/
+        ignore Space = /\s+/
 
         Int = /\d+/ |> `int`
 
-        Expr = OperatorPrecedence(
-            Int,
-            Mixfix('(' >> Expr << ')'),
-            Prefix('+' | '-'),
-            RightAssoc('^'),
-            Postfix('%'),
-            LeftAssoc('*' | '/'),
-            LeftAssoc('+' | '-'),
-        )
+        Expr = Int between {
+            mixfix: "(" >> Expr << ")"
+            prefix: "+", "-"
+            right: "^"
+            postfix: "%"
+            left: "*", "/"
+            left: "+", "-"
+        }
         start = Expr
     ''')
 
@@ -61,6 +60,28 @@ def test_arithmetic_expressions():
     result = g.parse('12 * 34%')
     assert result == g.Infix(12, '*', g.Postfix(34, '%'))
 
+    # Postfix operator used in the left-hand operand:
+    result = g.parse('12% * 34')
+    assert result == g.Infix(g.Postfix(12, '%'), '*', 34)
+
+    # Postfix operator used in the left-hand operand of an operator with higher
+    # precedence:
+    result = g.parse('12% ^ 34')
+    assert result == g.Infix(g.Postfix(12, '%'), '^', 34)
+
+    # A number by itself:
+    result = g.parse('10')
+    assert result == 10
+
+    # A stack of postfix operators:
+    result = g.parse('100%%%')
+    assert result == g.Postfix(g.Postfix(g.Postfix(100, '%'), '%'), '%')
+
+    # Stacks of prefix and postfix operators:
+    result = g.parse('-+-456%%%')
+    assert result == g.Postfix(g.Postfix(g.Postfix(
+        P('-', P('+', P('-', 456))), '%'), '%'), '%')
+
 
 def test_simple_json_grammar():
     g = Grammar(r'''
@@ -72,7 +93,7 @@ def test_simple_json_grammar():
 
         Object = "{" >> (Member // ",") << "}" |> `dict`
 
-        Member = [String << ":", Value]
+        Member = [String, ":" >> Value]
 
         Array = "[" >> (Value // ",") << "]"
 
@@ -82,7 +103,7 @@ def test_simple_json_grammar():
 
         Keyword = "true" >> `True` | "false" >> `False` | "null" >> `None`
 
-        ignored Space = /\s+/
+        ignore Space = /\s+/
     ''')
 
     result = g.parse('{"foo": "bar", "baz": true}')
@@ -141,12 +162,11 @@ def test_postfix_operators():
             args: "(" >> (Expr /? ",") << ")"
         }
 
-        Expr = OperatorPrecedence(
-            Atom,
-            Postfix(ArgList),
-            Postfix("?" | "*" | "+" | "!"),
-            LeftAssoc("|"),
-        )
+        Expr = Atom between {
+            postfix: ArgList
+            postfix: "?", "*", "+", "!"
+            left: "|"
+        }
 
         start = Expr
     ''')
@@ -239,7 +259,7 @@ def test_simple_data_dependent_class():
 
 def test_simple_rule_with_parameter():
     g = Grammar(r'''
-        ignored Space = /[ \t]+/
+        ignore Space = /[ \t]+/
         Name = /[_a-zA-Z][_a-zA-Z0-9]*/
         Pair(x) = "(" >> [x << ",", x] << ")"
 
@@ -563,23 +583,22 @@ def test_mixfix_operator():
 
         Int = /\d+/ |> `int`
 
-        Expr = OperatorPrecedence(
-            Int,
-            Mixfix('(' >> Expr << ')'),
-            Prefix('+' | '-'),
-            RightAssoc('^'),
-            Postfix('%'),
-            LeftAssoc('*' | '/'),
-            LeftAssoc('+' | '-'),
-            NonAssoc("<=" | "<" | ">=" | ">" | "as"),
-            NonAssoc("==" | "!="),
-            Prefix("not"),
-            LeftAssoc("and"),
-            LeftAssoc("or"),
-            RightAssoc("->"),
-            Mixfix(IfThenElse),
-            Prefix("assert"),
-        )
+        Expr = Int between {
+            mixfix: '(' >> Expr << ')'
+            prefix: '+', '-'
+            right: '^'
+            postfix: '%'
+            left: '*', '/'
+            left: '+', '-'
+            infix: "<=", "<", ">=", ">", "as"
+            infix: "==", "!="
+            prefix: "not"
+            left: "and"
+            left: "or"
+            right: "->"
+            mixfix: IfThenElse
+            prefix: "assert"
+        }
 
         class IfThenElse {
             test: "if" >> Expr
@@ -609,6 +628,13 @@ def test_mixfix_operator():
     result = g.parse('1 * (if 2 >= 3 then 4 else 5) / 6')
     assert result == I(I(1, '*', g.IfThenElse(I(2, '>=', 3), 4, 5)), '/', 6)
 
+    # Try mixing some non-associative infix operators. These should fail.
+    with pytest.raises(g.PartialParseError):
+        g.parse('1 < 2 < 3')
+
+    with pytest.raises(g.PartialParseError):
+        g.parse('1 == 2 != 3')
+
 
 def test_traverse_function():
     g = Grammar(r'''
@@ -624,16 +650,17 @@ def test_traverse_function():
             body: "=>" >> Expr
         }
 
-        Expr = OperatorPrecedence(
-            Word | Int,
-            Mixfix('(' >> Expr << ')'),
-            Postfix(ArgList),
-        )
+        Expr = (Word | Int) between {
+            mixfix: '(' >> Expr << ')'
+            postfix: ArgList
+        }
+
         class ArgList {
             args: "(" >> (Expr /? ",") << ")"
         }
 
         Word = /[_a-zA-Z][_a-zA-Z0-9]*/
+        Int = /\d+/ |> `int`
         ignored Space = /\s+/
     ''')
     result = g.parse('''
@@ -683,7 +710,7 @@ def test_traverse_function():
 
 
 def test_simple_traversal():
-    g = Grammar('''
+    g = Grammar(r'''
         class Branch {
             name: "branch" >> Word
             children: "{" >> Tree* << "}"
@@ -736,3 +763,136 @@ def test_simple_traversal():
         'baz', 'fiz', 'buz', 'flim', 'flim', 'flam', 'flam', 'buz', 'fiz',
         'spam', 'eggs', 'eggs', 'ham', 'ham', 'spam', 'baz', 'foo',
     ]
+
+
+def test_extending_a_grammar():
+    g1 = Grammar(r'''
+        grammar fake_basic
+
+        ignore Space = /\s+/
+
+        Program = Statement*
+        Statement = Print | Goto | Halt
+
+        class Print {
+            line: Number
+            message: "print"i >> /"[^"]*"/
+        }
+
+        class Goto {
+            line: Number
+            destination: "goto"i >> Number
+        }
+
+        class Halt {
+            line: Number << "halt"i
+        }
+
+        Number = /\d+/ |> `int`
+        start = Program
+    ''', include_source=True)
+
+    g2 = Grammar(
+        r'''
+            grammar extra_fake_basic extends fake_basic
+
+            override Statement = Sleep | super.Statement
+
+            class Sleep {
+                line: Number
+                duration: "sleep"i >> Number
+            }
+        ''',
+        include_source=True,
+    )
+
+    p1 = g1.parse('''
+        10 PRINT "running"
+        20 GOTO 10
+        30 HALT
+    ''')
+    assert p1 == [
+        g1.Print(line=10, message='"running"'),
+        g1.Goto(line=20, destination=10),
+        g1.Halt(line=30),
+    ]
+
+    p2 = g2.parse('''
+        10 PRINT "running"
+        20 SLEEP 99
+        40 HALT
+    ''')
+    assert p2 == [
+        g1.Print(line=10, message='"running"'),
+        g2.Sleep(line=20, duration=99),
+        g1.Halt(line=40),
+    ]
+
+
+def test_low_priority_postfix_operator():
+    g = Grammar('''
+        kw(word) => Name where `lambda x: x == word`
+        ParensList(T) => "(" >> (T /? ",") << ")"
+        Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+
+        Expression = Name between {
+            mixfix: "(" >> Expression << ")"
+            postfix: FieldList
+            left: kw("and")
+            left: kw("or")
+            left: kw("but") >> kw("not")
+            postfix: Where
+        }
+
+        class FieldList {
+            fields: ParensList(Name)
+        }
+
+        class Where {
+            condition: kw("where") >> Name
+        }
+
+        ignore Space = /[ \t\r\n]+/
+        start = Expression
+    ''')
+    I, P, Where = g.Infix, g.Postfix, g.Where
+
+    tree = g.parse('Foo and Fiz where Buz')
+    assert tree == P(I('Foo', 'and', 'Fiz'), Where('Buz'))
+
+    tree = g.parse('Foo where Bar and Fiz where Buz')
+    assert tree == P(I(P('Foo', Where('Bar')), 'and', 'Fiz'), Where('Buz'))
+
+
+def test_operator_rows_with_trailing_commas():
+    g = Grammar(r'''
+        ignore Space = /\s+/
+
+        Int = /\d+/ |> `int`
+
+        # Allow trailing spaces after the operators.
+        Expr = Int between {
+            mixfix: "(" >> Expr << ")",
+            prefix:
+                "+",
+                "-",
+            right: "^",
+            postfix: "%",
+            left: "*"
+                , "/",
+            left: "+", "-",
+        }
+        start = Expr
+    ''')
+
+    # Define short names for the constructors.
+    I, P = g.Infix, g.Prefix
+
+    result = g.parse('1 + 2 ^ 3')
+    assert result == I(1, '+', I(2, '^', 3))
+
+    result = g.parse('11 * (22 + 33) - 44 / 55')
+    assert result == I(I(11, '*', I(22, '+', 33)), '-', I(44, '/', 55))
+
+    result = g.parse('123 ^ 456')
+    assert result == I(123, '^', 456)

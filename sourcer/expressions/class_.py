@@ -32,8 +32,8 @@ class Class(Expression):
     def always_succeeds(self):
         return all(x.expr.always_succeeds() for x in self.members)
 
-    def _compile(self, out):
-        parse_func = Code(f'{utils.implementation_name(self.name)}')
+    def _compile(self, out, flags):
+        parse_func = utils.implementation_name(self.name)
         all_names = [x.name for x in self.members]
         field_names = [x.name for x in self.members if not x.is_omitted]
         class_attrs = []
@@ -46,9 +46,14 @@ class Class(Expression):
 
         with out.global_section():
             with out.CLASS(self.name, 'Node'):
-                self._compile_class_body(out, parse_func, field_names, class_attrs)
+                self._compile_class_body(
+                    out, flags, parse_func, field_names, class_attrs
+                )
 
-            with out.DEF(parse_func, [str(TEXT), str(POS)] + (self.params or [])):
+            extra_params = ['_ctx'] if flags.uses_context else []
+            parse_params = extra_params + [str(TEXT), str(POS)]
+
+            with out.DEF(parse_func, parse_params + (self.params or [])):
                 exprs = (x.expr for x in self.members)
                 seq = Seq(
                     *exprs,
@@ -57,13 +62,18 @@ class Class(Expression):
                     constructor_args=field_names,
                 )
                 seq.program_id = self.extra_id
-                seq.compile(out)
+                seq.compile(out, flags)
                 out.YIELD((STATUS, RESULT, POS))
 
-    def _compile_class_body(self, out, parse_func, field_names, class_attrs):
+    def _compile_class_body(self, out, flags, parse_func, field_names, class_attrs):
         out.add_docstring(str(self))
         out += Code('_fields') << tuple(field_names)
         out.add_newline()
+
+        if flags.uses_context:
+            parse_func = Code(f'_ctx.{parse_func}')
+        else:
+            parse_func = Code(parse_func)
 
         if class_attrs:
             for name, value in class_attrs:
@@ -79,6 +89,8 @@ class Class(Expression):
             values = ', '.join(f'{x}={{self.{x}!r}}' for x in field_names)
             out.RETURN(Code(f"f'{self.name}({values})'"))
 
+        ctx = '_ctx, ' if flags.uses_context else ''
+
         out += Code('@staticmethod')
         if self.params:
             with out.DEF('parse', self.params):
@@ -86,9 +98,9 @@ class Class(Expression):
                 args = tuple(Code(x) for x in self.params)
                 out += _closure << _ParseFunction(parse_func, args, {})
                 out.RETURN(Code(
-                    'lambda text, pos=0, fullparse=True:'
-                    ' _run(text, pos, _closure, fullparse)'
+                    f'lambda {ctx}text, pos=0, fullparse=True:'
+                    f' _run({ctx}text, pos, _closure, fullparse)'
                 ))
         else:
             with out.DEF('parse', ['text', 'pos=0', 'fullparse=True']):
-                out.RETURN(Code(f'_run(text, pos, {parse_func}, fullparse)'))
+                out.RETURN(Code(f'_run({ctx}text, pos, {parse_func}, fullparse)'))

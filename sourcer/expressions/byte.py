@@ -28,15 +28,15 @@ class Byte(Expression):
     def can_partially_succeed(self):
         return False
 
-    def argumentize(self, out):
+    def argumentize(self, out, flags):
         wrap = Code('_wrap_byte_literal')
-        value = Expression.argumentize(self, out)
+        value = self.argumentize(out, flags)
         return out.var('arg', wrap(self.value, value))
 
     def constantize(self):
         return hex(self.value)
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         LEN = Code('len')
         has_byte = POS < LEN(TEXT)
         is_match = TEXT[POS] == self.value
@@ -44,7 +44,12 @@ class Byte(Expression):
         with out.IF(Code(has_byte, ' and ', is_match)):
             out += RESULT << self.value
             end = POS + 1
-            out += POS << (utils.skip_ignored(end) if self.skip_ignored else end)
+
+            if self.skip_ignored:
+                out += POS << utils.skip_ignored(end, flags)
+            else:
+                out += POS << end
+
             out += STATUS << True
 
         with out.ELSE():

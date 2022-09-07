@@ -18,9 +18,9 @@ class Opt(Expression):
     def can_partially_succeed(self):
         return False
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         backtrack = out.var('backtrack', POS)
-        with utils.if_fails(out, self.expr):
+        with utils.if_fails(out, flags, self.expr):
             out += POS << backtrack
             out += RESULT << None
             out += STATUS << True

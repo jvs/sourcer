@@ -16,11 +16,11 @@ class Where(Expression):
     def operand_string(self):
         return f'({self})'
 
-    def _compile(self, out):
-        with utils.if_succeeds(out, self.expr):
+    def _compile(self, out, flags):
+        with utils.if_succeeds(out, flags, self.expr):
             arg = out.var('arg', RESULT)
 
-            with utils.if_succeeds(out, self.predicate):
+            with utils.if_succeeds(out, flags, self.predicate):
                 with out.IF(RESULT(arg)):
                     out += RESULT << arg
 

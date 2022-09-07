@@ -7,7 +7,7 @@ description = r'''
     start = Formula
     Formula = "="? >> Expr
 
-    ignored Space = /[ \t\n\r]+/
+    ignore Space = /[ \t\n\r]+/
 
     Offset = /\d+|\[\-?\d+\]/
 
@@ -61,19 +61,18 @@ description = r'''
         | DateTime
         | Error
 
-    Operators(allow_union) => OperatorPrecedence(
-        Atom,
-        LeftAssoc(":"),
-        LeftAssoc(""),
-        LeftAssoc("," where `lambda _: allow_union`),
-        Prefix("-" | "+"),
-        Postfix("%"),
-        RightAssoc("^"),
-        LeftAssoc("*" | "/"),
-        LeftAssoc("+" | "-"),
-        LeftAssoc("&"),
-        LeftAssoc("=" | "!=" | "<>" | "<=" | ">=" | "<" | ">"),
-    )
+    Operators(allow_union) => Atom between {
+        left: ":"
+        left: ""
+        left: "," where `lambda _: allow_union`
+        prefix: "-", "+"
+        postfix: "%"
+        right: "^"
+        left: "*", "/"
+        left: "+", "-"
+        left: "&"
+        left: "=", "!=", "<>", "<=", ">=", "<", ">"
+    }
 
     Expr = Operators(allow_union=True)
     ExprList = Operators(allow_union=False)? /? ","

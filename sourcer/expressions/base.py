@@ -22,9 +22,9 @@ class Expression:
     def precompile(self, out):
         pass
 
-    def compile(self, out):
+    def compile(self, out, flags):
         if not out.has_available_blocks(self.num_blocks):
-            func, params = self.functionalize(out, is_generator=False)
+            func, params = self.functionalize(out, flags, is_generator=False)
             out += (STATUS, RESULT, POS) << func(*params)
             return
 
@@ -34,7 +34,7 @@ class Expression:
         if self.is_commented:
             out.add_comment(str(self))
 
-        self._compile(out)
+        self._compile(out, flags)
 
         if self.is_tagged:
             out.add_comment(f'End {self.__class__.__name__}')
@@ -45,9 +45,10 @@ class Expression:
     def operand_string(self):
         return str(self)
 
-    def argumentize(self, out):
-        func, params = self.functionalize(out, is_generator=True)
-        if len(params) <= 2:
+    def argumentize(self, out, flags):
+        func, params = self.functionalize(out, flags, is_generator=True)
+        cutoff = 3 if flags.uses_context else 2
+        if len(params) <= 3:
             return func
         else:
             _ParseFunction = Code('_ParseFunction')
@@ -57,13 +58,15 @@ class Expression:
     def constantize(self):
         return None
 
-    def functionalize(self, out, is_generator=False):
+    def functionalize(self, out, flags, is_generator=False):
         name = f'_parse_function_{self.program_id}'
-        params = [str(TEXT), str(POS)] + list(sorted(self.freevars()))
+
+        extras = ['_ctx'] if flags.uses_context else []
+        params = extras + [str(TEXT), str(POS)] + list(sorted(self.freevars()))
 
         with out.global_section():
             with out.DEF(name, params):
-                self.compile(out)
+                self.compile(out, flags)
                 method = out.YIELD if is_generator else out.RETURN
                 method((STATUS, RESULT, POS))
 

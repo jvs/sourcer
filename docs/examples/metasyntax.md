@@ -9,12 +9,14 @@ Sourcer's grammar, using Sourcer's grammar, if that makes any sense.)
 import textwrap
 ```
 
-ignored Space = /[ \t]+/
-ignored Comment = /#[^\r\n]*/
+ignore Space = /[ \t]+/
+ignore Comment = /#[^\r\n]*/
 
 Newline = /[\r\n][\s]*/
 LineSep = Some(Newline | ";")
 Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+QualifiedName = (Name // ".") |> `lambda x: '.'.join(x)`
+
 Comma = wrap(",")
 
 wrap(x) => Skip(Newline) >> x << Skip(Newline)
@@ -26,6 +28,7 @@ kw(word) => Name where `lambda x: x == word`
 
 Params = wrap("(") >> (wrap(Name) /? Comma) << ")"
 IgnoreKeyword = kw("ignored") | kw("ignore")
+OverrideKeyword = kw("overrides") | kw("override")
 
 class StringLiteral {
     value: (
@@ -55,6 +58,7 @@ class PythonExpression {
 }
 
 class RuleDef {
+    is_override: Opt(OverrideKeyword) |> `bool`
     is_ignored: Opt(IgnoreKeyword) |> `bool`
     name: Name
     params: Opt(Params) << wrap("=>" | "=" | ":")
@@ -75,6 +79,16 @@ class ClassMember {
 
 class IgnoreStmt {
     expr: IgnoreKeyword >> Expr
+}
+
+class GrammarDef {
+    head: Opt(GrammarHead << Skip(Newline))
+    body: ManyStmts | SingleExpr
+}
+
+class GrammarHead {
+    name: kw("grammar") >> QualifiedName
+    extends: Opt(kw("extends") >> QualifiedName)
 }
 
 Stmt = ClassDef
@@ -119,16 +133,20 @@ class ArgList {
     args: "(" >> (wrap(KeywordArg | Expr) /? Comma) << ")"
 }
 
-Expr = OperatorPrecedence(
-    Atom,
-    Mixfix("(" >> wrap(Expr) << ")"),
-    Postfix(ArgList),
-    Postfix("?" | "*" | "+" | Repeat),
-    LeftAssoc(wrap("//" | "/?")),
-    LeftAssoc(wrap("<<" | ">>")),
-    LeftAssoc(wrap("<|" | "|>" | "where")),
-    LeftAssoc(wrap("|")),
-)
+Expr = Atom between {
+    mixfix: "(" >> wrap(Expr) << ")"
+    postfix: ArgList, FieldAccess
+    postfix: "?", "*", "+", Repeat
+    left: wrap("//" | "/?")
+    left: wrap("<<" | ">>")
+    left: wrap("<|" | "|>" | "where")
+    left: wrap("|")
+    postfix: OperatorTable
+}
+
+class FieldAccess {
+    field: "." >> Name
+}
 
 class Repeat {
     open: "{"
@@ -139,10 +157,32 @@ class Repeat {
 
 RepeatArg = PythonExpression | Ref
 
+class OperatorTable {
+    rows: wrap(kw("between"))
+        >> "{"
+        >> Skip(Newline)
+        >> OperatorRow*
+        << "}"
+}
+
+class OperatorRow {
+    associativity: Associativity
+    operators: wrap(":") >> (Operator /? Comma)
+    tail: Opt(LineSep)
+}
+
+Operator = Expr << ExpectNot(wrap(":"))
+
+Associativity = kw("left")
+    | kw("right")
+    | kw("infix")
+    | kw("mixfix")
+    | kw("postfix")
+    | kw("prefix")
+
 ManyStmts = Sep(Stmt, LineSep, allow_trailer=True, allow_empty=False)
 SingleExpr = Expr << Opt(LineSep)
-
-start = Skip(Newline) >> (ManyStmts | SingleExpr)
+start = Skip(Newline) >> GrammarDef
 ~~~
 
 As part of Sourcer's build process, it reads

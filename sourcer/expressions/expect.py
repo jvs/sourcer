@@ -18,10 +18,10 @@ class Expect(Expression):
     def can_partially_succeed(self):
         return self.expr.can_partially_succeed()
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         backtrack = out.var('backtrack', POS)
 
-        with utils.if_succeeds(out, self.expr):
+        with utils.if_succeeds(out, flags, self.expr):
             out += POS << backtrack
 
 
@@ -34,9 +34,9 @@ class ExpectNot(Expression):
     def __str__(self):
         return f'ExpectNot({self.expr})'
 
-    def _compile(self, out):
+    def _compile(self, out, flags):
         backtrack = out.var('backtrack', POS)
-        self.expr.compile(out)
+        self.expr.compile(out, flags)
         out += POS << backtrack
 
         with out.IF(STATUS):

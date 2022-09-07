@@ -24,8 +24,9 @@ class Rule(Expression):
         params = '' if self.params is None else f'({", ".join(self.params)})'
         return f'{self.name}{params} = {self.expr}'
 
-    def _compile(self, out):
-        params = [str(TEXT), str(POS)] + (self.params or [])
+    def _compile(self, out, flags):
+        extra_params = ['_ctx'] if flags.uses_context else []
+        params = extra_params + [str(TEXT), str(POS)] + (self.params or [])
         impl_name = utils.implementation_name(self.name)
         entry_name = f'_parse_{self.name}'
 
@@ -36,11 +37,12 @@ class Rule(Expression):
         with out.global_section():
             with out.DEF(impl_name, params):
                 out.add_comment(f'Rule {self.name!r}')
-                self.expr.compile(out)
+                self.expr.compile(out, flags)
                 out.YIELD((STATUS, RESULT, POS))
 
             with out.DEF(entry_name, ['text', 'pos=0', 'fullparse=True']):
-                out.RETURN(Code(f'_run(text, pos, {impl_name}, fullparse)'))
+                ctx = '_ctx, ' if flags.uses_context else ''
+                out.RETURN(Code(f'_run({ctx}text, pos, {impl_name}, fullparse)'))
 
             out += Code(f'{self.name} = Rule({self.name!r}, {entry_name}, """')
             out.extend(Code('    ', x) for x in definition.split('\n'))
