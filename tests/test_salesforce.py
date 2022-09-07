@@ -10,18 +10,18 @@ g = Grammar(r'''
 
     start = Expression
 
-    Expression = OperatorPrecedence(
-        Atom | "(" >> Expression << ")",
-        Postfix(ArgumentList | FieldAccess),
-        Prefix("-" | "+" | "!"),
-        RightAssoc("^"),
-        LeftAssoc("*" | "/"),
-        LeftAssoc("+" | "-" | "&"),
-        NonAssoc("<=" | "<" | ">=" | ">"),
-        NonAssoc("!=" | "<>" | "==" | "="),
-        LeftAssoc("&&"),
-        LeftAssoc("||"),
-    )
+    Expression = Atom between {
+        mixfix: "(" >> Expression << ")"
+        postfix: ArgumentList, FieldAccess
+        prefix: "-", "+", "!"
+        right: "^"
+        left: "*", "/"
+        left: "+", "-", "&"
+        infix: "<=", "<", ">=", ">"
+        infix: "!=", "<>", "==", "="
+        left: "&&"
+        left: "||"
+    }
 
     class ArgumentList {
         arguments: "(" >> (Expression /? ",") << ")"

@@ -12,16 +12,8 @@ from .inline_python import PythonExpression, PythonSection
 from .let import Let
 from .list import List
 from .longest import Longest
+from .operator_table import OperatorTable
 from .opt import Opt
-from .precedence import (
-    LeftAssoc,
-    Mixfix,
-    NonAssoc,
-    OperatorPrecedence,
-    Postfix,
-    Prefix,
-    RightAssoc,
-)
 from .ref import Ref
 from .regex import Regex
 from .rule import Rule

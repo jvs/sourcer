@@ -101,15 +101,14 @@ g = Grammar(r'''
     start = Expr
 
     # Define operatator precedence, from highest to lowest.
-    Expr = OperatorPrecedence(
-        Int,
-        Mixfix('(' >> Expr << ')'),
-        Prefix('+' | '-'),
-        RightAssoc('^'),
-        Postfix('%'),
-        LeftAssoc('*' | '/'),
-        LeftAssoc('+' | '-'),
-    )
+    Expr = Int between {
+        mixfix: '(' >> Expr << ')'
+        prefix: '+', '-'
+        right: '^'
+        postfix: '%'
+        left: '*', '/'
+        left: '+', '-'
+    }
 
     # Turn integers into Python int objects.
     Int = /\d+/ |> `int`
@@ -411,9 +410,9 @@ For now, here's a list of the supported expressions:
     - `foo |> bar` -- parses foo then parses bar, then returns `bar(foo)`.
     - `foo <| bar` -- parses foo then parses bar, then returns `foo(bar)`.
 
-- OperatorPrecedence:
+- Operator Precedence:
 
-    - `OperatorPrecedence(...)` -- defines an operator precedence table.
+    - `foo between { ... }` -- defines an operator precedence table.
 
 - Option:
 

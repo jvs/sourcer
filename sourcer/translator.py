@@ -262,6 +262,8 @@ def _assign_ids(rules):
 
     def assign_id(node):
         nonlocal next_id
+        if getattr(node, 'program_id', None) is not None:
+            return
         node.program_id = next_id
         next_id += 1
         if isinstance(node, ex.Class):
@@ -363,6 +365,16 @@ def _create_parsing_expression(tree):
             )
         else:
             return ex.Call(left, args)
+
+    if isinstance(tree, (parser.OperatorTable, parser.OperatorRow)):
+        return tree
+
+    if isinstance(tree, parser.Postfix) and isinstance(tree.operator, parser.OperatorTable):
+        rows = tree.operator.rows
+        if rows:
+            return ex.OperatorTable.create(operand=tree.left, rows=rows)
+        else:
+            return tree.left
 
     if isinstance(tree, parser.Postfix):
         left, op = tree.left, tree.operator

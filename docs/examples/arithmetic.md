@@ -9,17 +9,14 @@ g = Grammar(r'''
     start = Expr
 
     # Define operatator precedence, from highest to lowest.
-    Expr = OperatorPrecedence(
-        Int | Parens,
-        Prefix('+' | '-'),
-        RightAssoc('^'),
-        Postfix('%'),
-        LeftAssoc('*' | '/'),
-        LeftAssoc('+' | '-'),
-    )
-
-    # Discard parentheses.
-    Parens = '(' >> Expr << ')'
+    Expr = Int between {
+        mixfix: '(' >> Expr << ')'
+        prefix: '+', '-'
+        right: '^'
+        postfix: '%'
+        left: '*', '/'
+        left: '+', '-'
+    }
 
     # Turn integers into Python int objects.
     Int = /\d+/ |> `int`
