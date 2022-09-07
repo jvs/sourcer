@@ -163,7 +163,7 @@ class OperatorTable {
 
 class OperatorRow {
     associativity: Associativity
-    operators: ":" >> (Expr // ",")
+    operators: ":" >> (Expr /? ",")
 }
 
 Associativity = kw("left")
@@ -5407,7 +5407,7 @@ class OperatorRow(Node):
     """
     class OperatorRow {
         associativity: Associativity
-        operators: ':' >> (Expr // ',')
+        operators: ':' >> (Expr /? ',')
     }
     """
     _fields = ('associativity', 'operators')
@@ -5436,7 +5436,7 @@ def _try_OperatorRow(_text, _pos):
             break
         associativity = _result
         # Begin Discard
-        # ':' >> (Expr // ',')
+        # ':' >> (Expr /? ',')
         while True:
             # Begin Str
             value58 = ':'
@@ -5452,7 +5452,7 @@ def _try_OperatorRow(_text, _pos):
             if not (_status):
                 break
             # Begin Sep
-            # Expr // ','
+            # Expr /? ','
             staging21 = []
             checkpoint12 = _pos
             while True:
@@ -5476,6 +5476,7 @@ def _try_OperatorRow(_text, _pos):
                 # End Str
                 if not (_status):
                     break
+                checkpoint12 = _pos
             _result = staging21
             _pos = checkpoint12
             _status = True

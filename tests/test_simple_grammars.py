@@ -862,3 +862,34 @@ def test_low_priority_postfix_operator():
 
     tree = g.parse('Foo where Bar and Fiz where Buz')
     assert tree == P(I(P('Foo', Where('Bar')), 'and', 'Fiz'), Where('Buz'))
+
+
+def test_operator_rows_with_trailing_commas():
+    g = Grammar(r'''
+        ignore Space = /\s+/
+
+        Int = /\d+/ |> `int`
+
+        # Allow trailing spaces after the operators.
+        Expr = Int between {
+            mixfix: "(" >> Expr << ")",
+            prefix: "+", "-",
+            right: "^",
+            postfix: "%",
+            left: "*", "/",
+            left: "+", "-",
+        }
+        start = Expr
+    ''')
+
+    # Define short names for the constructors.
+    I, P = g.Infix, g.Prefix
+
+    result = g.parse('1 + 2 ^ 3')
+    assert result == I(1, '+', I(2, '^', 3))
+
+    result = g.parse('11 * (22 + 33) - 44 / 55')
+    assert result == I(I(11, '*', I(22, '+', 33)), '-', I(44, '/', 55))
+
+    result = g.parse('123 ^ 456')
+    assert result == I(123, '^', 456)

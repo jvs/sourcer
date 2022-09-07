@@ -167,7 +167,7 @@ class OperatorTable {
 
 class OperatorRow {
     associativity: Associativity
-    operators: ":" >> (Expr // ",")
+    operators: ":" >> (Expr /? ",")
 }
 
 Associativity = kw("left")
