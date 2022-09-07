@@ -7,7 +7,7 @@ description = r'''
     start = Formula
     Formula = "="? >> Expr
 
-    ignored Space = /[ \t\n\r]+/
+    ignore Space = /[ \t\n\r]+/
 
     Offset = /\d+|\[\-?\d+\]/
 

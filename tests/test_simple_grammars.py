@@ -16,7 +16,7 @@ def test_simple_words():
 
 def test_arithmetic_expressions():
     g = Grammar(r'''
-        ignored Space = /\s+/
+        ignore Space = /\s+/
 
         Int = /\d+/ |> `int`
 
@@ -103,7 +103,7 @@ def test_simple_json_grammar():
 
         Keyword = "true" >> `True` | "false" >> `False` | "null" >> `None`
 
-        ignored Space = /\s+/
+        ignore Space = /\s+/
     ''')
 
     result = g.parse('{"foo": "bar", "baz": true}')
@@ -259,7 +259,7 @@ def test_simple_data_dependent_class():
 
 def test_simple_rule_with_parameter():
     g = Grammar(r'''
-        ignored Space = /[ \t]+/
+        ignore Space = /[ \t]+/
         Name = /[_a-zA-Z][_a-zA-Z0-9]*/
         Pair(x) = "(" >> [x << ",", x] << ")"
 
