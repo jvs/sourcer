@@ -245,8 +245,6 @@ gives you normal Python objects, that you define.
 Maybe you have to parse something where you have matching start and end tags.
 Here's a simple example that you can work from.
 
-It shows how Sourcer can handle some data-dependent grammars.
-
 ```python
 from sourcer import Grammar
 
