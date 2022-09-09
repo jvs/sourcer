@@ -9,11 +9,17 @@ First, you define your grammar:
 
 ```python
 from sourcer import Grammar
-
 g = Grammar(r'''
-    start = "Hello" >> /\w+/
+    class Greeting {
+        salutation: "Hello" | "Hi"i
+        audience: Punctuation* >> Word << Punctuation*
+    }
 
-    ignore "," | "." | "!" | "?" | " "
+    Word = /[a-z]+/i
+    Punctuation = "." | "!" | "?" | ","
+
+    ignore /\s+/
+    start = Greeting
 ''')
 ```
 
@@ -23,10 +29,13 @@ Then, you use your grammar to parse things:
 
 ```python
 >>> g.parse('Hello, World!')
-'World'
+g.Greeting(salutation='Hello', audience='World')
 
 >>> g.parse('Hello?? Anybody?!')
-'Anybody'
+g.Greeting(salutation='Hello', audience='Anybody')
+
+>>> g.parse('hi all')
+g.Greeting(salutation='hi', audience='all')
 ```
 
 
