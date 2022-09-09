@@ -5,7 +5,7 @@ A parsing library for Python.
 
 ## What's it look like?
 
-First, you define your grammar:
+First, define your grammar:
 
 ```python
 from sourcer import Grammar
@@ -25,7 +25,7 @@ g = Grammar(r'''
 
 Sourcer compiles your grammar to a Python module.
 
-Then, you use your grammar to parse things:
+Then, use your grammar to parse things:
 
 ```python
 >>> g.parse('Hello, World!')
