@@ -29,13 +29,13 @@ Then, use your grammar to parse things:
 
 ```python
 >>> g.parse('Hello, World!')
-g.Greeting(salutation='Hello', audience='World')
+Greeting(salutation='Hello', audience='World')
 
 >>> g.parse('Hello?? Anybody?!')
-g.Greeting(salutation='Hello', audience='Anybody')
+Greeting(salutation='Hello', audience='Anybody')
 
 >>> g.parse('hi all')
-g.Greeting(salutation='hi', audience='all')
+Greeting(salutation='hi', audience='all')
 ```
 
 
@@ -50,57 +50,10 @@ $ python3 -m pip install sourcer
 Sourcer requires Python version 3.6 or later.
 
 
-## Why does this exist?
-
-Sometimes you have to parse things, and sometimes a regex won't cut it.
-
-Things you might have to parse someday:
-
-- log files
-- business rules
-- market data feeds
-- equations
-- queries
-- user input
-- domain specific languages
-- obscure data formats
-- legacy source code
-
-So that's what this library is for. It's for when you have to take some text
-and turn it into a tree of Python objects.
-
-
-#### But aren't there a ton of parsing libraries for Python already?
-
-Yes, there are. Most of them focus on different problems. Sourcer focuses on the
-output of parsing, rather than the means. The main point of Sourcer is that you
-can just define the thing that you really want, and then get on with your life.
-
-
-## Features
-
-- Supports Python version 3.6 and later.
-- Create parsers at runtime, or generate Python source code as part of your build.
-- Implements [Parsing Expression Grammars](http://en.wikipedia.org/wiki/Parsing_expression_grammar)
-  (where "|" represents ordered choice).
-- Built-in support for operator precedence parsing.
-- Supports inline Python, for defining predicates and transformations directly
-  within grammars.
-- Supports class definitions for defining the structure of your parse trees.
-- Each rule in a grammar becomes a top-level function in the generated Python
-  module, so you can use a grammar as a parsing library, rather than just a
-  monolithic "parse" function.
-- Supports data dependent rules, for things like:
-    - significant indentation
-    - matching start and end tags
-
-
 ## Examples
 
 
 ### Arithmetic Expressions
-
-Here's a simple grammar for arithmetic expressions.
 
 ```python
 from sourcer import Grammar
@@ -109,7 +62,8 @@ from sourcer import Grammar
 g = Grammar(r'''
     start = Expr
 
-    # Define operatator precedence, from highest to lowest.
+    # Define operatator precedence, from highest to lowest. Use "left" for
+    # left associative operators, and "right" for right associative operators.
     Expr = Int between {
         mixfix: '(' >> Expr << ')'
         prefix: '+', '-'
@@ -189,17 +143,9 @@ result = g.parse('[12, -34, {"56": 78, "foo": null}]')
 assert result == [12, -34, {'56': 78, 'foo': None}]
 ```
 
-This example how Sourcer lets you define what you want, and then get on with
-your life. This example parses something remarkably close to JSON with just
-10 lines of actual code (ignoring all my chatty comments).
-
-
 ### Using Classes
 
-This is a short example to show how you can define classes within your grammars.
-
-Classes let you define the kinds of objects that you want to get back when you
-parse something.
+Classes let you define the types of objects in your parse tree.
 
 ```python
 from sourcer import Grammar
@@ -242,11 +188,6 @@ info = cmd._metadata.position_info
 assert info.start == g._Position(index=16, line=1, column=17)
 assert info.end == g._Position(index=30, line=1, column=31)
 ```
-
-The point of classes is to give you a way to name the things that you want.
-Instead of traversing some opaque tree structure to get what you want, Sourcer
-gives you normal Python objects, that you define.
-
 
 
 ### Something Like XML
@@ -481,11 +422,6 @@ For now, here's a list of the supported expressions:
     - `foo(bar)` -- parses the rule foo using the parsing expression bar.
 
 
-## Grammar Modules
-
-This part is work in progress, too.
-
-
 ### Generating A Python File
 
 Really quickly, if you want to generate Python source code from your grammar,
@@ -512,3 +448,48 @@ assert 'def parse' in g._source_code
 
 You can then take the `_source_code` field of your grammar and write it to a
 file as part of your build.
+
+
+## Why does this exist?
+
+Sometimes you have to parse things, and sometimes a regex won't cut it.
+
+Things you might have to parse someday:
+
+- log files
+- business rules
+- market data feeds
+- equations
+- queries
+- user input
+- domain specific languages
+- obscure data formats
+- legacy source code
+
+So that's what this library is for. It's for when you have to take some text
+and turn it into a tree of Python objects.
+
+
+#### But aren't there a ton of parsing libraries for Python already?
+
+Yes, there are. Most of them focus on different problems. Sourcer focuses on the
+output of parsing, rather than the means. The main point of Sourcer is that you
+can just define the thing that you really want, and then get on with your life.
+
+
+## Features
+
+- Supports Python version 3.6 and later.
+- Create parsers at runtime, or generate Python source code as part of your build.
+- Implements [Parsing Expression Grammars](http://en.wikipedia.org/wiki/Parsing_expression_grammar)
+  (where "|" represents ordered choice).
+- Built-in support for operator precedence parsing.
+- Supports inline Python, for defining predicates and transformations directly
+  within grammars.
+- Supports class definitions for defining the structure of your parse trees.
+- Each rule in a grammar becomes a top-level function in the generated Python
+  module, so you can use a grammar as a parsing library, rather than just a
+  monolithic "parse" function.
+- Supports data dependent rules, for things like:
+    - significant indentation
+    - matching start and end tags
