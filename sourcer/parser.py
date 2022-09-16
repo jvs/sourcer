@@ -5899,7 +5899,7 @@ def _raise_error423(_text, _pos):
 def _try_ManyStmts(_text, _pos):
     # Rule 'ManyStmts'
     # Begin Sep
-    # Stmt /? LineSep
+    # Sep(Stmt, LineSep, allow_trailer=True, allow_empty=False)
     staging23 = []
     checkpoint13 = _pos
     while True:
@@ -5927,7 +5927,7 @@ def _parse_ManyStmts(text, pos=0, fullparse=True):
     return _run(text, pos, _try_ManyStmts, fullparse)
 
 ManyStmts = Rule('ManyStmts', _parse_ManyStmts, """
-    ManyStmts = Stmt /? LineSep
+    ManyStmts = Sep(Stmt, LineSep, allow_trailer=True, allow_empty=False)
 """)
 def _try_SingleExpr(_text, _pos):
     # Rule 'SingleExpr'

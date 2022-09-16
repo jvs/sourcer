@@ -896,3 +896,47 @@ def test_operator_rows_with_trailing_commas():
 
     result = g.parse('123 ^ 456')
     assert result == I(123, '^', 456)
+
+
+def test_single_element_tuples():
+    g = Grammar(r'''
+        start = Expression
+        ignore Space = /[ \t\r\n]+/
+        Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+        kw(word) => Name where `lambda x: x == word`
+
+        Atom = Name | Tuple
+
+        Expression = Atom between {
+            mixfix: "(" >> Expression << ")"
+            left: "*" | "/" | "%"
+            left: "+" | "-"
+        }
+
+        class Tuple {
+            elements: "("
+                >> Sep(Expression, ",", allow_trailer=True, require_separator=True)
+                << ")"
+        }
+    ''')
+
+    result = g.parse('()')
+    assert result == g.Tuple([])
+
+    result = g.parse('(foo)')
+    assert result == 'foo'
+
+    result = g.parse('(foo,)')
+    assert result == g.Tuple(['foo'])
+
+    result = g.parse('(foo, bar)')
+    assert result == g.Tuple(['foo', 'bar'])
+
+    result = g.parse('(foo, bar, )')
+    assert result == g.Tuple(['foo', 'bar'])
+
+    result = g.parse('(foo, bar) + (baz)')
+    assert result == g.Infix(g.Tuple(['foo', 'bar']), '+', 'baz')
+
+    result = g.parse('(foo, bar) / (baz,)')
+    assert result == g.Infix(g.Tuple(['foo', 'bar']), '/', g.Tuple(['baz']))
