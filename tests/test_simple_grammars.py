@@ -576,6 +576,21 @@ def test_class_with_omitted_fields():
     assert result.id == 0x01
     assert expected.id == 0x01
 
+    # Make sure that we can also keep the count field, if we want to.
+    g = Grammar(r'''
+        class Section {
+            let id: 0x01
+            count: Byte
+            name: Byte{count} |> `bytes`
+            body: b/[\x01-\xFF]*\x00/
+        }
+
+        Byte = b/[\x00-\xFF]/ |> `ord`
+    ''')
+    result = g.Section.parse(b'\x01\x04test\x99\x88\x77\x00')
+    expected = g.Section(name=b'test', count=4, body=b'\x99\x88\x77\x00')
+    assert result == expected
+
 
 def test_mixfix_operator():
     g = Grammar(r'''
