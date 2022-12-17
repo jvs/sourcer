@@ -25,8 +25,9 @@ class Class(Expression):
         params = '' if self.params is None else f'({", ".join(self.params)})'
         lines = []
         for member in self.members:
-            mod = 'let ' if member.is_omitted else ''
-            lines.append(f'    {mod}{member.name}: {member.expr}\n')
+            if member.name:
+                mod = 'let ' if member.is_omitted else ''
+                lines.append(f'    {mod}{member.name}: {member.expr}\n')
         return f'class {self.name}{params} {{\n{"".join(lines)}}}'
 
     def always_succeeds(self):
@@ -34,14 +35,14 @@ class Class(Expression):
 
     def _compile(self, out, flags):
         parse_func = utils.implementation_name(self.name)
-        all_names = [x.name for x in self.members]
-        field_names = [x.name for x in self.members if not x.is_omitted]
+        all_names = [x.name if x.name else f'_{id(x)}' for x in self.members]
+        field_names = [x.name for x in self.members if not x.is_omitted and x.name]
         class_attrs = []
 
         for member in self.members:
             if member.is_omitted:
                 const_value = member.expr.constantize()
-                if const_value is not None:
+                if const_value is not None and member.name:
                     class_attrs.append((member.name, const_value))
 
         with out.global_section():

@@ -71,10 +71,20 @@ class ClassDef {
     members: wrap("{") >> (ClassMember /? LineSep) << "}"
 }
 
-class ClassMember {
+ClassMember = ClassField | ClassRequirement | OmittedClassMember
+
+class ClassField {
     is_omitted: Opt("let") |> `bool`
     name: Name << wrap("=>" | "=" | ":")
     expr: Expr
+}
+
+class ClassRequirement {
+    expr: kw("requires") >> Expr
+}
+
+class OmittedClassMember {
+    expr: kw("pass") >> Expr
 }
 
 class IgnoreStmt {

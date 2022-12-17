@@ -440,8 +440,22 @@ def _create_parsing_expression(tree):
     if isinstance(tree, parser.ClassDef):
         return ex.Class(tree.name, tree.params, tree.members)
 
-    if isinstance(tree, parser.ClassMember):
+    if isinstance(tree, parser.ClassField):
         return ex.Rule(tree.name, None, tree.expr, is_omitted=tree.is_omitted)
+
+    if isinstance(tree, parser.OmittedClassMember):
+        return ex.Rule(None, None, tree.expr, is_omitted=True)
+
+    if isinstance(tree, parser.ClassRequirement):
+        nop = ex.PythonExpression('None')
+        expr = tree.expr
+
+        if not isinstance(expr, ex.PythonExpression):
+            expr = ex.PythonExpression(expr)
+
+        func = ex.PythonExpression('lambda _: ' + expr.source_code)
+        test_expr = ex.Where(nop, func)
+        return ex.Rule(None, None, test_expr, is_omitted=True)
 
     if isinstance(tree, parser.IgnoreStmt):
         return ex.Rule(None, None, tree.expr, is_ignored=True)

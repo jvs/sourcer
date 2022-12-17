@@ -592,6 +592,98 @@ def test_class_with_omitted_fields():
     assert result == expected
 
 
+def test_omitting_marker():
+    g = Grammar(
+        '''
+            class OpenTag {
+                pass "<"
+                name: Name
+                pass ">"
+            }
+            Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+        ''',
+        include_source=True,
+    )
+    result = g.OpenTag.parse('<foobar>')
+    assert result == g.OpenTag('foobar')
+
+    g = Grammar(r'''
+        class ArgumentList {
+            pass "("
+            args: Expression /? ","
+            pass ")"
+        }
+
+        Atom = Comprehension | Name | Integer
+
+        Expression = Atom between {
+            mixfix: '(' >> Expression << ')'
+            postfix: ArgumentList
+        }
+
+        class Comprehension {
+            pass "["
+            name: kw("for") >> Name
+            source: kw("in") >> Expression
+            body: ":" >> Expression
+            pass "]"
+        }
+
+        Integer = /\d+/ |> `int`
+        Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+        kw(word) => Name where `lambda x: x == word`
+
+        ignore Space = /[ \t\r\n]+/
+        start = Expression
+    ''')
+
+    result = g.parse('[for foo in bar(1, 2): baz(3, 4, 5)]')
+    assert result == g.Comprehension(
+        name='foo',
+        source=g.Postfix('bar', g.ArgumentList(args=[1, 2])),
+        body=g.Postfix('baz', g.ArgumentList(args=[3, 4, 5])),
+    )
+
+
+def test_class_requirements():
+    g = Grammar(r'''
+        class Section {
+            pass "%"
+            head: Opt(Name << ":")
+            body: Opt(Name << "!")
+            requires `head or body`
+        }
+
+        Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+        ignore Space = /[ \t\r\n]+/
+    ''')
+
+    result = g.Section.parse('% foo : bar !')
+    assert result == g.Section(head='foo', body='bar')
+
+    result = g.Section.parse('% foo :')
+    assert result == g.Section(head='foo', body=None)
+
+    result = g.Section.parse('% bar !')
+    assert result == g.Section(head=None, body='bar')
+
+    with pytest.raises(g.ParseError):
+        result = g.Section.parse('%')
+
+    g = Grammar(r'''
+        class Section {
+            pass "%"
+            head: Opt(Name << ":")
+            body: Opt(Name << "!")
+        }
+
+        Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+        ignore Space = /[ \t\r\n]+/
+    ''')
+    result = g.Section.parse('%')
+    assert result == g.Section(head=None, body=None)
+
+
 def test_mixfix_operator():
     g = Grammar(r'''
         ignored Space = /\s+/
