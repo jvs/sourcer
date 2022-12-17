@@ -55,7 +55,7 @@ class Sep(Expression):
         return f'({self})'
 
     def always_succeeds(self):
-        return self.allow_empty
+        return self.allow_empty and not self.require_separator
 
     def _compile(self, out, flags):
         staging = out.var('staging', [])

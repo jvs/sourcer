@@ -1047,3 +1047,20 @@ def test_single_element_tuples():
 
     result = g.parse('(foo, bar) / (baz,)')
     assert result == g.Infix(g.Tuple(['foo', 'bar']), '/', g.Tuple(['baz']))
+
+
+def test_another_example_of_using_pass():
+    g = Grammar(r'''
+        class Tuple {
+            pass "("
+            elements: Sep(Name, ",", allow_trailer=True, require_separator=True)
+            pass ")"
+        }
+
+        Expression = Tuple | "(" >> Name << ")"
+
+        Name = /[_a-zA-Z][_a-zA-Z0-9]*/
+        ignore Space = /[ \t\r\n]+/
+    ''')
+    result = g.Expression.parse('(foo)')
+    assert result == 'foo'
