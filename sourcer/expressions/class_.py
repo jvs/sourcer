@@ -28,6 +28,8 @@ class Class(Expression):
             if member.name:
                 mod = 'let ' if member.is_omitted else ''
                 lines.append(f'    {mod}{member.name}: {member.expr}\n')
+            else:
+                lines.append(f'    pass {member.expr}\n')
         return f'class {self.name}{params} {{\n{"".join(lines)}}}'
 
     def always_succeeds(self):
