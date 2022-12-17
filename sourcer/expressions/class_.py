@@ -37,10 +37,7 @@ class Class(Expression):
 
     def _compile(self, out, flags):
         parse_func = utils.implementation_name(self.name)
-        all_names = [
-            x.name if x.name else f'_pass_{self.name}_{idx}'
-            for idx, x in enumerate(self.members)
-        ]
+        all_names = [x.name for x in self.members]
         field_names = [x.name for x in self.members if not x.is_omitted and x.name]
         class_attrs = []
 
