@@ -1062,5 +1062,15 @@ def test_another_example_of_using_pass():
         Name = /[_a-zA-Z][_a-zA-Z0-9]*/
         ignore Space = /[ \t\r\n]+/
     ''')
+
     result = g.Expression.parse('(foo)')
     assert result == 'foo'
+
+    result = g.Expression.parse('(foo,)')
+    assert result == g.Tuple(['foo'])
+
+    result = g.Expression.parse('(foo, bar)')
+    assert result == g.Tuple(['foo', 'bar'])
+
+    result = g.Expression.parse('()')
+    assert result == g.Tuple([])
