@@ -468,7 +468,7 @@ _program_setup = r'''
 from collections import namedtuple as _nt
 from re import compile as _compile_re, IGNORECASE as _IGNORECASE
 
-class Node:
+class ParsedObject:
     _fields = ()
 
     def __init__(self):
@@ -547,14 +547,14 @@ class _Metadata:
         self._fields.update(other._fields)
 
 
-class Rule:
+class ParsingRule:
     def __init__(self, name, parse, definition):
         self.name = name
         self.parse = parse
         self.definition = definition
 
     def __repr__(self):
-        return (f'Rule(name={self.name!r}, parse={self.parse.__name__},'
+        return (f'ParsingRule(name={self.name!r}, parse={self.parse.__name__},'
             f' definition={self.definition!r})')
 '''
 
@@ -578,11 +578,11 @@ class PartialParseError(InputError):
         self.last_position = last_position
 
 
-class Infix(Node):
+class Infix(ParsedObject):
     _fields = ('left', 'operator', 'right')
 
     def __init__(self, left, operator, right):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.left = left
         self.operator = operator
         self.right = right
@@ -591,11 +591,11 @@ class Infix(Node):
         return f'Infix({self.left!r}, {self.operator!r}, {self.right!r})'
 
 
-class Postfix(Node):
+class Postfix(ParsedObject):
     _fields = ('left', 'operator')
 
     def __init__(self, left, operator):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.left = left
         self.operator = operator
 
@@ -603,11 +603,11 @@ class Postfix(Node):
         return f'Postfix({self.left!r}, {self.operator!r})'
 
 
-class Prefix(Node):
+class Prefix(ParsedObject):
     _fields = ('operator', 'right')
 
     def __init__(self, operator, right):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.operator = operator
         self.right = right
 
@@ -693,7 +693,7 @@ def visit(node):
         elif isinstance(node, dict):
             stack.extend(reversed(node.values()))
 
-        elif isinstance(node, Node):
+        elif isinstance(node, ParsedObject):
             node_id = id(node)
             if node_id in visited:
                 continue
@@ -743,7 +743,7 @@ def traverse(node):
                 for k, v in child.items()
             )
 
-        elif isinstance(child, Node) and hasattr(child, '_fields'):
+        elif isinstance(child, ParsedObject) and hasattr(child, '_fields'):
             extend(
                 _Traversing(
                     parent=child,
@@ -766,8 +766,8 @@ def transform(node, *callbacks):
 
             if node is not prev:
                 if (
-                    isinstance(prev, Node)
-                    and isinstance(node, Node)
+                    isinstance(prev, ParsedObject)
+                    and isinstance(node, ParsedObject)
                     and not node._metadata
                 ):
                     node._metadata.update(prev._metadata)
@@ -781,7 +781,7 @@ def _transform(node, callback):
     if isinstance(node, list):
         return [_transform(x, callback) for x in node]
 
-    if not isinstance(node, Node):
+    if not isinstance(node, ParsedObject):
         return node
 
     updates = {}
@@ -882,12 +882,12 @@ _subgrammar_setup = r'''
 from $super_module import (
     Infix,
     InputError,
-    Node,
     ParseError,
+    ParsedObject,
+    ParsingRule,
     PartialParseError,
     Postfix,
     Prefix,
-    Rule,
     _ByteLiteral,
     _Context,
     _IGNORECASE,

@@ -195,7 +195,7 @@ start = Skip(Newline) >> GrammarDef
 from collections import namedtuple as _nt
 from re import compile as _compile_re, IGNORECASE as _IGNORECASE
 
-class Node:
+class ParsedObject:
     _fields = ()
 
     def __init__(self):
@@ -274,14 +274,14 @@ class _Metadata:
         self._fields.update(other._fields)
 
 
-class Rule:
+class ParsingRule:
     def __init__(self, name, parse, definition):
         self.name = name
         self.parse = parse
         self.definition = definition
 
     def __repr__(self):
-        return (f'Rule(name={self.name!r}, parse={self.parse.__name__},'
+        return (f'ParsingRule(name={self.name!r}, parse={self.parse.__name__},'
             f' definition={self.definition!r})')
 
 
@@ -306,11 +306,11 @@ class PartialParseError(InputError):
         self.last_position = last_position
 
 
-class Infix(Node):
+class Infix(ParsedObject):
     _fields = ('left', 'operator', 'right')
 
     def __init__(self, left, operator, right):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.left = left
         self.operator = operator
         self.right = right
@@ -319,11 +319,11 @@ class Infix(Node):
         return f'Infix({self.left!r}, {self.operator!r}, {self.right!r})'
 
 
-class Postfix(Node):
+class Postfix(ParsedObject):
     _fields = ('left', 'operator')
 
     def __init__(self, left, operator):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.left = left
         self.operator = operator
 
@@ -331,11 +331,11 @@ class Postfix(Node):
         return f'Postfix({self.left!r}, {self.operator!r})'
 
 
-class Prefix(Node):
+class Prefix(ParsedObject):
     _fields = ('operator', 'right')
 
     def __init__(self, operator, right):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.operator = operator
         self.right = right
 
@@ -421,7 +421,7 @@ def visit(node):
         elif isinstance(node, dict):
             stack.extend(reversed(node.values()))
 
-        elif isinstance(node, Node):
+        elif isinstance(node, ParsedObject):
             node_id = id(node)
             if node_id in visited:
                 continue
@@ -471,7 +471,7 @@ def traverse(node):
                 for k, v in child.items()
             )
 
-        elif isinstance(child, Node) and hasattr(child, '_fields'):
+        elif isinstance(child, ParsedObject) and hasattr(child, '_fields'):
             extend(
                 _Traversing(
                     parent=child,
@@ -494,8 +494,8 @@ def transform(node, *callbacks):
 
             if node is not prev:
                 if (
-                    isinstance(prev, Node)
-                    and isinstance(node, Node)
+                    isinstance(prev, ParsedObject)
+                    and isinstance(node, ParsedObject)
                     and not node._metadata
                 ):
                     node._metadata.update(prev._metadata)
@@ -509,7 +509,7 @@ def _transform(node, callback):
     if isinstance(node, list):
         return [_transform(x, callback) for x in node]
 
-    if not isinstance(node, Node):
+    if not isinstance(node, ParsedObject):
         return node
 
     updates = {}
@@ -631,7 +631,7 @@ def _try_Space(_text, _pos):
 def _parse_Space(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Space, fullparse)
 
-Space = Rule('Space', _parse_Space, """
+Space = ParsingRule('Space', _parse_Space, """
     Space = /[ \\t]+/
 """)
 def _raise_error2(_text, _pos):
@@ -668,7 +668,7 @@ def _try_Comment(_text, _pos):
 def _parse_Comment(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Comment, fullparse)
 
-Comment = Rule('Comment', _parse_Comment, """
+Comment = ParsingRule('Comment', _parse_Comment, """
     Comment = /#[^\\r\\n]*/
 """)
 def _raise_error4(_text, _pos):
@@ -705,7 +705,7 @@ def _try_Newline(_text, _pos):
 def _parse_Newline(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Newline, fullparse)
 
-Newline = Rule('Newline', _parse_Newline, """
+Newline = ParsingRule('Newline', _parse_Newline, """
     Newline = /[\\r\\n][\\s]*/
 """)
 def _raise_error6(_text, _pos):
@@ -776,7 +776,7 @@ def _try_LineSep(_text, _pos):
 def _parse_LineSep(text, pos=0, fullparse=True):
     return _run(text, pos, _try_LineSep, fullparse)
 
-LineSep = Rule('LineSep', _parse_LineSep, """
+LineSep = ParsingRule('LineSep', _parse_LineSep, """
     LineSep = (Newline | ';')+
 """)
 def _raise_error9(_text, _pos):
@@ -829,7 +829,7 @@ def _try_Name(_text, _pos):
 def _parse_Name(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Name, fullparse)
 
-Name = Rule('Name', _parse_Name, """
+Name = ParsingRule('Name', _parse_Name, """
     Name = /[_a-zA-Z][_a-zA-Z0-9]*/
 """)
 def _raise_error13(_text, _pos):
@@ -891,7 +891,7 @@ def _try_QualifiedName(_text, _pos):
 def _parse_QualifiedName(text, pos=0, fullparse=True):
     return _run(text, pos, _try_QualifiedName, fullparse)
 
-QualifiedName = Rule('QualifiedName', _parse_QualifiedName, """
+QualifiedName = ParsingRule('QualifiedName', _parse_QualifiedName, """
     QualifiedName = (Name // '.') |> `lambda x: '.'.join(x)`
 """)
 def _raise_error18(_text, _pos):
@@ -937,7 +937,7 @@ def _try_Comma(_text, _pos):
 def _parse_Comma(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Comma, fullparse)
 
-Comma = Rule('Comma', _parse_Comma, """
+Comma = ParsingRule('Comma', _parse_Comma, """
     Comma = wrap(',')
 """)
 def _raise_error23(_text, _pos):
@@ -1010,7 +1010,7 @@ def _try_wrap(_text, _pos, x):
 def _parse_wrap(text, pos=0, fullparse=True):
     return _run(text, pos, _try_wrap, fullparse)
 
-wrap = Rule('wrap', _parse_wrap, """
+wrap = ParsingRule('wrap', _parse_wrap, """
     wrap(x) = (Skip(Newline) >> x) << Skip(Newline)
 """)
 def _try_kw(_text, _pos, word):
@@ -1035,7 +1035,7 @@ def _try_kw(_text, _pos, word):
 def _parse_kw(text, pos=0, fullparse=True):
     return _run(text, pos, _try_kw, fullparse)
 
-kw = Rule('kw', _parse_kw, """
+kw = ParsingRule('kw', _parse_kw, """
     kw(word) = Name where `lambda x: x == word`
 """)
 def _raise_error33(_text, _pos):
@@ -1133,7 +1133,7 @@ def _try_Params(_text, _pos):
 def _parse_Params(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Params, fullparse)
 
-Params = Rule('Params', _parse_Params, """
+Params = ParsingRule('Params', _parse_Params, """
     Params = (wrap('(') >> (wrap(Name) /? Comma)) << ')'
 """)
 def _raise_error41(_text, _pos):
@@ -1236,7 +1236,7 @@ def _try_IgnoreKeyword(_text, _pos):
 def _parse_IgnoreKeyword(text, pos=0, fullparse=True):
     return _run(text, pos, _try_IgnoreKeyword, fullparse)
 
-IgnoreKeyword = Rule('IgnoreKeyword', _parse_IgnoreKeyword, """
+IgnoreKeyword = ParsingRule('IgnoreKeyword', _parse_IgnoreKeyword, """
     IgnoreKeyword = kw('ignored') | kw('ignore')
 """)
 def _raise_error49(_text, _pos):
@@ -1355,7 +1355,7 @@ def _try_OverrideKeyword(_text, _pos):
 def _parse_OverrideKeyword(text, pos=0, fullparse=True):
     return _run(text, pos, _try_OverrideKeyword, fullparse)
 
-OverrideKeyword = Rule('OverrideKeyword', _parse_OverrideKeyword, """
+OverrideKeyword = ParsingRule('OverrideKeyword', _parse_OverrideKeyword, """
     OverrideKeyword = kw('overrides') | kw('override')
 """)
 def _raise_error57(_text, _pos):
@@ -1406,7 +1406,7 @@ def _raise_error63(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class StringLiteral(Node):
+class StringLiteral(ParsedObject):
     """
     class StringLiteral {
         value: /(?s)[bB]?(\"\"\"([^\\\\\\\\]|\\\\\\\\.)*?\"\"\")[iI]?/ | /(?s)[bB]?('''([^\\\\\\\\]|\\\\\\\\.)*?''')[iI]?/ | /[bB]?("([^"\\\\\\\\]|\\\\\\\\.)*")[iI]?/ | /[bB]?('([^'\\\\\\\\]|\\\\\\\\.)*')[iI]?/
@@ -1415,7 +1415,7 @@ class StringLiteral(Node):
     _fields = ('value',)
 
     def __init__(self, value):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.value = value
 
     def __repr__(self):
@@ -1583,7 +1583,7 @@ def _raise_error71(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class RegexLiteral(Node):
+class RegexLiteral(ParsedObject):
     """
     class RegexLiteral {
         value: /[bB]?\\\\/([^\\\\/\\\\\\\\]|\\\\\\\\.)*\\\\/[iI]?/
@@ -1592,7 +1592,7 @@ class RegexLiteral(Node):
     _fields = ('value',)
 
     def __init__(self, value):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.value = value
 
     def __repr__(self):
@@ -1643,7 +1643,7 @@ def _raise_error75(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class PythonSection(Node):
+class PythonSection(ParsedObject):
     """
     class PythonSection {
         value: /(?s)```.*?```/ |> `lambda x: textwrap.dedent(x[3:-3])`
@@ -1652,7 +1652,7 @@ class PythonSection(Node):
     _fields = ('value',)
 
     def __init__(self, value):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.value = value
 
     def __repr__(self):
@@ -1711,7 +1711,7 @@ def _raise_error80(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class PythonExpression(Node):
+class PythonExpression(ParsedObject):
     """
     class PythonExpression {
         value: /`.*?`/ |> `lambda x: x[1:-1]` | /\\\\d+/ | 'True' | 'False' | 'None'
@@ -1720,7 +1720,7 @@ class PythonExpression(Node):
     _fields = ('value',)
 
     def __init__(self, value):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.value = value
 
     def __repr__(self):
@@ -1930,7 +1930,7 @@ def _raise_error92(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class RuleDef(Node):
+class RuleDef(ParsedObject):
     """
     class RuleDef {
         is_override: Opt(OverrideKeyword) |> `bool`
@@ -1943,7 +1943,7 @@ class RuleDef(Node):
     _fields = ('is_override', 'is_ignored', 'name', 'params', 'expr')
 
     def __init__(self, is_override, is_ignored, name, params, expr):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.is_override = is_override
         self.is_ignored = is_ignored
         self.name = name
@@ -2162,7 +2162,7 @@ def _raise_error116(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class ClassDef(Node):
+class ClassDef(ParsedObject):
     """
     class ClassDef {
         name: kw('class') >> Name
@@ -2173,7 +2173,7 @@ class ClassDef(Node):
     _fields = ('name', 'params', 'members')
 
     def __init__(self, name, params, members):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.name = name
         self.params = params
         self.members = members
@@ -2406,7 +2406,7 @@ def _try_ClassMember(_text, _pos):
 def _parse_ClassMember(text, pos=0, fullparse=True):
     return _run(text, pos, _try_ClassMember, fullparse)
 
-ClassMember = Rule('ClassMember', _parse_ClassMember, """
+ClassMember = ParsingRule('ClassMember', _parse_ClassMember, """
     ClassMember = ClassField | ClassRequirement | OmittedClassMember
 """)
 def _raise_error141(_text, _pos):
@@ -2425,7 +2425,7 @@ def _raise_error141(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class ClassField(Node):
+class ClassField(ParsedObject):
     """
     class ClassField {
         is_omitted: Opt('let') |> `bool`
@@ -2436,7 +2436,7 @@ class ClassField(Node):
     _fields = ('is_omitted', 'name', 'expr')
 
     def __init__(self, is_omitted, name, expr):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.is_omitted = is_omitted
         self.name = name
         self.expr = expr
@@ -2646,7 +2646,7 @@ def _raise_error160(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class ClassRequirement(Node):
+class ClassRequirement(ParsedObject):
     """
     class ClassRequirement {
         expr: kw('requires') >> Expr
@@ -2655,7 +2655,7 @@ class ClassRequirement(Node):
     _fields = ('expr',)
 
     def __init__(self, expr):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.expr = expr
 
     def __repr__(self):
@@ -2725,7 +2725,7 @@ def _raise_error169(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class OmittedClassMember(Node):
+class OmittedClassMember(ParsedObject):
     """
     class OmittedClassMember {
         expr: kw('pass') >> Expr
@@ -2734,7 +2734,7 @@ class OmittedClassMember(Node):
     _fields = ('expr',)
 
     def __init__(self, expr):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.expr = expr
 
     def __repr__(self):
@@ -2804,7 +2804,7 @@ def _raise_error177(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class IgnoreStmt(Node):
+class IgnoreStmt(ParsedObject):
     """
     class IgnoreStmt {
         expr: IgnoreKeyword >> Expr
@@ -2813,7 +2813,7 @@ class IgnoreStmt(Node):
     _fields = ('expr',)
 
     def __init__(self, expr):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.expr = expr
 
     def __repr__(self):
@@ -2850,7 +2850,7 @@ def _try_IgnoreStmt(_text, _pos):
     # End Seq
     yield (_status, _result, _pos)
 
-class GrammarDef(Node):
+class GrammarDef(ParsedObject):
     """
     class GrammarDef {
         head: Opt(GrammarHead << Skip(Newline))
@@ -2860,7 +2860,7 @@ class GrammarDef(Node):
     _fields = ('head', 'body')
 
     def __init__(self, head, body):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.head = head
         self.body = body
 
@@ -2964,7 +2964,7 @@ def _raise_error194(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class GrammarHead(Node):
+class GrammarHead(ParsedObject):
     """
     class GrammarHead {
         name: kw('grammar') >> QualifiedName
@@ -2974,7 +2974,7 @@ class GrammarHead(Node):
     _fields = ('name', 'extends')
 
     def __init__(self, name, extends):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.name = name
         self.extends = extends
 
@@ -3164,7 +3164,7 @@ def _try_Stmt(_text, _pos):
 def _parse_Stmt(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Stmt, fullparse)
 
-Stmt = Rule('Stmt', _parse_Stmt, """
+Stmt = ParsingRule('Stmt', _parse_Stmt, """
     Stmt = ClassDef | RuleDef | IgnoreStmt | PythonSection | PythonExpression
 """)
 def _raise_error213(_text, _pos):
@@ -3183,7 +3183,7 @@ def _raise_error213(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class LetExpression(Node):
+class LetExpression(ParsedObject):
     """
     class LetExpression {
         name: (kw('let') >> Name) << wrap('=>' | '=' | ':')
@@ -3194,7 +3194,7 @@ class LetExpression(Node):
     _fields = ('name', 'expr', 'body')
 
     def __init__(self, name, expr, body):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.name = name
         self.expr = expr
         self.body = body
@@ -3464,7 +3464,7 @@ def _raise_error241(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class Ref(Node):
+class Ref(ParsedObject):
     """
     class Ref {
         value: Name
@@ -3473,7 +3473,7 @@ class Ref(Node):
     _fields = ('value',)
 
     def __init__(self, value):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.value = value
 
     def __repr__(self):
@@ -3500,7 +3500,7 @@ def _try_Ref(_text, _pos):
     # End Seq
     yield (_status, _result, _pos)
 
-class ListLiteral(Node):
+class ListLiteral(ParsedObject):
     """
     class ListLiteral {
         elements: ('[' >> (wrap(Expr) /? Comma)) << ']'
@@ -3509,7 +3509,7 @@ class ListLiteral(Node):
     _fields = ('elements',)
 
     def __init__(self, elements):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.elements = elements
 
     def __repr__(self):
@@ -3628,7 +3628,7 @@ def _raise_error259(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class ByteLiteral(Node):
+class ByteLiteral(ParsedObject):
     """
     class ByteLiteral {
         prefix: /0[xX]/
@@ -3638,7 +3638,7 @@ class ByteLiteral(Node):
     _fields = ('prefix', 'value')
 
     def __init__(self, prefix, value):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.prefix = prefix
         self.value = value
 
@@ -3812,7 +3812,7 @@ def _try_Atom(_text, _pos):
 def _parse_Atom(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Atom, fullparse)
 
-Atom = Rule('Atom', _parse_Atom, """
+Atom = ParsingRule('Atom', _parse_Atom, """
     Atom = StringLiteral | RegexLiteral | LetExpression | ListLiteral | ByteLiteral | PythonExpression | Ref
 """)
 def _raise_error269(_text, _pos):
@@ -3831,7 +3831,7 @@ def _raise_error269(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class KeywordArg(Node):
+class KeywordArg(ParsedObject):
     """
     class KeywordArg {
         name: Name << ('=>' | '=' | ':')
@@ -3841,7 +3841,7 @@ class KeywordArg(Node):
     _fields = ('name', 'expr')
 
     def __init__(self, name, expr):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.name = name
         self.expr = expr
 
@@ -3999,7 +3999,7 @@ def _raise_error285(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class ArgList(Node):
+class ArgList(ParsedObject):
     """
     class ArgList {
         args: ('(' >> (wrap(KeywordArg | Expr) /? Comma)) << ')'
@@ -4008,7 +4008,7 @@ class ArgList(Node):
     _fields = ('args',)
 
     def __init__(self, args):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.args = args
 
     def __repr__(self):
@@ -4753,7 +4753,7 @@ def _try_Expr(_text, _pos):
 def _parse_Expr(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Expr, fullparse)
 
-Expr = Rule('Expr', _parse_Expr, """
+Expr = ParsingRule('Expr', _parse_Expr, """
     Expr = Atom with operators {
         mixfix: ('(' >> wrap(Expr)) << ')'
         postfix: ArgList, FieldAccess
@@ -5117,7 +5117,7 @@ def _raise_error355(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class FieldAccess(Node):
+class FieldAccess(ParsedObject):
     """
     class FieldAccess {
         field: '.' >> Name
@@ -5126,7 +5126,7 @@ class FieldAccess(Node):
     _fields = ('field',)
 
     def __init__(self, field):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.field = field
 
     def __repr__(self):
@@ -5187,7 +5187,7 @@ def _raise_error361(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class Repeat(Node):
+class Repeat(ParsedObject):
     """
     class Repeat {
         open: '{'
@@ -5199,7 +5199,7 @@ class Repeat(Node):
     _fields = ('open', 'start', 'stop', 'close')
 
     def __init__(self, open, start, stop, close):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.open = open
         self.start = start
         self.stop = stop
@@ -5419,7 +5419,7 @@ def _try_RepeatArg(_text, _pos):
 def _parse_RepeatArg(text, pos=0, fullparse=True):
     return _run(text, pos, _try_RepeatArg, fullparse)
 
-RepeatArg = Rule('RepeatArg', _parse_RepeatArg, """
+RepeatArg = ParsingRule('RepeatArg', _parse_RepeatArg, """
     RepeatArg = PythonExpression | Ref
 """)
 def _raise_error382(_text, _pos):
@@ -5438,7 +5438,7 @@ def _raise_error382(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class OperatorTable(Node):
+class OperatorTable(ParsedObject):
     """
     class OperatorTable {
         rows: (((wrap(kw('between')) >> '{') >> Skip(Newline)) >> OperatorRow*) << '}'
@@ -5447,7 +5447,7 @@ class OperatorTable(Node):
     _fields = ('rows',)
 
     def __init__(self, rows):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.rows = rows
 
     def __repr__(self):
@@ -5630,7 +5630,7 @@ def _raise_error402(_text, _pos):
     )
     raise ParseError((title + details), _pos, line, col)
 
-class OperatorRow(Node):
+class OperatorRow(ParsedObject):
     """
     class OperatorRow {
         associativity: Associativity
@@ -5641,7 +5641,7 @@ class OperatorRow(Node):
     _fields = ('associativity', 'operators', 'tail')
 
     def __init__(self, associativity, operators, tail):
-        Node.__init__(self)
+        ParsedObject.__init__(self)
         self.associativity = associativity
         self.operators = operators
         self.tail = tail
@@ -5801,7 +5801,7 @@ def _try_Operator(_text, _pos):
 def _parse_Operator(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Operator, fullparse)
 
-Operator = Rule('Operator', _parse_Operator, """
+Operator = ParsingRule('Operator', _parse_Operator, """
     Operator = Expr << ExpectNot(wrap(':'))
 """)
 def _raise_error421(_text, _pos):
@@ -6012,7 +6012,7 @@ def _try_Associativity(_text, _pos):
 def _parse_Associativity(text, pos=0, fullparse=True):
     return _run(text, pos, _try_Associativity, fullparse)
 
-Associativity = Rule('Associativity', _parse_Associativity, """
+Associativity = ParsingRule('Associativity', _parse_Associativity, """
     Associativity = kw('left') | kw('right') | kw('infix') | kw('mixfix') | kw('postfix') | kw('prefix')
 """)
 def _raise_error426(_text, _pos):
@@ -6157,7 +6157,7 @@ def _try_ManyStmts(_text, _pos):
 def _parse_ManyStmts(text, pos=0, fullparse=True):
     return _run(text, pos, _try_ManyStmts, fullparse)
 
-ManyStmts = Rule('ManyStmts', _parse_ManyStmts, """
+ManyStmts = ParsingRule('ManyStmts', _parse_ManyStmts, """
     ManyStmts = Sep(Stmt, LineSep, allow_trailer=True, allow_empty=False)
 """)
 def _try_SingleExpr(_text, _pos):
@@ -6190,7 +6190,7 @@ def _try_SingleExpr(_text, _pos):
 def _parse_SingleExpr(text, pos=0, fullparse=True):
     return _run(text, pos, _try_SingleExpr, fullparse)
 
-SingleExpr = Rule('SingleExpr', _parse_SingleExpr, """
+SingleExpr = ParsingRule('SingleExpr', _parse_SingleExpr, """
     SingleExpr = Expr << Opt(LineSep)
 """)
 def _try_start(_text, _pos):
@@ -6233,7 +6233,7 @@ def _try_start(_text, _pos):
 def _parse_start(text, pos=0, fullparse=True):
     return _run(text, pos, _try_start, fullparse)
 
-start = Rule('start', _parse_start, """
+start = ParsingRule('start', _parse_start, """
     start = _try__ignored >> (Skip(Newline) >> GrammarDef)
 """)
 def _try__ignored(_text, _pos):
@@ -6265,6 +6265,6 @@ def _try__ignored(_text, _pos):
 def _parse__ignored(text, pos=0, fullparse=True):
     return _run(text, pos, _try__ignored, fullparse)
 
-_ignored = Rule('_ignored', _parse__ignored, """
+_ignored = ParsingRule('_ignored', _parse__ignored, """
     _ignored = Skip(Space, Comment)
 """)

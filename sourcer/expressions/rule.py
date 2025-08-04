@@ -44,6 +44,6 @@ class Rule(Expression):
                 ctx = '_ctx, ' if flags.uses_context else ''
                 out.RETURN(Code(f'_run({ctx}text, pos, {impl_name}, fullparse)'))
 
-            out += Code(f'{self.name} = Rule({self.name!r}, {entry_name}, """')
+            out += Code(f'{self.name} = ParsingRule({self.name!r}, {entry_name}, """')
             out.extend(Code('    ', x) for x in definition.split('\n'))
             out += Code('""")')

@@ -48,7 +48,7 @@ class Class(Expression):
                     class_attrs.append((member.name, const_value))
 
         with out.global_section():
-            with out.CLASS(self.name, 'Node'):
+            with out.CLASS(self.name, 'ParsedObject'):
                 self._compile_class_body(
                     out, flags, parse_func, field_names, class_attrs
                 )
@@ -84,7 +84,7 @@ class Class(Expression):
             out.add_newline()
 
         with out.DEF('__init__', ['self'] + field_names):
-            out += Code('Node.__init__(self)')
+            out += Code('ParsedObject.__init__(self)')
             for name in field_names:
                 out += Code(f'self.{name} = {name}')
 
