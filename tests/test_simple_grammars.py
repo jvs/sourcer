@@ -1074,3 +1074,55 @@ def test_another_example_of_using_pass():
 
     result = g.Expression.parse('()')
     assert result == g.Tuple([])
+
+
+def test_backtrack():
+    g = Grammar(r'''
+        ignore Space = /[ \t]+/
+        CheckedSpace = Backtrack(1) >> Space
+
+        Word = /[_a-zA-Z][_a-zA-Z0-9]*/
+
+        ForbiddenSpace(x) = ExpectNot(CheckedSpace) >> x
+        RequiredSpace(x) = CheckedSpace >> x << CheckedSpace
+
+        Type = GenericType | Word
+
+        class GenericType {
+            base: Word
+            arg: ForbiddenSpace("<") >> Type << ForbiddenSpace(">")
+        }
+
+        class TypeComparison {
+            left: Type
+            operator: RequiredSpace("<" | ">")
+            right: Type
+        }
+
+        start = TypeComparison | Type
+    ''')
+
+    result = g.parse('foo<bar>')
+    assert result == g.GenericType(base='foo', arg='bar')
+
+    result = g.parse('foo < bar')
+    assert result == g.TypeComparison('foo', '<', 'bar')
+
+    result = g.parse('foo < bar<baz>')
+    assert result == g.TypeComparison('foo', '<', g.GenericType('bar', 'baz'))
+
+    result = g.parse('foo > bar<baz>')
+    assert result == g.TypeComparison('foo', '>', g.GenericType('bar', 'baz'))
+
+    result = g.parse('foo<bar> > baz')
+    assert result == g.TypeComparison(g.GenericType('foo', 'bar'), '>', 'baz')
+
+    result = g.parse('foo<bar> < baz')
+    assert result == g.TypeComparison(g.GenericType('foo', 'bar'), '<', 'baz')
+
+    result = g.parse('foo<bar<baz>> < zim<zam>')
+    assert result == g.TypeComparison(
+        left=g.GenericType('foo', g.GenericType('bar', 'baz')),
+        operator='<',
+        right=g.GenericType('zim', 'zam'),
+    )

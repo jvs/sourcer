@@ -335,6 +335,11 @@ different parsing expressions.
 
 For now, here's a list of the supported expressions:
 
+- Backtracking (Lookbehind):
+
+
+    - `Backtrack(1) >> foo` -- moves back 1 character, then tries parsing foo.
+
 - Binding:
 
     - `let foo = bar in baz` -- parses bar, binding the result to foo, then

@@ -1,4 +1,5 @@
 from .apply import Apply
+from .backtrack import Backtrack
 from .base import SymbolCounter, visit
 from .byte import Byte
 from .call import Call, KeywordArg
